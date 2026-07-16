@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+
+  "name": "CT Operations Monitor",
+
+  "version": "2.0",
+
+  "description": "Live CallTools Campaign Monitor",
+
+  "permissions": [
+    "storage"
+  ],
+
+  "host_permissions": [
+    "https://east-2.calltools.io/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://east-2.calltools.io/*"
+      ],
+      "js": [
+        "parser.js",
+        "content.js",
+        "helpers.js",
+        "dashboard.js"
+      ],
+      "css": [
+        "dashboard.css"
+      ]
+    }
+  ]
+}
