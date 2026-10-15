@@ -208,7 +208,116 @@ function createCallToolsQueuesDOM(data = []) {
     return { document, table, thead, tbody };
 }
 
+function createCallToolsCampaignsDOM(data = []) {
+    const document = new MockNode("document");
+    const table = new MockNode("table", { class: "mat-table cdk-table" });
+    document.appendChild(table);
+
+    const thead = new MockNode("thead");
+    table.appendChild(thead);
+
+    // Group Header Row (Tier 1) - matches live CallTools Campaigns structure
+    const groupRow = new MockNode("tr", { class: "mat-header-row group-header-row" });
+    thead.appendChild(groupRow);
+    const groups = [
+        { text: "Contact", colspan: 1 },
+        { text: "Logs", colspan: 1 },
+        { text: "Channels", colspan: 1 },
+        { text: "Agent Wait Time (Seconds)", colspan: 3 },
+        { text: "Calls (Today)", colspan: 12 },
+        { text: "SMS", colspan: 2 },
+        { text: "Email", colspan: 1 },
+        { text: "Controls", colspan: 1 }
+    ];
+    for (const g of groups) {
+        groupRow.appendChild(new MockNode("th", { colspan: String(g.colspan) }, g.text));
+    }
+
+    // Leaf Header Row (Tier 2) - exact 23 leaf columns as observed in live CallTools
+    const leafRow = new MockNode("tr", { class: "mat-header-row mat-mdc-header-row" });
+    thead.appendChild(leafRow);
+
+    const leafHeaders = [
+        { label: "Name", cls: "cdk-column-name", left: 0, width: 140 },
+        { label: "Active", cls: "cdk-column-active", left: 140, width: 60 },
+        { label: "Total", cls: "cdk-column-contact_count", left: 200, width: 70 },
+        { label: "Per Agent", cls: "cdk-column-channels", left: 270, width: 60 },
+        { label: "Now", cls: "cdk-column-wait_now", left: 330, width: 60 },
+        { label: "Today", cls: "cdk-column-wait_today", left: 390, width: 60 },
+        { label: "Total", cls: "cdk-column-wait_total", left: 450, width: 60 },
+        { label: "Total", cls: "cdk-column-outbound", left: 510, width: 70 },
+        { label: "Human", cls: "cdk-column-human", left: 580, width: 60 },
+        { label: "Machine", cls: "cdk-column-machine", left: 640, width: 70 },
+        { label: "To Agents", cls: "cdk-column-agent_connect", left: 710, width: 70 },
+        { label: "Abandoned", cls: "cdk-column-abandoned", left: 780, width: 80 },
+        { label: "No Ans", cls: "cdk-column-no_answer", left: 860, width: 60 },
+        { label: "Busy", cls: "cdk-column-busy", left: 920, width: 60 },
+        { label: "Failed", cls: "cdk-column-failed", left: 980, width: 60 },
+        { label: "<1min", cls: "cdk-column-wait_bucket_1", left: 1040, width: 50 },
+        { label: "<2min", cls: "cdk-column-wait_bucket_2", left: 1090, width: 50 },
+        { label: ">3min", cls: "cdk-column-wait_bucket_3", left: 1140, width: 50 },
+        { label: ">5min", cls: "cdk-column-wait_bucket_4", left: 1190, width: 50 },
+        { label: "Sent", cls: "cdk-column-sms_sent", left: 1240, width: 50 },
+        { label: "Received", cls: "cdk-column-sms_received", left: 1290, width: 50 },
+        { label: "Sent", cls: "cdk-column-email_sent", left: 1340, width: 50 },
+        { label: "Controls", cls: "cdk-column-controls", left: 1390, width: 80 }
+    ];
+
+    leafHeaders.forEach(h => {
+        const th = new MockNode("th", { class: "mat-header-cell " + h.cls }, h.label);
+        th.rect = { left: h.left, width: h.width, right: h.left + h.width };
+        leafRow.appendChild(th);
+    });
+
+    const tbody = new MockNode("tbody");
+    table.appendChild(tbody);
+
+    data.forEach((c, idx) => {
+        const tr = new MockNode("tr", {
+            class: "mat-row mat-mdc-row",
+            "data-campaign-id": c.id || ("campaign-" + idx),
+            "data-id": c.id || ("campaign-" + idx)
+        });
+        tbody.appendChild(tr);
+
+        const values = [
+            { cls: "cdk-column-name", val: c.name, left: 0, width: 140 },
+            { cls: "cdk-column-active", val: c.active === true ? "active" : "inactive", left: 140, width: 60 },
+            { cls: "cdk-column-contact_count", val: c.contacts, left: 200, width: 70 },
+            { cls: "cdk-column-channels", val: c.channels, left: 270, width: 60 },
+            { cls: "cdk-column-wait_now", val: c.waitNow, left: 330, width: 60 },
+            { cls: "cdk-column-wait_today", val: c.waitToday, left: 390, width: 60 },
+            { cls: "cdk-column-wait_total", val: c.waitTotal, left: 450, width: 60 },
+            { cls: "cdk-column-outbound", val: c.outbound, left: 510, width: 70 },
+            { cls: "cdk-column-human", val: c.human, left: 580, width: 60 },
+            { cls: "cdk-column-machine", val: c.machine, left: 640, width: 70 },
+            { cls: "cdk-column-agent_connect", val: c.agentConnect, left: 710, width: 70 },
+            { cls: "cdk-column-abandoned", val: c.abandoned, left: 780, width: 80 },
+            { cls: "cdk-column-no_answer", val: c.noAnswer, left: 860, width: 60 },
+            { cls: "cdk-column-busy", val: c.busy, left: 920, width: 60 },
+            { cls: "cdk-column-failed", val: c.failed, left: 980, width: 60 },
+            { cls: "cdk-column-wait_bucket_1", val: c.waitBucket1 || "0", left: 1040, width: 50 },
+            { cls: "cdk-column-wait_bucket_2", val: c.waitBucket2 || "0", left: 1090, width: 50 },
+            { cls: "cdk-column-wait_bucket_3", val: c.waitBucket3 || "0", left: 1140, width: 50 },
+            { cls: "cdk-column-wait_bucket_4", val: c.waitBucket4 || "0", left: 1190, width: 50 },
+            { cls: "cdk-column-sms_sent", val: c.smsSent || "0", left: 1240, width: 50 },
+            { cls: "cdk-column-sms_received", val: c.smsReceived || "0", left: 1290, width: 50 },
+            { cls: "cdk-column-email_sent", val: c.emailSent || "0", left: 1340, width: 50 },
+            { cls: "cdk-column-controls", val: "", left: 1390, width: 80 }
+        ];
+
+        values.forEach(v => {
+            const td = new MockNode("td", { class: "mat-cell mat-mdc-cell " + v.cls }, String(v.val ?? ""));
+            td.rect = { left: v.left, width: v.width, right: v.left + v.width };
+            tr.appendChild(td);
+        });
+    });
+
+    return { document, table, thead, tbody };
+}
+
 module.exports = {
     MockNode,
-    createCallToolsQueuesDOM
+    createCallToolsQueuesDOM,
+    createCallToolsCampaignsDOM
 };

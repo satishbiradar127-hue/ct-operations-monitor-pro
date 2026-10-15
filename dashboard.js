@@ -2501,7 +2501,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                         </div>
                         <div class="ct-summary-controls">
                             <span class="ct-live" data-ref="live">WAITING</span>
-                            <span class="ct-feed-poll" title="Live parser polling interval">Feed poll: 0.25s</span>
+                            <span class="ct-feed-poll" title="Live parser polling interval">Feed poll: 1.0s</span>
                             <button class="ct-header-refresh" type="button" data-ref="headerRefresh" aria-label="Refresh live CallTools data" title="Refresh live CallTools data">↻</button>
                             <div class="ct-zoom-controls" role="group" aria-label="Dashboard zoom"><button type="button" data-ref="zoomOut" aria-label="Zoom out">−</button><button type="button" data-ref="zoomReset" aria-label="Reset zoom" data-zoom-value>100%</button><button type="button" data-ref="zoomIn" aria-label="Zoom in">+</button></div>
                             <button class="ct-header-collapse" type="button" data-ref="headerCollapse" aria-label="Collapse operations panel">Collapse</button>
@@ -3443,12 +3443,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const outboundNote = state.route === "queues" ? "LAST KNOWN OUTBOUND · " + (outboundAge !== null ? formatAge(outboundAge) + " old" : "not loaded") : "campaign-reported attempts";
         const connectedNote = state.route === "queues" ? "LAST KNOWN OUTBOUND" : (stats.outbound > 0 ? ((stats.connected / stats.outbound) * 100).toFixed(2) + "% connect rate" : "connect rate unavailable");
         updateKpi("campaigns", stats.total, stats.total + " active / " + stats.visibleTotal + " visible");
-        updateKpi("waiting", formatNumber(stats.waiting), "current queue load");
-        updateKpi("onCall", formatNumber(stats.onCall), "active calls");
+        updateKpi("waiting", stats.waitingAvailable ? formatNumber(stats.waiting) : "—", stats.waitingAvailable ? "current queue load" : "Not exposed by Campaigns feed");
+        updateKpi("onCall", stats.onCallAvailable ? formatNumber(stats.onCall) : "—", stats.onCallAvailable ? "active calls" : "Not exposed by Campaigns feed");
         updateKpi("contacts", formatNumber(stats.contacts), stats.realtimeShared ? "shared CallTools contact pool · deduped" : "CallTools saved contact count");
         updateKpi("outbound", formatNumber(stats.outbound), outboundNote);
         updateKpi("connected", formatNumber(stats.connected), connectedNote);
-        updateKpi("loggedIn", formatNumber(stats.loggedIn), state.route === "queues" ? "LAST KNOWN OUTBOUND" : "agents in feed");
+        updateKpi("loggedIn", state.route === "queues" ? formatNumber(stats.loggedIn) : (stats.loggedInAvailable ? formatNumber(stats.loggedIn) : "—"), state.route === "queues" ? "LAST KNOWN OUTBOUND" : (stats.loggedInAvailable ? "agents in feed" : "Not exposed by Campaigns feed"));
         updateKpi("maxWait", stats.highestWait ? safeValue(stats.highestWait.waitNow) + "s" : "0s", stats.highestWait ? safeValue(stats.highestWait.name) : "no wait signal");
         updateKpi("abandoned", formatNumber(stats.abandonmentTotal), stats.highestAbandoned && stats.highestAbandoned.__abandoned ? "highest: " + safeValue(stats.highestAbandoned.name) : "no current signal");
         updateKpi("goals", stats.goalsAvailable ? formatNumber(stats.goals) : "—", stats.goalsAvailable ? "CallTools campaign feed" : "Not exposed by Campaigns feed");
@@ -4163,11 +4163,11 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const selectedOperatingIdsForAlert = new Set(state.operatingCampaigns || []);
         selectedOperatingIdsForAlert.forEach(function (selectedId) {
             const selected = operational.find(function (c) { return c.__id === selectedId; });
-            if (!selected || selected.__loggedIn !== 0) return;
+            if (!selected || !selected.__loggedInAvailable || selected.__loggedIn !== 0) return;
             const other = operational
-                .filter(function (c) { return c.__id !== selected.__id && c.__loggedIn > 0; })
+                .filter(function (c) { return c.__id !== selected.__id && c.__loggedInAvailable && c.__loggedIn > 0; })
                 .sort(function (a, b) {
-                    return b.__loggedIn - a.__loggedIn || b.__waiting - a.__waiting;
+                    return b.__loggedIn - a.__loggedIn || (b.__waiting || 0) - (a.__waiting || 0);
                 })[0];
             if (!other) return;
             const severity = selected.__waiting > 0 ? "critical" : "warning";
@@ -4231,17 +4231,17 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 }
             }
 
-            if (c.__waiting > 0 && c.__loggedIn === 0) {
+            if (c.__waitingAvailable && c.__loggedInAvailable && c.__waiting > 0 && c.__loggedIn === 0) {
                 upsert(c.__id + ":CAPACITY", name, "critical", "NO AGENT CAPACITY", c.__waiting + " waiting with 0 logged-in agents" + (c.__wait ? " and " + c.__wait + "s wait." : ".") + ((alertChangeText(c, "waiting", "Waiting", "") || alertChangeText(c, "waitNow", "Wait", "s")) ? " " + [alertChangeText(c, "waiting", "Waiting", ""), alertChangeText(c, "waitNow", "Wait", "s")].filter(Boolean).join("; ") + "." : ""), "Check agent readiness, queue membership, and campaign assignment.", c.__id);
-            } else if (c.__wait >= 60 && c.__waiting > 0) {
-                upsert(c.__id + ":WAIT", name, "critical", "QUEUE DELAY", c.__wait + "s wait with " + c.__waiting + " waiting." + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Review available capacity and the highest-wait queue first.", c.__id);
-            } else if (c.__wait >= 30 && c.__waiting > 0) {
-                upsert(c.__id + ":WAIT", name, "warning", "HIGH WAIT", c.__wait + "s wait with " + c.__waiting + " waiting." + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Watch wait growth and intervene if the queue continues rising.", c.__id);
+            } else if (c.__wait >= 60 && (c.__waitingAvailable ? c.__waiting > 0 : true)) {
+                upsert(c.__id + ":WAIT", name, "critical", "QUEUE DELAY", c.__wait + "s wait" + (c.__waitingAvailable && c.__waiting > 0 ? " with " + c.__waiting + " waiting." : ".") + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Review available capacity and the highest-wait queue first.", c.__id);
+            } else if (c.__wait >= 30 && (c.__waitingAvailable ? c.__waiting > 0 : true)) {
+                upsert(c.__id + ":WAIT", name, "warning", "HIGH WAIT", c.__wait + "s wait" + (c.__waitingAvailable && c.__waiting > 0 ? " with " + c.__waiting + " waiting." : ".") + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Watch wait growth and intervene if the queue continues rising.", c.__id);
             }
 
             // Queue saturation is a distinct condition from wait time. It catches
             // queues where every logged-in agent is occupied while calls are waiting.
-            if (c.__waiting >= 5 && c.__loggedIn > 0 && c.__onCall >= c.__loggedIn) {
+            if (c.__waitingAvailable && c.__loggedInAvailable && c.__onCallAvailable && c.__waiting >= 5 && c.__loggedIn > 0 && c.__onCall >= c.__loggedIn) {
                 upsert(c.__id + ":SATURATION", name, "warning", "QUEUE SATURATED", c.__waiting + " waiting while all " + c.__loggedIn + " logged-in agents are occupied." + (alertChangeText(c, "waiting", "Waiting", "") ? " " + alertChangeText(c, "waiting", "Waiting", "") + "." : ""), "Watch wait growth and add capacity if the queue continues rising.", c.__id);
             }
 
@@ -4617,16 +4617,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         card.node.classList.toggle("is-data-check", Boolean(campaign.__dataCheck));
         setText(card.fields.name, safeValue(campaign.name, "Unnamed Campaign"));
         card.fields.name.title = safeValue(campaign.name, "Unnamed Campaign");
-        setText(card.fields.metaLoggedIn, `${formatNumber(campaign.__loggedIn)} total agents`);
-        setText(card.fields.metaWaiting, `${formatNumber(campaign.__waiting)} waiting`);
-        setText(card.fields.metaOnCall, `${formatNumber(campaign.__onCall)} on call${campaign.__active === false ? " · INACTIVE" : campaign.__active === null ? " · STATUS UNVERIFIED" : " · ACTIVE"}`);
+        setText(card.fields.metaLoggedIn, campaign.__loggedInAvailable ? `${formatNumber(campaign.__loggedIn)} total agents` : `Agents: N/A in table`);
+        setText(card.fields.metaWaiting, campaign.__waitingAvailable ? `${formatNumber(campaign.__waiting)} waiting` : `Waiting: N/A`);
+        setText(card.fields.metaOnCall, `${campaign.__onCallAvailable ? formatNumber(campaign.__onCall) + " on call · " : ""}${campaign.__active === false ? "INACTIVE" : campaign.__active === null ? "STATUS UNVERIFIED" : "ACTIVE"}`);
         setText(card.fields.health, campaign.__dataCheck ? "DATA CHECK" : campaign.__active === true ? HEALTH[campaign.__health].label : campaign.__active === false ? "INACTIVE" : "DATA CHECK");
         setClass(card.fields.health, "ct-badge " + (campaign.__dataCheck ? "is-warning" : campaign.__active === true ? healthClass : campaign.__active === false ? "is-inactive" : "is-warning"));
         setText(card.fields.liveLeads, formatNumber(campaign.__contacts));
         setClass(card.fields.liveLeads, "ct-row-value " + (campaign.__active !== true ? "" : campaign.__contacts <= state.contactThreshold ? "is-warning" : "is-good"));
-        setText(card.fields.waiting, formatNumber(campaign.__waiting));
-        setClass(card.fields.waiting, "ct-row-value " + (campaign.__waiting > 0 ? "is-warning" : "is-good"));
-        setText(card.fields.onCall, formatNumber(campaign.__onCall));
+        setText(card.fields.waiting, campaign.__waitingAvailable ? formatNumber(campaign.__waiting) : "—");
+        setClass(card.fields.waiting, "ct-row-value " + (campaign.__waitingAvailable && campaign.__waiting > 0 ? "is-warning" : "is-good"));
+        setText(card.fields.onCall, campaign.__onCallAvailable ? formatNumber(campaign.__onCall) : "—");
         setClass(card.fields.onCall, "ct-row-value is-info");
         setText(card.fields.waitPill, `${campaign.__wait}s`);
         setClass(card.fields.waitPill, "ct-row-value " + waitClassName);
@@ -4639,9 +4639,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const runway = estimateCampaignRunway(campaign);
         setText(card.fields.runway, runway.label);
         setClass(card.fields.runway, "ct-row-value " + runway.tone);
-        setText(card.fields.agents, `${formatNumber(campaign.__loggedIn)}`);
-        card.fields.agents.title = "Native CallTools Logged In agents count";
-        setClass(card.fields.agents, "ct-row-value " + (campaign.__loggedIn === 0 && campaign.__active === true && campaign.__waiting > 0 ? "is-critical" : "is-info"));
+        setText(card.fields.agents, campaign.__loggedInAvailable ? `${formatNumber(campaign.__loggedIn)}` : "—");
+        card.fields.agents.title = campaign.__loggedInAvailable ? "Native CallTools Logged In agents count" : "Agent count not exposed in CallTools Campaigns table";
+        setClass(card.fields.agents, "ct-row-value " + (campaign.__loggedInAvailable && campaign.__loggedIn === 0 && campaign.__active === true && campaign.__waiting > 0 ? "is-critical" : "is-info"));
         setText(card.fields.attempts, formatNumber(campaign.__outbound));
         setClass(card.fields.attempts, "ct-row-value");
         const head = card.node.querySelector('.ct-card-head');
@@ -4681,14 +4681,17 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             prepared.__contacts = numberValue(prepared.contacts);
             prepared.__abandoned = abandonedCount(prepared.abandoned);
             prepared.__failed = numberValue(prepared.failed);
-            prepared.__loggedIn = numberValue(prepared.loggedIn);
-            prepared.__waiting = numberValue(prepared.waiting);
-            prepared.__onCall = numberValue(prepared.onCall);
+            prepared.__loggedInAvailable = prepared.loggedIn !== null && prepared.loggedIn !== undefined && String(prepared.loggedIn).trim() !== "";
+            prepared.__loggedIn = prepared.__loggedInAvailable ? numberValue(prepared.loggedIn) : null;
+            prepared.__waitingAvailable = prepared.waiting !== null && prepared.waiting !== undefined && String(prepared.waiting).trim() !== "";
+            prepared.__waiting = prepared.__waitingAvailable ? numberValue(prepared.waiting) : null;
+            prepared.__onCallAvailable = prepared.onCall !== null && prepared.onCall !== undefined && String(prepared.onCall).trim() !== "";
+            prepared.__onCall = prepared.__onCallAvailable ? numberValue(prepared.onCall) : null;
             prepared.__outbound = numberValue(prepared.outbound);
             prepared.__human = numberValue(prepared.human);
             prepared.__agentConnect = numberValue(prepared.agentConnect);
-            prepared.__goalsAvailable = String(prepared.goals ?? "").trim() !== "";
-            prepared.__goals = numberValue(prepared.goals);
+            prepared.__goalsAvailable = prepared.goals !== null && prepared.goals !== undefined && String(prepared.goals).trim() !== "";
+            prepared.__goals = prepared.__goalsAvailable ? numberValue(prepared.goals) : null;
             prepared.__active = resolveActiveState(prepared);
             prepared.__operational = prepared.__active === true;
             // A campaign is a Data Check item when CallTools has not verified
@@ -4818,8 +4821,11 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             warning: 0,
             critical: 0,
             loggedIn: 0,
+            loggedInAvailable: false,
             waiting: 0,
+            waitingAvailable: false,
             onCall: 0,
+            onCallAvailable: false,
             contacts: 0,
             outbound: 0,
             connected: 0,
@@ -4846,9 +4852,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         campaigns.forEach(function (campaign) {
             if (!campaign.__operational) return;
             stats[campaign.__health] += 1;
-            stats.loggedIn += campaign.__loggedIn;
-            stats.waiting += campaign.__waiting;
-            stats.onCall += campaign.__onCall;
+            if (campaign.__loggedInAvailable) {
+                stats.loggedInAvailable = true;
+                stats.loggedIn += campaign.__loggedIn;
+            }
+            if (campaign.__waitingAvailable) {
+                stats.waitingAvailable = true;
+                stats.waiting += campaign.__waiting;
+            }
+            if (campaign.__onCallAvailable) {
+                stats.onCallAvailable = true;
+                stats.onCall += campaign.__onCall;
+            }
             stats.contacts += campaign.__contacts;
             stats.outbound += campaign.__outbound;
             stats.connected += campaign.__human;
@@ -4872,7 +4887,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         }
 
         stats.averageWait = stats.total ? Math.round(stats.waitTotal / stats.total) : 0;
-        stats.utilization = utilizationPercent(stats.loggedIn, stats.onCall);
+        stats.utilization = stats.loggedInAvailable ? utilizationPercent(stats.loggedIn, stats.onCall) : 0;
 
         return stats;
     }
@@ -4916,13 +4931,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const human = numberValue(campaign.human);
         const agentConnect = numberValue(campaign.agentConnect);
         const abandoned = abandonedCount(campaign.abandoned);
-        const loggedIn = numberValue(campaign.loggedIn);
-        const onCall = numberValue(campaign.onCall);
         const contacts = numberValue(campaign.contacts);
-        const required = [campaign.contacts, campaign.outbound, campaign.human, campaign.agentConnect, campaign.loggedIn, campaign.waiting, campaign.onCall];
+        const required = [campaign.contacts, campaign.outbound, campaign.human];
         if (required.some(function (value) { return String(value ?? "").trim() === ""; })) return true;
-        if (outbound < 0 || human < 0 || agentConnect < 0 || abandoned < 0 || loggedIn < 0 || onCall < 0 || contacts < 0) return true;
-        if (human > outbound || agentConnect > human || abandoned > outbound || onCall > loggedIn) return true;
+        if (outbound < 0 || human < 0 || abandoned < 0 || contacts < 0) return true;
+        if (human > outbound || abandoned > outbound) return true;
+        if (campaign.__loggedInAvailable && campaign.__onCallAvailable && campaign.__onCall > campaign.__loggedIn) return true;
         return false;
     }
 
@@ -4944,9 +4958,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         if (campaign.__active !== true) return 100;
 
         const wait = campaign.__wait;
-        const waiting = campaign.__waiting;
-        const loggedIn = campaign.__loggedIn;
-        const onCall = campaign.__onCall;
+        const waiting = campaign.__waitingAvailable ? campaign.__waiting : 0;
+        const loggedIn = campaign.__loggedInAvailable ? campaign.__loggedIn : 1;
+        const onCall = campaign.__onCallAvailable ? campaign.__onCall : 0;
         const leads = campaign.__contacts;
         const outbound = campaign.__outbound;
         const abandoned = campaign.__abandoned;
@@ -4954,18 +4968,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
         // Critical only for conditions that represent an immediate operational
         // problem and are also surfaced as critical Action Center conditions.
-        if ((waiting > 0 && loggedIn === 0) ||
-            (waiting > 0 && wait >= 60) ||
+        if ((campaign.__waitingAvailable && campaign.__loggedInAvailable && waiting > 0 && loggedIn === 0) ||
+            (wait >= 60) ||
             leads === 0 ||
             abandoned >= 500 ||
             abandonRate >= 5) return 35;
 
         // Warning conditions mirror the Action Center's non-critical pressure
         // signals. A low abandoned count alone is informational, not unhealthy.
-        if ((waiting > 0 && wait >= 30) ||
-            (waiting >= 5 && loggedIn > 0 && onCall >= loggedIn) ||
+        if ((wait >= 30) ||
+            (campaign.__waitingAvailable && campaign.__loggedInAvailable && waiting >= 5 && loggedIn > 0 && onCall >= loggedIn) ||
             (state.contactThreshold > 0 && leads <= state.contactThreshold) ||
-            abandoned > 0 && abandonRate >= 2) return 65;
+            (abandoned > 0 && abandonRate >= 2)) return 65;
 
         return 92;
     }

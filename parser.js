@@ -16,16 +16,38 @@ window.CTParser = {
             .trim();
     },
 
+    campaignLeafHeaders(table) {
+        if (!table) return [];
+        const rows = Array.from(table.querySelectorAll('thead tr, tr.mat-header-row, tr.mat-mdc-header-row, tr[role="row"]'));
+        const headerRows = rows.filter(function(row) {
+            return Array.from(row.querySelectorAll('th, [role="columnheader"]')).length > 0;
+        });
+        if (!headerRows.length) return [];
+        const leafRow = headerRows.slice().sort(function(a, b) {
+            return b.querySelectorAll('th, [role="columnheader"]').length - a.querySelectorAll('th, [role="columnheader"]').length;
+        })[0];
+        return Array.from(leafRow.querySelectorAll('th, [role="columnheader"]'));
+    },
+
     findHeaderCell(row, labels) {
         const table = row.closest('table, mat-table');
         if (!table) return null;
         const wanted = (labels || []).map(function(v){ return String(v).replace(/\s+/g,' ').trim().toLowerCase(); });
-        const headers = Array.from(table.querySelectorAll('thead th, tr.mat-header-row th, tr.mat-mdc-header-row th, th, [role="columnheader"]'));
+        const headers = this.campaignLeafHeaders(table);
         const header = headers.find(function(h){
             const text = String(h.innerText || h.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
             return wanted.includes(text);
         });
         if (!header) return null;
+
+        // Prefer the shared Material/CDK column class when it exists between header and row.
+        const headerClasses = typeof header.className === 'string' ? header.className.split(/\s+/).filter(Boolean) : [];
+        for (const cls of headerClasses) {
+            if (!/^(mat|cdk)-column-/.test(cls)) continue;
+            const cell = row.querySelector('.' + cls);
+            if (cell) return cell;
+        }
+
         const headerRect = header.getBoundingClientRect ? header.getBoundingClientRect() : null;
         const cells = Array.from(row.querySelectorAll('td.mat-cell, td.mat-mdc-cell, td, [role="cell"]'));
         if (headerRect && headerRect.width) {
@@ -546,6 +568,7 @@ window.CTParser = {
     readCampaigns() {
         const rows = Array.from(document.querySelectorAll("tr.mat-row, tr.mat-mdc-row"));
         if (!rows.length) return [];
+        const parse = this.parseMetricRecord.bind(this);
 
         return rows.map((row, index) => {
             const idNode = row.querySelector(
@@ -555,37 +578,80 @@ window.CTParser = {
                 ? (idNode.getAttribute("data-campaign-id") || idNode.getAttribute("data-id") || idNode.getAttribute("data-campaignid"))
                 : (row.getAttribute("data-campaign-id") || row.getAttribute("data-id") || "");
 
+            const rawName = this.getByHeader(row, ["name"], ["cdk-column-name", "cdk-column-campaign__name"]);
+            const active = this.readActiveState(row);
+            const rawContacts = this.getByHeader(row, ["count", "contact count", "total contacts", "total"], ["cdk-column-contact_count", "cdk-column-total_saved_contact_count", "cdk-column-contacts"]);
+            const rawChannels = this.getByHeader(row, ["per agent", "channels per agent", "channels"], ["cdk-column-channels", "cdk-column-campaign__channels_per_agent"]);
+            const rawWaitNow = this.getByHeader(row, ["agent wait", "wait now", "now"], ["cdk-column-wait_now", "cdk-column-cached_now_avg_wait_time"]);
+            const rawWaitToday = this.getByHeader(row, ["today"], ["cdk-column-wait_today", "cdk-column-recent_avg_wait_time", "cdk-column-cached_today_avg_wait_time"]);
+            const rawOutbound = this.getByHeader(row, ["total", "outbound", "outbound calls"], ["cdk-column-outbound", "cdk-column-calls_outbound", "cdk-column-calls_today"]);
+            const rawHuman = this.getByHeader(row, ["human"], ["cdk-column-human", "cdk-column-calls_outbound_human"]);
+            const rawMachine = this.getByHeader(row, ["machine"], ["cdk-column-machine", "cdk-column-calls_outbound_machine"]);
+            const rawAgentConnect = this.getByHeader(row, ["to agents", "agent connect", "agent connects"], ["cdk-column-agent_connect", "cdk-column-calls_outbound_agent_connect"]);
+            const rawAbandoned = this.getByHeader(row, ["abandoned"], ["cdk-column-abandoned", "cdk-column-calls_outbound_abandoned"]);
+            const rawNoAnswer = this.getByHeader(row, ["no ans", "no answer"], ["cdk-column-no_answer", "cdk-column-calls_outbound_noanswer"]);
+            const rawBusy = this.getByHeader(row, ["busy"], ["cdk-column-busy", "cdk-column-calls_outbound_busy"]);
+            const rawFailed = this.getByHeader(row, ["failed"], ["cdk-column-failed", "cdk-column-calls_outbound_failed"]);
+
+            // Agent state columns are not exposed on the native CallTools Campaigns table.
+            // If present in another view or custom layout, extract them; otherwise preserve null (unavailable)
+            // so dashboard.js never fabricates 0 or triggers false agent capacity alerts.
+            const rawLoggedIn = this.getByHeader(row, ["logged in", "logged-in"], ["cdk-column-logged_in", "cdk-column-cached_logged_in_agents"]);
+            const rawWaiting = this.getByHeader(row, ["waiting"], ["cdk-column-waiting_agents", "cdk-column-cached_waiting_agents"]);
+            const rawOnCall = this.getByHeader(row, ["on call", "on-call"], ["cdk-column-phone_call_agents", "cdk-column-cached_phone_call_agents"]);
+            const rawPostCall = this.getByHeader(row, ["post call", "wrap up"], ["cdk-column-post_call_wrap_up_agents", "cdk-column-cached_post_call_wrap_up_agents"]);
+            const rawGoals = this.getByHeader(
+                row,
+                ["goals", "goal", "conversions"],
+                [
+                    "mat-column-goals",
+                    "cdk-column-goals",
+                    "cdk-column-campaign__goals",
+                    "cdk-column-conversions"
+                ]
+            );
+
             return {
                 id: id || "",
                 rowIndex: index,
-                name: this.getByHeader(row, ["name"], ["cdk-column-campaign__name"]),
-                active: this.readActiveState(row),
-                contacts: this.getByHeader(row, ["count", "contact count"], ["cdk-column-total_saved_contact_count"]),
-                channels: this.getByHeader(row, ["per agent", "channels per agent"], ["cdk-column-campaign__channels_per_agent"]),
-                waitNow: this.getByHeader(row, ["agent wait", "wait now", "now"], ["cdk-column-cached_now_avg_wait_time"]),
-                waitToday: this.get("cdk-column-recent_avg_wait_time", row),
-                outbound: this.getByHeader(row, ["outbound calls", "outbound"], ["cdk-column-calls_outbound"]),
-                human: this.get("cdk-column-calls_outbound_human", row),
-                machine: this.get("cdk-column-calls_outbound_machine", row),
-                agentConnect: this.get("cdk-column-calls_outbound_agent_connect", row),
-                abandoned: this.getByHeader(row, ["abandoned"], ["cdk-column-calls_outbound_abandoned"]),
-                noAnswer: this.get("cdk-column-calls_outbound_noanswer", row),
-                busy: this.get("cdk-column-calls_outbound_busy", row),
-                failed: this.get("cdk-column-calls_outbound_failed", row),
-                loggedIn: this.getByHeader(row, ["logged in", "logged-in"], ["cdk-column-cached_logged_in_agents"]),
-                waiting: this.getByHeader(row, ["waiting"], ["cdk-column-cached_waiting_agents"]),
-                onCall: this.getByHeader(row, ["on call", "on-call"], ["cdk-column-cached_phone_call_agents"]),
-                postCall: this.get("cdk-column-post_call_wrap_up_agents", row) || this.get("cdk-column-cached_post_call_wrap_up_agents", row),
-                goals: this.getByHeader(
-                    row,
-                    ["goals", "goal", "conversions"],
-                    [
-                        "mat-column-goals",
-                        "cdk-column-goals",
-                        "cdk-column-campaign__goals",
-                        "cdk-column-conversions"
-                    ]
-                )
+                name: rawName,
+                active: active,
+                contacts: rawContacts,
+                channels: rawChannels,
+                waitNow: rawWaitNow,
+                waitToday: rawWaitToday,
+                outbound: rawOutbound,
+                human: rawHuman,
+                machine: rawMachine,
+                agentConnect: rawAgentConnect,
+                abandoned: rawAbandoned,
+                noAnswer: rawNoAnswer,
+                busy: rawBusy,
+                failed: rawFailed,
+                loggedIn: rawLoggedIn !== "" ? rawLoggedIn : null,
+                waiting: rawWaiting !== "" ? rawWaiting : null,
+                onCall: rawOnCall !== "" ? rawOnCall : null,
+                postCall: rawPostCall !== "" ? rawPostCall : null,
+                goals: rawGoals !== "" ? rawGoals : null,
+                _metrics: {
+                    contacts: parse(rawContacts),
+                    channels: parse(rawChannels),
+                    waitNow: parse(rawWaitNow),
+                    waitToday: parse(rawWaitToday),
+                    outbound: parse(rawOutbound),
+                    human: parse(rawHuman),
+                    machine: parse(rawMachine),
+                    agentConnect: parse(rawAgentConnect),
+                    abandoned: parse(rawAbandoned),
+                    noAnswer: parse(rawNoAnswer),
+                    busy: parse(rawBusy),
+                    failed: parse(rawFailed),
+                    loggedIn: parse(rawLoggedIn),
+                    waiting: parse(rawWaiting),
+                    onCall: parse(rawOnCall),
+                    postCall: parse(rawPostCall),
+                    goals: parse(rawGoals)
+                }
             };
         });
     }

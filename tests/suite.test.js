@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { MockNode, createCallToolsQueuesDOM } = require("./mock_dom");
+const { MockNode, createCallToolsQueuesDOM, createCallToolsCampaignsDOM } = require("./mock_dom");
 
 // Setup global environment for helpers.js, parser.js, dashboard.js
 function setupGlobalEnv() {
@@ -442,6 +442,158 @@ test("PHASE 5 & 7: Clear All clears visible signals and preserves future distinc
     const escalatedAlert = { conditionKey: "INBOUND:Q1:CAPACITY", signature: "v11.1.53|CAPACITY|tier:5+" };
     const filteredEscalated = [escalatedAlert].filter(a => dismissedConditions.get(a.conditionKey) !== a.signature);
     assert.strictEqual(filteredEscalated.length, 1, "Materially changed alert must be detected despite prior Clear All");
+});
+
+test("PHASE 2, 3 & 8: parser.js extracts 2-tier CallTools Campaigns table correctly without header index offset", () => {
+    const campaignData = [
+        {
+            id: "camp-res-cred",
+            name: "RES CRED MAIN",
+            active: true,
+            contacts: "47,846",
+            channels: "36",
+            waitNow: "64",
+            waitToday: "83",
+            waitTotal: "84",
+            outbound: "36,039",
+            human: "975",
+            machine: "31,649",
+            agentConnect: "982",
+            abandoned: "4 (0.41%)",
+            noAnswer: "1,541",
+            busy: "122",
+            failed: "1,505"
+        },
+        {
+            id: "camp-vdh",
+            name: "VDH INBOUND CALLBACK",
+            active: false,
+            contacts: "507",
+            channels: "0",
+            waitNow: "0",
+            waitToday: "0",
+            waitTotal: "0",
+            outbound: "0",
+            human: "0",
+            machine: "0",
+            agentConnect: "0",
+            abandoned: "0",
+            noAnswer: "0",
+            busy: "0",
+            failed: "0"
+        }
+    ];
+
+    const dom = createCallToolsCampaignsDOM(campaignData);
+    global.document = dom.document;
+
+    const campaigns = global.window.CTParser.readCampaigns();
+    assert.strictEqual(campaigns.length, 2, "Must parse exactly 2 campaign rows");
+
+    const resCred = campaigns[0];
+    assert.strictEqual(resCred.name, "RES CRED MAIN");
+    assert.strictEqual(resCred.active, true);
+    assert.strictEqual(resCred.contacts, "47,846");
+    assert.strictEqual(resCred.channels, "36");
+    assert.strictEqual(resCred.waitNow, "64");
+    assert.strictEqual(resCred.waitToday, "83");
+    assert.strictEqual(resCred.outbound, "36,039");
+    assert.strictEqual(resCred.human, "975");
+    assert.strictEqual(resCred.machine, "31,649");
+    assert.strictEqual(resCred.agentConnect, "982");
+    assert.strictEqual(resCred.abandoned, "4 (0.41%)");
+    assert.strictEqual(resCred.noAnswer, "1,541");
+    assert.strictEqual(resCred.busy, "122");
+    assert.strictEqual(resCred.failed, "1,505");
+
+    // Agent state metrics are NOT in the Campaigns table and must be null (unavailable)
+    assert.strictEqual(resCred.loggedIn, null);
+    assert.strictEqual(resCred.waiting, null);
+    assert.strictEqual(resCred.onCall, null);
+    assert.strictEqual(resCred.postCall, null);
+    assert.strictEqual(resCred.goals, null);
+
+    // Typed metrics records
+    assert.strictEqual(resCred._metrics.contacts.value, 47846);
+    assert.strictEqual(resCred._metrics.waitToday.value, 83);
+    assert.strictEqual(resCred._metrics.human.value, 975);
+    assert.strictEqual(resCred._metrics.machine.value, 31649);
+    assert.strictEqual(resCred._metrics.agentConnect.value, 982);
+    assert.strictEqual(resCred._metrics.noAnswer.value, 1541);
+    assert.strictEqual(resCred._metrics.busy.value, 122);
+    assert.strictEqual(resCred._metrics.failed.value, 1505);
+
+    // Inactive campaign
+    const vdh = campaigns[1];
+    assert.strictEqual(vdh.name, "VDH INBOUND CALLBACK");
+    assert.strictEqual(vdh.active, false);
+    assert.strictEqual(vdh.contacts, "507");
+});
+
+test("PHASE 5 & 8: Missing agent metrics on Campaigns table are represented as unavailable (null), not zero, preventing false alerts", () => {
+    const campaignData = [
+        {
+            id: "camp-res-cred",
+            name: "RES CRED MAIN",
+            active: true,
+            contacts: "47,846",
+            channels: "36",
+            waitNow: "64",
+            waitToday: "83",
+            outbound: "36,039",
+            human: "975",
+            machine: "31,649",
+            agentConnect: "982",
+            abandoned: "4 (0.41%)"
+        }
+    ];
+
+    const dom = createCallToolsCampaignsDOM(campaignData);
+    global.document = dom.document;
+
+    const campaigns = global.window.CTParser.readCampaigns();
+    const c = campaigns[0];
+
+    // Must be typed as MISSING, not VALID_ZERO
+    assert.strictEqual(c.loggedIn, null);
+    assert.strictEqual(c.waiting, null);
+    assert.strictEqual(c.onCall, null);
+    assert.strictEqual(c._metrics.loggedIn.state, "MISSING");
+    assert.strictEqual(c._metrics.waiting.state, "MISSING");
+    assert.strictEqual(c._metrics.onCall.state, "MISSING");
+
+    // Verify alert evaluation does NOT trigger false NO AGENT CAPACITY
+    const waitingAvailable = c.waiting !== null && c.waiting !== undefined && String(c.waiting).trim() !== "";
+    const loggedInAvailable = c.loggedIn !== null && c.loggedIn !== undefined && String(c.loggedIn).trim() !== "";
+
+    let capacityAlertTriggered = false;
+    if (waitingAvailable && loggedInAvailable && Number(c.waiting) > 0 && Number(c.loggedIn) === 0) {
+        capacityAlertTriggered = true;
+    }
+    assert.strictEqual(capacityAlertTriggered, false, "False NO AGENT CAPACITY alert must not trigger when agent columns are missing");
+});
+
+test("PHASE 4 & 8: REALTIME shared lead pool deduplication and aggregate calculations", () => {
+    const realtimeCampaigns = [
+        { name: "REALTIME 732 / 317 / 126", contacts: "15,133", active: true },
+        { name: "REALTIME MAIN", contacts: "15,133", active: true },
+        { name: "RES CRED MAIN", contacts: "47,846", active: true }
+    ];
+
+    const realtime = realtimeCampaigns.filter(c => /^realtime\b/i.test(c.name));
+    const realtimeValues = realtime.map(c => parseFloat(c.contacts.replace(/,/g, "")));
+    const samePool = realtime.length > 1 && realtimeValues.every(v => v === realtimeValues[0]);
+    assert.strictEqual(samePool, true, "Must detect identical REALTIME lead count as shared pool");
+
+    // Deduplication calculation
+    let totalContacts = realtimeCampaigns.reduce((sum, c) => sum + parseFloat(c.contacts.replace(/,/g, "")), 0);
+    assert.strictEqual(totalContacts, 15133 + 15133 + 47846, "Raw sum includes duplicated pool");
+
+    if (samePool) {
+        const realtimeSum = realtime.reduce((sum, c) => sum + parseFloat(c.contacts.replace(/,/g, "")), 0);
+        totalContacts = totalContacts - realtimeSum + realtimeValues[0];
+    }
+    assert.strictEqual(totalContacts, 15133 + 47846, "Deduplicated pool must count shared REALTIME leads exactly once");
 });
 
 
