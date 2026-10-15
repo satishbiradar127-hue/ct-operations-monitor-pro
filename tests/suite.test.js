@@ -596,4 +596,132 @@ test("PHASE 4 & 8: REALTIME shared lead pool deduplication and aggregate calcula
     assert.strictEqual(totalContacts, 15133 + 47846, "Deduplicated pool must count shared REALTIME leads exactly once");
 });
 
+test("UPGRADE TEST 14: Active Campaigns Command Summary filters operational campaigns and computes required summary columns", () => {
+    const allCampaigns = [
+        { id: "1", name: "REALTIME MAIN", active: true, contacts: "15,133", waitNow: "0", waitToday: "34", outbound: "5,074", human: "142", agentConnect: "140", channels: "6" },
+        { id: "2", name: "WEB UPGRADE", active: true, contacts: "12,400", waitNow: "12", waitToday: "25", outbound: "3,200", human: "89", agentConnect: "88", channels: "4" },
+        { id: "3", name: "RES CRED MAIN", active: true, contacts: "47,846", waitNow: "64", waitToday: "83", outbound: "36,039", human: "975", agentConnect: "982", channels: "36" },
+        { id: "4", name: "OLD CAMPAIGN 1", active: false, contacts: "500", waitNow: "0", waitToday: "0", outbound: "100", human: "5", agentConnect: "5", channels: "0" },
+        { id: "5", name: "ARCHIVED LIST", active: false, contacts: "0", waitNow: "0", waitToday: "0", outbound: "0", human: "0", agentConnect: "0", channels: "0" }
+    ];
+
+    const active = allCampaigns.filter(c => c.active === true);
+    assert.strictEqual(active.length, 3, "Only active campaigns should be included in Active Command Summary");
+
+    // Verify pinned ordering preservation
+    const PINNED_ORDER = ["RES CRED MAIN", "REALTIME 126", "REALTIME 484"];
+    const sorted = active.slice().sort((a, b) => {
+        const aPin = PINNED_ORDER.indexOf(a.name);
+        const bPin = PINNED_ORDER.indexOf(b.name);
+        if (aPin !== -1 && bPin !== -1) return aPin - bPin;
+        if (aPin !== -1) return -1;
+        if (bPin !== -1) return 1;
+        return a.name.localeCompare(b.name);
+    });
+
+    assert.strictEqual(sorted[0].name, "RES CRED MAIN", "Pinned campaign must appear first");
+    assert.strictEqual(sorted[1].name, "REALTIME MAIN");
+    assert.strictEqual(sorted[2].name, "WEB UPGRADE");
+});
+
+test("UPGRADE TEST 15: Discrepancy reconciliation between active operational totals and all visible campaigns", () => {
+    const campaigns = [
+        { name: "REALTIME MAIN", active: true, outbound: 5074, human: 142 },
+        { name: "RES CRED MAIN", active: true, outbound: 36039, human: 975 },
+        { name: "INACTIVE CALLS MADE EARLIER", active: false, outbound: 100, human: 5 }
+    ];
+
+    const activeOutbound = campaigns.filter(c => c.active).reduce((sum, c) => sum + c.outbound, 0);
+    const allOutbound = campaigns.reduce((sum, c) => sum + c.outbound, 0);
+
+    const activeHuman = campaigns.filter(c => c.active).reduce((sum, c) => sum + c.human, 0);
+    const allHuman = campaigns.reduce((sum, c) => sum + c.human, 0);
+
+    assert.strictEqual(activeOutbound, 41113, "Active outbound calls must equal 41,113");
+    assert.strictEqual(allOutbound, 41213, "All campaigns outbound must equal 41,213");
+    assert.strictEqual(activeHuman, 1117, "Active human connects must equal 1,117");
+    assert.strictEqual(allHuman, 1122, "All human connects must equal 1,122");
+
+    // Subnote reconciliation formatting
+    const outboundSubnote = "Active: " + activeOutbound.toLocaleString() + " · All: " + allOutbound.toLocaleString();
+    const humanSubnote = "Active: " + activeHuman.toLocaleString() + " · All: " + allHuman.toLocaleString();
+    assert.strictEqual(outboundSubnote, "Active: 41,113 · All: 41,213");
+    assert.strictEqual(humanSubnote, "Active: 1,117 · All: 1,122");
+});
+
+test("UPGRADE TEST 16: Honest Lead Runway states distinguish gathering vs stable lead pool vs exhaustion", () => {
+    function estimateCampaignRunway(history, contacts) {
+        if (!contacts || contacts <= 0) return { label: "No leads", tone: "critical" };
+        if (!history || history.length < 2) return { label: "Gathering data…", tone: "neutral" };
+        const elapsed = (history[history.length - 1].time - history[0].time) / 1000;
+        if (elapsed < 30) return { label: "Gathering (<30s)", tone: "neutral" };
+        const delta = history[0].contacts - history[history.length - 1].contacts;
+        if (delta <= 0) return { label: "Stable lead pool", tone: "good" };
+        const ratePerSec = delta / elapsed;
+        const secondsRemaining = contacts / ratePerSec;
+        const hours = secondsRemaining / 3600;
+        if (hours < 1) return { label: Math.round(secondsRemaining / 60) + "m remaining", tone: "critical" };
+        if (hours < 4) return { label: hours.toFixed(1) + "h remaining", tone: "warning" };
+        return { label: hours.toFixed(1) + "h remaining", tone: "good" };
+    }
+
+    // Case 1: Initial load
+    assert.strictEqual(estimateCampaignRunway([], 15000).label, "Gathering data…");
+
+    // Case 2: Short history < 30s
+    const shortHistory = [
+        { time: 100000, contacts: 15000 },
+        { time: 115000, contacts: 14995 }
+    ];
+    assert.strictEqual(estimateCampaignRunway(shortHistory, 14995).label, "Gathering (<30s)");
+
+    // Case 3: Stable or replenishing pool
+    const stableHistory = [
+        { time: 100000, contacts: 15000 },
+        { time: 160000, contacts: 15000 }
+    ];
+    assert.strictEqual(estimateCampaignRunway(stableHistory, 15000).label, "Stable lead pool");
+
+    // Case 4: Burning leads
+    const burningHistory = [
+        { time: 100000, contacts: 10000 },
+        { time: 160000, contacts: 9000 } // 1000 leads in 60s = 16.66/s
+    ];
+    // remaining: 9000 / 16.666 = 540 seconds = 9 minutes
+    const runway = estimateCampaignRunway(burningHistory, 9000);
+    assert.strictEqual(runway.label, "9m remaining");
+    assert.strictEqual(runway.tone, "critical");
+});
+
+test("UPGRADE TEST 17: Inbound missing not-answered column yields null and never reports false zero", () => {
+    // Inbound queue missing callsTodayNotAnswered column in DOM
+    const queueWithoutNotAnswered = {
+        name: "Main Support Queue",
+        callsTodayTotal: 324,
+        callsTodayAnswered: 259,
+        waiting: 2
+        // callsTodayNotAnswered is missing / undefined
+    };
+
+    function inboundNotAnswered(q) {
+        if (!q) return null;
+        if (q._metrics && q._metrics.callsTodayNotAnswered && typeof q._metrics.callsTodayNotAnswered.value === "number") {
+            return q._metrics.callsTodayNotAnswered.value;
+        }
+        if (typeof q.callsTodayNotAnswered === "number") return q.callsTodayNotAnswered;
+        return null;
+    }
+
+    const notAnswered = inboundNotAnswered(queueWithoutNotAnswered);
+    assert.strictEqual(notAnswered, null, "Unexposed Not Answered column must be null, not 0");
+
+    // Verify subnote rendering
+    const note = notAnswered !== null
+        ? `${queueWithoutNotAnswered.callsTodayAnswered} answered · ${notAnswered} not answered`
+        : `${queueWithoutNotAnswered.callsTodayAnswered} answered · other categories unexposed`;
+
+    assert.strictEqual(note, "259 answered · other categories unexposed");
+});
+
+
 

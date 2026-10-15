@@ -5,8 +5,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
     // The inbound bridge uses a same-page hidden native CallTools Queue iframe
     // as the DOM source of truth. The feed frame must not render a second dashboard.
-    if (new URLSearchParams(window.location.search).get("ct_inbound_monitor") === "1") {
-        console.log("CT Operations Monitor — hidden inbound Queue DOM feed active");
+    if (new URLSearchParams(window.location.search).get("ct_inbound_monitor") === "1" || window.self !== window.top) {
+        console.log("CT Operations Monitor — iframe context; skipping duplicate dashboard root");
         return;
     }
 
@@ -15,9 +15,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     const THEME_KEY = "ct-operations-dashboard-theme";
     const CONTACT_THRESHOLD_KEY = "ct-operations-contact-threshold";
     const ZOOM_KEY = "ct-operations-dashboard-zoom";
-    const LAYOUT_KEY = "ct-operations-dashboard-layout";
+    const LAYOUT_KEY = "ct-operations-dashboard-layout-v15";
     const LAYOUT_VERSION_KEY = "ct-operations-dashboard-layout-version";
-    const LAYOUT_VERSION = 14;
+    const LAYOUT_VERSION = 15;
     const ORDER_KEY = "ct-operations-dashboard-campaign-order";
     const ORDER_META_KEY = "ct-operations-dashboard-campaign-order-meta";
     const EMPTY = "-";
@@ -2483,7 +2483,32 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-order-editor-move button { width:23px; height:23px; padding:0; border:1px solid rgba(148,163,184,.26); border-radius:5px; color:#dbe7f8; background:rgba(255,255,255,.05); font-size:12px; font-weight:950; }
             #${DASHBOARD_ID} .ct-order-editor-move button:hover:not(:disabled) { background:#2563eb; border-color:#7fb0ff; color:#fff; }
             #${DASHBOARD_ID} .ct-order-editor-move button:disabled { opacity:.28; cursor:default; }
-            #${DASHBOARD_ID} .ct-list.is-reordering .ct-drag-handle { opacity:.45; cursor:not-allowed; }
+            #${DASHBOARD_ID} .ct-active-command-summary { margin:8px 0 10px; border:1px solid rgba(139,182,255,.35); border-radius:9px; background:linear-gradient(180deg,rgba(23,32,51,.95),rgba(15,23,42,.95)); box-shadow:0 4px 16px rgba(0,0,0,.22); overflow:hidden; }
+            #${DASHBOARD_ID} .ct-active-summary-head { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(37,99,235,.12); border-bottom:1px solid rgba(148,163,184,.16); }
+            #${DASHBOARD_ID} .ct-active-summary-title { display:flex; align-items:center; gap:8px; }
+            #${DASHBOARD_ID} .ct-active-pulse-dot { width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981; animation:ct-pulse 2s infinite ease-in-out; }
+            @keyframes ct-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.85); } }
+            #${DASHBOARD_ID} .ct-active-summary-title strong { font-size:11px; font-weight:900; color:#f8fafc; letter-spacing:.06em; }
+            #${DASHBOARD_ID} .ct-active-summary-title small { color:#94a3b8; font-size:9px; }
+            #${DASHBOARD_ID} .ct-active-summary-badge { padding:3px 8px; border-radius:999px; font-size:8px; font-weight:900; letter-spacing:.05em; border:1px solid rgba(16,185,129,.4); background:rgba(16,185,129,.12); color:#6ee7b7; }
+            #${DASHBOARD_ID} .ct-active-summary-badge.is-inactive { border-color:rgba(148,163,184,.3); background:rgba(148,163,184,.1); color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:240px; overflow-x:auto; overflow-y:auto; }
+            #${DASHBOARD_ID} .ct-active-summary-table { width:100%; border-collapse:collapse; font-size:10px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:8px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:6px 8px; text-align:left; border-bottom:1px solid rgba(148,163,184,.2); }
+            #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border-bottom:1px solid rgba(148,163,184,.1); color:#e2e8f0; }
+            #${DASHBOARD_ID} .ct-active-summary-table tr:hover { background:rgba(59,130,246,.08); }
+            #${DASHBOARD_ID} .ct-active-name { color:#f8fafc; font-weight:700; }
+            #${DASHBOARD_ID} .ct-active-status-tag { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:900; background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
+            #${DASHBOARD_ID} .ct-health-pill { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:900; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-health-pill.is-excellent, #${DASHBOARD_ID} .ct-health-pill.is-good { background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
+            #${DASHBOARD_ID} .ct-health-pill.is-warning { background:rgba(245,158,11,.15); color:#fbbf24; border:1px solid rgba(245,158,11,.3); }
+            #${DASHBOARD_ID} .ct-health-pill.is-critical { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); }
+            #${DASHBOARD_ID} .ct-active-focus-btn { padding:2px 8px; border-radius:4px; border:1px solid rgba(148,163,184,.3); background:rgba(255,255,255,.05); color:#93c5fd; font-size:8px; font-weight:800; cursor:pointer; }
+            #${DASHBOARD_ID} .ct-active-focus-btn:hover { background:#2563eb; color:#fff; border-color:#3b82f6; }
+            #${DASHBOARD_ID} .ct-active-empty { text-align:center; padding:16px; color:#94a3b8; font-style:italic; }
+            #${DASHBOARD_ID} .ct-reconciled-footer { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; margin-top:6px; border:1px solid rgba(148,163,184,.15); border-radius:6px; background:rgba(15,23,42,.6); font-size:9px; color:#94a3b8; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-reconciled-footer b { color:#f1f5f9; }
+            #${DASHBOARD_ID} .ct-kpi-value, #${DASHBOARD_ID} .ct-command-value, #${DASHBOARD_ID} .ct-row-cell { font-variant-numeric:tabular-nums; }
             @media (max-width:900px) { #${DASHBOARD_ID} .ct-focus-grid { grid-template-columns:1fr !important; } }
             @media (max-width:700px) { #${DASHBOARD_ID} .ct-order-editor-head { align-items:flex-start; flex-direction:column; } #${DASHBOARD_ID} .ct-order-editor-row { grid-template-columns:26px 22px minmax(0,1fr) 52px 50px; } }
         `;
@@ -2535,6 +2560,42 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                             <div class="ct-alert-controls"><span class="ct-alert-counter ct-critical-counter" data-ref="criticalCount">0 CRITICAL</span><span class="ct-alert-counter ct-warning-counter" data-ref="warningCount">0 AT RISK</span><button class="ct-alert-clear" type="button" data-ref="clearAlerts">Clear All</button></div>
                         </div>
                         <div class="ct-action-notice" data-ref="actionNotice" hidden aria-live="polite"></div><div class="ct-alert-list"></div>
+                    </section>
+
+                    <section class="ct-active-command-summary" data-ref="activeCommandSummary" aria-label="Active Campaigns Command Summary">
+                        <div class="ct-active-summary-head">
+                            <div class="ct-active-summary-title">
+                                <span class="ct-active-pulse-dot"></span>
+                                <strong>ACTIVE CAMPAIGNS COMMAND SUMMARY</strong>
+                                <small data-ref="activeSummaryCount">Waiting for verified campaign data</small>
+                            </div>
+                            <div class="ct-active-summary-status">
+                                <span class="ct-active-summary-badge" data-ref="activeSummaryBadge">— ACTIVE</span>
+                            </div>
+                        </div>
+                        <div class="ct-active-summary-table-wrap">
+                            <table class="ct-active-summary-table">
+                                <thead>
+                                    <tr>
+                                        <th>CAMPAIGN</th>
+                                        <th>STATUS</th>
+                                        <th>AGENTS</th>
+                                        <th>WAIT NOW</th>
+                                        <th>WAIT TODAY</th>
+                                        <th>OUTBOUND CALLS</th>
+                                        <th>HUMAN CONNECTS</th>
+                                        <th>TO AGENTS</th>
+                                        <th>LIVE LEADS</th>
+                                        <th>LEAD RUNWAY</th>
+                                        <th>HEALTH</th>
+                                        <th>FOCUS</th>
+                                    </tr>
+                                </thead>
+                                <tbody data-ref="activeSummaryRows">
+                                    <tr><td colspan="12" class="ct-active-empty">Waiting for active campaigns…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </section>
 
 
@@ -2674,6 +2735,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                     </section>
                     <div class="ct-table-head" aria-hidden="true"><span>#</span><span>CAMPAIGN</span><span>STATUS</span><span>TOTAL AGENTS</span><span>WAITING</span><span>ON CALL</span><span>WORST WAIT</span><span>LIVE LEADS</span><span>CONNECTED</span><span>CALL ATTEMPTS</span><span>ABANDONED</span><span>RUNWAY</span><span>ACTIONS</span></div>
                     <div class="ct-list" aria-live="polite"></div>
+                    <div class="ct-reconciled-footer" data-ref="reconciledFooter">
+                        <span><b>Active Campaigns:</b> <span data-ref="footerActiveTotals">—</span></span>
+                        <span><b>All Visible Directory Rows:</b> <span data-ref="footerVisibleTotals">—</span></span>
+                    </div>
 
                 </main>
                 <div class="ct-resize-handle" title="Resize dashboard" aria-hidden="true"></div>
@@ -2687,6 +2752,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             zoomOut: root.querySelector('[data-ref="zoomOut"]'),
             zoomReset: root.querySelector('[data-ref="zoomReset"]'),
             zoomIn: root.querySelector('[data-ref="zoomIn"]'),
+            activeCommandSummary: root.querySelector('[data-ref="activeCommandSummary"]'),
+            activeSummaryCount: root.querySelector('[data-ref="activeSummaryCount"]'),
+            activeSummaryBadge: root.querySelector('[data-ref="activeSummaryBadge"]'),
+            activeSummaryRows: root.querySelector('[data-ref="activeSummaryRows"]'),
+            reconciledFooter: root.querySelector('[data-ref="reconciledFooter"]'),
+            footerActiveTotals: root.querySelector('[data-ref="footerActiveTotals"]'),
+            footerVisibleTotals: root.querySelector('[data-ref="footerVisibleTotals"]'),
             search: root.querySelector(".ct-search input"),
             threshold: root.querySelector(".ct-threshold"),
             operatingTrigger: root.querySelector(".ct-operating-trigger"),
@@ -2921,6 +2993,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             scheduleRender();
         });
         refs.clearAlerts.addEventListener("click", clearAttentionCenter);
+        if (refs.activeSummaryRows) {
+            refs.activeSummaryRows.addEventListener("click", function (event) {
+                const btn = event.target.closest("[data-campaign-focus]");
+                if (!btn) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const id = btn.getAttribute("data-campaign-focus");
+                if (id) focusCampaign(id, false);
+            });
+        }
         refs.alerts.addEventListener("click", function (event) {
             const action = event.target.closest("[data-alert-action]");
             if (!action) return;
@@ -3440,8 +3522,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setText(refs.updated, state.route === "queues"
             ? (state.feedStatus === "LIVE" ? "INBOUND LIVE · outbound snapshot " + (outboundAge !== null ? formatAge(outboundAge) : "not loaded") + " ago" : "INBOUND " + (state.feedStatus || "WAITING"))
             : (state.lastDataChangeAt ? (state.sourceState === "LIVE" ? "LIVE · data " + formatAge(dataAge) + " · " + formatDateTime(new Date(state.lastDataChangeAt)) : "Data " + formatAge(dataAge) + " · " + state.sourceState) : "Waiting for verified CallTools data"));
-        const outboundNote = state.route === "queues" ? "LAST KNOWN OUTBOUND · " + (outboundAge !== null ? formatAge(outboundAge) + " old" : "not loaded") : "campaign-reported attempts";
-        const connectedNote = state.route === "queues" ? "LAST KNOWN OUTBOUND" : (stats.outbound > 0 ? ((stats.connected / stats.outbound) * 100).toFixed(2) + "% connect rate" : "connect rate unavailable");
+        const outboundNote = state.route === "queues"
+            ? "LAST KNOWN OUTBOUND · " + (outboundAge !== null ? formatAge(outboundAge) + " old" : "not loaded")
+            : (stats.total < stats.visibleTotal && stats.allOutbound !== stats.outbound
+                ? "Active: " + formatNumber(stats.outbound) + " · All: " + formatNumber(stats.allOutbound)
+                : "Active campaign attempts");
+        const connectedNote = state.route === "queues"
+            ? "LAST KNOWN OUTBOUND"
+            : (stats.total < stats.visibleTotal && stats.allHuman !== stats.connected
+                ? "Active: " + formatNumber(stats.connected) + " · All: " + formatNumber(stats.allHuman)
+                : (stats.outbound > 0 ? ((stats.connected / stats.outbound) * 100).toFixed(2) + "% connect rate" : "connect rate unavailable"));
         updateKpi("campaigns", stats.total, stats.total + " active / " + stats.visibleTotal + " visible");
         updateKpi("waiting", stats.waitingAvailable ? formatNumber(stats.waiting) : "—", stats.waitingAvailable ? "current queue load" : "Not exposed by Campaigns feed");
         updateKpi("onCall", stats.onCallAvailable ? formatNumber(stats.onCall) : "—", stats.onCallAvailable ? "active calls" : "Not exposed by Campaigns feed");
@@ -3486,6 +3576,61 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setText(refs.systemHealth, stats.integrityIssues > 0 ? "CallTools campaign data check required" : state.sourceState === "STALE" ? "CallTools feed stale — recovery required" : state.sourceState === "RECOVERING" ? "CallTools feed recovering" : state.sourceState === "DATA CHECK" ? "CallTools feed requires verification" : state.sourceState === "DELAYED" ? "Feed delayed — watching" : state.sourceState === "LIVE" ? "Live monitoring active" : "Waiting for data");
         setText(refs.recoveryCount, String(state.recoveryCount));
         setText(refs.dataConfidence, stats.integrityIssues > 0 ? "DATA CHECK" : state.sourceState === "LIVE" ? "VERIFIED" : state.sourceState === "DATA CHECK" ? "DATA CHECK" : state.sourceState === "DELAYED" ? "PARTIAL" : state.sourceState === "STALE" ? "STALE" : "WAITING");
+
+        if (refs.footerActiveTotals) {
+            setText(refs.footerActiveTotals, stats.total + " active · " + formatNumber(stats.outbound) + " attempts · " + formatNumber(stats.connected) + " human connects · " + formatNumber(stats.contacts) + " leads");
+        }
+        if (refs.footerVisibleTotals) {
+            setText(refs.footerVisibleTotals, stats.visibleTotal + " total rows · " + formatNumber(stats.allOutbound) + " attempts · " + formatNumber(stats.allHuman) + " human connects · " + formatNumber(stats.allContacts) + " leads");
+        }
+
+        updateActiveCommandSummary(stats.campaigns || state.campaigns);
+    }
+
+    function updateActiveCommandSummary(campaigns) {
+        if (!refs || !refs.activeSummaryRows) return;
+        const active = (campaigns || []).filter(function (c) { return c.__active === true; });
+        if (refs.activeSummaryCount) {
+            setText(refs.activeSummaryCount, active.length + " active of " + (campaigns ? campaigns.length : 0) + " campaigns dialing");
+        }
+        if (refs.activeSummaryBadge) {
+            setText(refs.activeSummaryBadge, active.length ? active.length + " ACTIVE" : "0 ACTIVE");
+            setClass(refs.activeSummaryBadge, "ct-active-summary-badge " + (active.length ? "is-live" : "is-inactive"));
+        }
+        if (!active.length) {
+            refs.activeSummaryRows.innerHTML = '<tr><td colspan="12" class="ct-active-empty">No campaigns currently active or dialing.</td></tr>';
+            return;
+        }
+        const fragment = document.createDocumentFragment();
+        active.forEach(function (c) {
+            const tr = document.createElement("tr");
+            tr.className = "ct-active-row is-" + (c.__health || "good");
+            const runway = estimateCampaignRunway(c);
+            const agentsText = c.__loggedInAvailable ? formatNumber(c.__loggedIn) : "—";
+            const agentsTitle = c.__loggedInAvailable ? c.__loggedIn + " logged in" : "Not exposed in Campaigns feed";
+            const waitNowText = c.waitNow ? safeValue(c.waitNow) + "s" : "0s";
+            const waitTodayText = c.waitToday ? safeValue(c.waitToday) + "s" : "0s";
+            const outboundText = formatNumber(c.__outbound);
+            const humanText = formatNumber(c.__human);
+            const agentConnectText = formatNumber(c.__agentConnect);
+            const contactsText = formatNumber(c.__contacts);
+            const healthLabel = (HEALTH[c.__health] && HEALTH[c.__health].label) || "HEALTHY";
+
+            tr.innerHTML = '<td class="ct-active-name"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
+                '<td><span class="ct-active-status-tag is-live">ACTIVE</span></td>' +
+                '<td title="' + escapeHtml(agentsTitle) + '">' + escapeHtml(agentsText) + '</td>' +
+                '<td class="' + (c.__wait >= 60 ? 'is-critical' : c.__wait >= 30 ? 'is-warning' : '') + '">' + escapeHtml(waitNowText) + '</td>' +
+                '<td>' + escapeHtml(waitTodayText) + '</td>' +
+                '<td>' + escapeHtml(outboundText) + '</td>' +
+                '<td class="is-highlight">' + escapeHtml(humanText) + '</td>' +
+                '<td>' + escapeHtml(agentConnectText) + '</td>' +
+                '<td>' + escapeHtml(contactsText) + '</td>' +
+                '<td class="' + escapeHtml(runway.tone) + '">' + escapeHtml(runway.label) + '</td>' +
+                '<td><span class="ct-health-pill is-' + escapeHtml(c.__health || 'good') + '">' + escapeHtml(healthLabel) + '</span></td>' +
+                '<td><button type="button" class="ct-active-focus-btn" data-campaign-focus="' + escapeHtml(c.__id) + '">Focus</button></td>';
+            fragment.appendChild(tr);
+        });
+        refs.activeSummaryRows.replaceChildren(fragment);
     }
 
     function getOperatingAlignmentState(campaigns) {
@@ -3770,17 +3915,17 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const current = Math.max(0, Number(descriptor.value) || 0);
         if (current <= 0) return { label: "0m", tone: "is-critical", minutes: 0, measured: true };
         const history = state.runwayHistory.get(descriptor.key) || [];
-        if (history.length < 2) return unavailableRunway("Measuring…");
+        if (history.length < 2) return unavailableRunway("Gathering data…");
 
         const now = Date.now();
         const cutoff = now - RUNWAY_WINDOW_MS;
         const samples = history.filter(function (sample) { return sample.at >= cutoff; });
-        if (samples.length < 2) return unavailableRunway("Measuring…");
+        if (samples.length < 2) return unavailableRunway("Gathering data…");
 
         const first = samples[0];
         const last = samples[samples.length - 1];
         const elapsedMs = last.at - first.at;
-        if (elapsedMs < RUNWAY_MIN_OBSERVATION_MS) return unavailableRunway("Measuring…");
+        if (elapsedMs < RUNWAY_MIN_OBSERVATION_MS) return unavailableRunway("Gathering (<30s)");
 
         // Sum only real decreases. If CallTools adds/reloads leads, that
         // increase is a supply event and is not counted as consumption.
@@ -3789,7 +3934,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             const delta = samples[i - 1].value - samples[i].value;
             if (delta > 0) consumed += delta;
         }
-        if (consumed < RUNWAY_MIN_LEAD_DROP) return unavailableRunway("Measuring…");
+        if (consumed < RUNWAY_MIN_LEAD_DROP) return { label: "Stable lead pool", tone: "is-good", minutes: Infinity, measured: false };
 
         const minutesObserved = elapsedMs / 60000;
         const leadsPerMinute = consumed / minutesObserved;
@@ -4234,9 +4379,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             if (c.__waitingAvailable && c.__loggedInAvailable && c.__waiting > 0 && c.__loggedIn === 0) {
                 upsert(c.__id + ":CAPACITY", name, "critical", "NO AGENT CAPACITY", c.__waiting + " waiting with 0 logged-in agents" + (c.__wait ? " and " + c.__wait + "s wait." : ".") + ((alertChangeText(c, "waiting", "Waiting", "") || alertChangeText(c, "waitNow", "Wait", "s")) ? " " + [alertChangeText(c, "waiting", "Waiting", ""), alertChangeText(c, "waitNow", "Wait", "s")].filter(Boolean).join("; ") + "." : ""), "Check agent readiness, queue membership, and campaign assignment.", c.__id);
             } else if (c.__wait >= 60 && (c.__waitingAvailable ? c.__waiting > 0 : true)) {
-                upsert(c.__id + ":WAIT", name, "critical", "QUEUE DELAY", c.__wait + "s wait" + (c.__waitingAvailable && c.__waiting > 0 ? " with " + c.__waiting + " waiting." : ".") + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Review available capacity and the highest-wait queue first.", c.__id);
+                upsert(c.__id + ":WAIT", name, "critical", "QUEUE DELAY", c.__wait + "s wait" + (c.__waitingAvailable && c.__waiting > 0 ? " with " + c.__waiting + " waiting." : ".") + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Review available capacity and the highest-wait queue first.", c.__id, ALERT_LOGIC_VERSION + "|critical|QUEUE_DELAY|tier:60");
             } else if (c.__wait >= 30 && (c.__waitingAvailable ? c.__waiting > 0 : true)) {
-                upsert(c.__id + ":WAIT", name, "warning", "HIGH WAIT", c.__wait + "s wait" + (c.__waitingAvailable && c.__waiting > 0 ? " with " + c.__waiting + " waiting." : ".") + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Watch wait growth and intervene if the queue continues rising.", c.__id);
+                upsert(c.__id + ":WAIT", name, "warning", "HIGH WAIT", c.__wait + "s wait" + (c.__waitingAvailable && c.__waiting > 0 ? " with " + c.__waiting + " waiting." : ".") + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Watch wait growth and intervene if the queue continues rising.", c.__id, ALERT_LOGIC_VERSION + "|warning|HIGH_WAIT|tier:30");
             }
 
             // Queue saturation is a distinct condition from wait time. It catches
@@ -4889,6 +5034,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         stats.averageWait = stats.total ? Math.round(stats.waitTotal / stats.total) : 0;
         stats.utilization = stats.loggedInAvailable ? utilizationPercent(stats.loggedIn, stats.onCall) : 0;
 
+        let allOutbound = 0;
+        let allHuman = 0;
+        let allToAgents = 0;
+        let allContacts = 0;
+        (campaigns || []).forEach(function (c) {
+            allOutbound += (c.__outbound || 0);
+            allHuman += (c.__human || 0);
+            allToAgents += (c.__agentConnect || 0);
+            allContacts += (c.__contacts || 0);
+        });
+        stats.allOutbound = allOutbound;
+        stats.allHuman = allHuman;
+        stats.allToAgents = allToAgents;
+        stats.allContacts = allContacts;
+
         return stats;
     }
 
@@ -5152,12 +5312,19 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     }
 
     function inboundNotAnswered(queue) {
-        if (!queue) return 0;
+        if (!queue) return null;
         // Strictly use native CallTools Not Answered count. Never synthesize from Total - Answered.
-        if (queue._metrics && queue._metrics.callsTodayNotAnswered) {
-            return queue._metrics.callsTodayNotAnswered.value ?? 0;
+        if (queue._metrics && queue._metrics.callsTodayNotAnswered && typeof queue._metrics.callsTodayNotAnswered.value === "number") {
+            return queue._metrics.callsTodayNotAnswered.value;
         }
-        return queueNumber(queue, "callsTodayNotAnswered");
+        if (typeof queue.callsTodayNotAnswered === "number") {
+            return queue.callsTodayNotAnswered;
+        }
+        if (queue.callsTodayNotAnswered !== undefined && queue.callsTodayNotAnswered !== null && String(queue.callsTodayNotAnswered).trim() !== "") {
+            const num = parseFloat(String(queue.callsTodayNotAnswered).replace(/,/g, ""));
+            if (Number.isFinite(num)) return num;
+        }
+        return null;
     }
 
     function updateInboundPanel() {
@@ -5218,10 +5385,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             };
         });
 
+        const anyNotAnswered = rows.some(function (r) { return r.notAnswered !== null; });
         const totals = rows.reduce(function (acc, row) {
             acc.today += row.today;
             acc.answered += row.answered;
-            acc.notAnswered += row.notAnswered;
+            if (row.notAnswered !== null) {
+                acc.notAnswered = (acc.notAnswered ?? 0) + row.notAnswered;
+            }
             acc.waiting += row.waiting;
             acc.onCall += row.onCall;
             acc.callsNow += row.callsNow;
@@ -5231,14 +5401,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 acc.maxWait = Math.max(acc.maxWait, row.maxWait);
             }
             return acc;
-        }, { today: 0, answered: 0, notAnswered: 0, waiting: 0, onCall: 0, callsNow: 0, goals: 0, loggedMemberships: 0, maxWait: 0 });
+        }, { today: 0, answered: 0, notAnswered: anyNotAnswered ? 0 : null, waiting: 0, onCall: 0, callsNow: 0, goals: 0, loggedMemberships: 0, maxWait: 0 });
 
         const waitingQueues = rows.filter(function (r) { return r.waiting > 0; });
         const noCapacityQueues = rows.filter(function (r) { return r.waiting > 0 && r.loggedIn === 0; });
         const saturatedQueues = rows.filter(function (r) { return r.waiting > 0 && r.loggedIn > 0 && r.onCall >= r.loggedIn; });
         const answerRate = totals.today > 0 ? totals.answered / totals.today * 100 : 0;
-        const missRate = totals.today > 0 ? totals.notAnswered / totals.today * 100 : 0;
-        const consistency = totals.today === totals.answered + totals.notAnswered;
+        const missRate = (totals.today > 0 && totals.notAnswered !== null) ? totals.notAnswered / totals.today * 100 : null;
+        const consistency = totals.notAnswered !== null ? (totals.today === totals.answered + totals.notAnswered) : true;
         const statusText = hasLiveQueueFeed
             ? "LIVE · automatic native Queue feed"
             : latestKnown
@@ -5256,7 +5426,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setText(refs.inboundHeroCallsNow, formatNumber(totals.callsNow));
         setText(refs.inboundHeroCallsNowNote, totals.onCall + " agent" + (totals.onCall === 1 ? "" : "s") + " currently on queue calls");
         setText(refs.inboundHeroToday, formatNumber(totals.today));
-        setText(refs.inboundHeroTodayNote, formatNumber(totals.answered) + " answered · " + formatNumber(totals.notAnswered) + " not answered");
+        setText(refs.inboundHeroTodayNote, totals.notAnswered !== null
+            ? formatNumber(totals.answered) + " answered · " + formatNumber(totals.notAnswered) + " not answered"
+            : formatNumber(totals.answered) + " answered · other categories unexposed");
         setText(refs.inboundHeroMaxWait, totals.waiting > 0 ? formatNumber(totals.maxWait) + "s" : "0s");
         setText(refs.inboundHeroMaxWaitNote, totals.waiting > 0 ? "highest wait while callers are waiting" : "no callers waiting");
         if (refs.inboundHeroWaiting) refs.inboundHeroWaiting.className = "ct-inbound-hero-value " + (totals.waiting >= 5 ? "is-critical" : totals.waiting > 0 ? "is-warning" : "is-good");
@@ -5264,8 +5436,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         // Total strip:
         updateInboundKpi("queues", formatNumber(active.length), active.length + " active" + (archived.length ? " · " + archived.length + " archived excluded" : ""));
         updateInboundKpi("answeredToday", formatNumber(totals.answered), totals.today ? answerRate.toFixed(1) + "% of active-queue calls today" : "no calls today");
-        updateInboundKpi("notAnsweredToday", formatNumber(totals.notAnswered), totals.today ? missRate.toFixed(1) + "% of active-queue calls today" : "no calls today");
-        updateInboundKpi("answerRate", totals.today ? answerRate.toFixed(1) + "%" : "—", consistency ? "answered ÷ calls today" : "DATA CHECK");
+        updateInboundKpi("notAnsweredToday", totals.notAnswered !== null ? formatNumber(totals.notAnswered) : "—", totals.notAnswered !== null ? (totals.today ? missRate.toFixed(1) + "% of active-queue calls today" : "no calls today") : "unexposed in queue table");
+        updateInboundKpi("answerRate", totals.today ? answerRate.toFixed(1) + "%" : "—", totals.notAnswered !== null ? (consistency ? "answered ÷ calls today" : "DATA CHECK") : "answered ÷ calls today");
         updateInboundKpi("onQueue", formatNumber(totals.onCall), "agents currently on live queue calls");
         updateInboundKpi("loggedMemberships", formatNumber(totals.loggedMemberships), "sum of queue-level Logged In · not unique agents");
         updateInboundKpi("goalsToday", formatNumber(totals.goals), "queue outcomes · today");
@@ -5324,7 +5496,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         }
 
         if (refs.inboundNote) {
-            const consistencyNote = consistency ? "Native CallTools Queue totals reconcile (Total = Answered + Not Answered)." : "Notice: CallTools native Total does not equal Answered + Not Answered; reporting verified raw counts without synthesis.";
+            const consistencyNote = totals.notAnswered === null
+                ? "Notice: Inbound Not Answered column not exposed in native CallTools Queue table; reporting verified raw counts without synthesis."
+                : (consistency ? "Native CallTools Queue totals reconcile (Total = Answered + Not Answered)." : "Notice: CallTools native Total does not equal Answered + Not Answered; reporting verified raw counts without synthesis.");
             setText(refs.inboundNote, "Source: native CallTools Queues DOM · " + consistencyNote + " Scope: active queues only; archived queues excluded. Calls Today is the sum of active queue rows shown in Queue Detail. Logged In is queue membership, not a unique-agent count." );
         }
     }
@@ -5372,7 +5546,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const waitDelta = nowSample.maxWait - baseline.maxWait;
         const waitingDelta = nowSample.waiting - baseline.waiting;
         const demandPerMin = Math.max(0, nowSample.totalToday - baseline.totalToday) / mins;
-        const missedPerMin = Math.max(0, nowSample.notAnswered - baseline.notAnswered) / mins;
+        const missedPerMin = (nowSample.notAnswered !== null && baseline.notAnswered !== null)
+            ? Math.max(0, nowSample.notAnswered - baseline.notAnswered) / mins
+            : null;
         const answeredPerMin = Math.max(0, nowSample.answeredToday - baseline.answeredToday) / mins;
         return {
             waitDelta: waitDelta, waitingDelta: waitingDelta, demandPerMin: demandPerMin, missedPerMin: missedPerMin, answeredPerMin: answeredPerMin,
@@ -5383,11 +5559,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
     function recordInboundHistory(queues, timestamp) {
         const active = (queues || []).filter(function(q){ return !isArchivedQueue(q); });
+        var hasAnyNotAnswered = false;
+        var notAnsweredSum = 0;
+        active.forEach(function(q) {
+            var v = inboundNotAnswered(q);
+            if (v !== null) {
+                hasAnyNotAnswered = true;
+                notAnsweredSum += v;
+            }
+        });
         const sample = {
             at: Number(timestamp) || Date.now(),
             totalToday: active.reduce(function(sum,q){ return sum + queueNumber(q,"callsTodayTotal"); },0),
             answeredToday: active.reduce(function(sum,q){ return sum + queueNumber(q,"callsTodayAnswered"); },0),
-            notAnswered: active.reduce(function(sum,q){ return sum + inboundNotAnswered(q); },0),
+            notAnswered: hasAnyNotAnswered ? notAnsweredSum : null,
             waiting: active.reduce(function(sum,q){ return sum + queueNumber(q,"waiting"); },0),
             maxWait: active.reduce(function(max,q){ return Math.max(max, queueNumber(q,"waitMax")); },0)
         };
@@ -5737,10 +5922,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
     function normalizeLayout(layout) {
         const source = Object.assign(defaultLayout(), layout || {});
-        const maxWidth = Math.max(360, window.innerWidth - 10);
-        const maxHeight = Math.max(260, window.innerHeight - 10);
-        const width = clamp(numberValue(source.width) || DEFAULT_LAYOUT.width, 360, maxWidth);
-        const height = clamp(numberValue(source.height) || DEFAULT_LAYOUT.height, 260, maxHeight);
+        const maxWidth = Math.max(760, window.innerWidth - 10);
+        const maxHeight = Math.max(480, window.innerHeight - 10);
+        const width = clamp(numberValue(source.width) || DEFAULT_LAYOUT.width, 760, maxWidth);
+        const height = clamp(numberValue(source.height) || DEFAULT_LAYOUT.height, 480, maxHeight);
         // IMPORTANT: the saved left/top coordinates must be bounded using the
         // saved panel dimensions. The old code bounded left against viewport-80,
         // which allowed a previously valid position to move almost entirely

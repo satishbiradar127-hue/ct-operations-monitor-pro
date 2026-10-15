@@ -16,8 +16,8 @@
         "https://east-2.calltools.io/manager/queues*"
       ],
       "js": [
-        "parser.js",
         "helpers.js",
+        "parser.js",
         "dashboard.js",
         "content.js"
       ],
