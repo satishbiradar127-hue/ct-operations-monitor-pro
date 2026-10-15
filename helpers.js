@@ -32,19 +32,40 @@ CT.escape = function (value) {
 };
 
 /**
- * Format numbers.
+ * Format numbers without coercing missing values to zero.
  */
-CT.number = function (value) {
-
-    if (!value) return "0";
+CT.number = function (value, fallback) {
+    const emptyFallback = fallback !== undefined ? fallback : "—";
+    if (value === null || value === undefined || String(value).trim() === "") {
+        return emptyFallback;
+    }
 
     const n = parseFloat(
         String(value).replace(/,/g, "")
     );
 
-    if (isNaN(n)) return value;
+    if (isNaN(n)) return String(value).trim() || emptyFallback;
 
     return n.toLocaleString();
+};
+
+/**
+ * Categorize a metric into explicit validity states:
+ * VALID_ZERO, VALID_NONZERO, MISSING, or MALFORMED.
+ */
+CT.parseMetric = function (value) {
+    if (value === null || value === undefined || String(value).trim() === "") {
+        return { raw: value, value: null, state: "MISSING", isValid: false };
+    }
+    const clean = String(value).replace(/,/g, "").trim();
+    const n = parseFloat(clean);
+    if (isNaN(n)) {
+        return { raw: value, value: null, state: "MALFORMED", isValid: false };
+    }
+    if (n === 0) {
+        return { raw: value, value: 0, state: "VALID_ZERO", isValid: true };
+    }
+    return { raw: value, value: n, state: "VALID_NONZERO", isValid: true };
 };
 
 /**

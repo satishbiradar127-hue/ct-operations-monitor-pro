@@ -1,9 +1,9 @@
-console.log("CT Operations Monitor — Production live feed controller v11.1.46");
+console.log("CT Operations Monitor — Production live feed controller v11.1.53");
 
 (function () {
     "use strict";
 
-    const POLL_MS = 250;
+    const POLL_MS = 1000;
     const NATIVE_REFRESH_MS = 5000;
     const REFRESH_VERIFY_TIMEOUT_MS = 7000;
     const REFRESH_VERIFY_STEP_MS = 350;
@@ -12,10 +12,13 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.46"
     const INBOUND_STORAGE_DATA_KEY = "ct-operations-inbound-data-v2";
     const INBOUND_STORAGE_STATUS_KEY = "ct-operations-inbound-status-v2";
     const INBOUND_COORDINATION_MS = 5000;
-    const INBOUND_HEARTBEAT_MS = 1000;
+    const INBOUND_HEARTBEAT_MS = 2500;
     const INBOUND_MONITOR_PARAM = "ct_inbound_monitor";
     // No-data-change is not equivalent to a stale feed. The native table can
     // remain live while metrics are unchanged, so feed health is heartbeat based.
+
+    let lastPersistedFeedStatusSig = "";
+    let lastPersistedFeedStatusAt = 0;
 
     function currentRoute() {
         const path = window.location.pathname.replace(/\/+$/, "");
@@ -121,10 +124,22 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.46"
     }
 
     function persistInboundFeedStatus(status, queueCount, timestamp) {
+        const now = timestamp || Date.now();
+        const normalizedStatus = String(status || "WAITING");
+        const count = Number(queueCount) || 0;
+        const sig = normalizedStatus + "|" + count + "|" + currentRoute();
+
+        // Avoid hammering storage when status has not changed unless 5 seconds have elapsed
+        if (sig === lastPersistedFeedStatusSig && now - lastPersistedFeedStatusAt < 5000) {
+            return;
+        }
+        lastPersistedFeedStatusSig = sig;
+        lastPersistedFeedStatusAt = now;
+
         const payload = {
-            status: String(status || "WAITING"),
-            heartbeatAt: timestamp || Date.now(),
-            rowCount: Number(queueCount) || 0,
+            status: normalizedStatus,
+            heartbeatAt: now,
+            rowCount: count,
             backgroundMonitor: isBackgroundInboundMonitor(),
             route: currentRoute()
         };

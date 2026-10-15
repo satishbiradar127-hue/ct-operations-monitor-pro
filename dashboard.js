@@ -2323,6 +2323,27 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-inbound-empty { padding:12px; border:1px dashed var(--ct-border); border-radius:8px; display:flex; flex-direction:column; gap:4px; }
             #${DASHBOARD_ID} .ct-inbound-empty strong { font-size:10px; }
             #${DASHBOARD_ID} .ct-inbound-empty span { font-size:9px; color:var(--ct-muted); line-height:1.35; }
+            #${DASHBOARD_ID} .ct-inbound-findings { margin-top:8px; padding:8px 10px; border:1px solid var(--ct-border); border-radius:8px; background:var(--ct-surface-2); }
+            #${DASHBOARD_ID} .ct-inbound-findings.is-critical { border-color:#e3a6a0; background:linear-gradient(135deg,var(--ct-surface-2),rgba(220,38,38,0.06)); }
+            #${DASHBOARD_ID} .ct-inbound-findings.is-warning { border-color:#e9c57d; background:linear-gradient(135deg,var(--ct-surface-2),rgba(217,119,6,0.06)); }
+            #${DASHBOARD_ID} .ct-inbound-findings.is-good { border-color:#a8dfc2; background:linear-gradient(135deg,var(--ct-surface-2),rgba(22,163,74,0.06)); }
+            #${DASHBOARD_ID} .ct-inbound-findings-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+            #${DASHBOARD_ID} .ct-inbound-findings-head strong { font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--ct-muted); }
+            #${DASHBOARD_ID} .ct-inbound-findings-badge { font-size:8px; font-weight:800; padding:2px 6px; border-radius:999px; }
+            #${DASHBOARD_ID} .ct-inbound-findings-badge.is-critical { background:var(--ct-red); color:#fff; }
+            #${DASHBOARD_ID} .ct-inbound-findings-badge.is-warning { background:var(--ct-amber); color:#fff; }
+            #${DASHBOARD_ID} .ct-inbound-findings-badge.is-good { background:var(--ct-green); color:#fff; }
+            #${DASHBOARD_ID} .ct-inbound-findings-list { display:flex; flex-wrap:wrap; gap:5px; }
+            #${DASHBOARD_ID} .ct-finding-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 7px; border-radius:6px; font-size:9px; background:var(--ct-surface); border:1px solid var(--ct-border); }
+            #${DASHBOARD_ID} .ct-finding-pill.is-critical { border-color:#e3a6a0; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-warning { border-color:#e9c57d; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-good { border-color:#a8dfc2; }
+            #${DASHBOARD_ID} .ct-finding-pill b { font-size:8px; text-transform:uppercase; letter-spacing:.06em; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-critical b { color:var(--ct-red); }
+            #${DASHBOARD_ID} .ct-finding-pill.is-warning b { color:var(--ct-amber); }
+            #${DASHBOARD_ID} .ct-finding-pill.is-good b { color:var(--ct-green); }
+            #${DASHBOARD_ID} .ct-focus-flash { animation: ctRowFlash 1.8s ease-in-out; }
+            @keyframes ctRowFlash { 0%, 100% { background:inherit; } 20%, 60% { background:rgba(37,99,235,0.25); outline:2px solid #2563eb; } }
 
             @media (max-width:1180px) {
                 #${DASHBOARD_ID} .ct-focus-grid { grid-template-columns:1fr; }
@@ -2919,13 +2940,31 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 requestPageRefresh("Action Center refresh requested");
                 showActionNotice("Live data refresh requested.");
             } else if (action.dataset.alertAction === "inbound-focus") {
-                const inboundPanel = root.querySelector('.ct-inbound-panel');
-                if (inboundPanel && typeof inboundPanel.scrollIntoView === "function") {
-                    inboundPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
-                    inboundPanel.classList.add("ct-inbound-attention-pulse");
-                    window.setTimeout(function(){ inboundPanel.classList.remove("ct-inbound-attention-pulse"); }, 1400);
+                const targetQueueName = (alertItem.name || alertItem.campaignId || "").trim();
+                let targetRow = null;
+                if (refs.inboundTable) {
+                    const rows = Array.from(refs.inboundTable.querySelectorAll('.ct-inbound-row'));
+                    targetRow = rows.find(function(r) {
+                        const rowName = (r.getAttribute('data-queue-name') || '').trim().toLowerCase();
+                        const rowId = (r.getAttribute('data-queue-id') || '').trim().toLowerCase();
+                        const target = targetQueueName.toLowerCase();
+                        return (rowName && rowName === target) || (rowId && rowId === target) || (rowName && target.includes(rowName));
+                    });
                 }
-                showActionNotice("Inbound queue condition is highlighted in the live command view.");
+                if (targetRow && typeof targetRow.scrollIntoView === "function") {
+                    targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
+                    targetRow.classList.add("ct-focus-flash");
+                    window.setTimeout(function(){ targetRow.classList.remove("ct-focus-flash"); }, 1800);
+                    showActionNotice('Focused on queue "' + targetQueueName + '" in Queue Detail.');
+                } else {
+                    const inboundPanel = root.querySelector('.ct-inbound-panel');
+                    if (inboundPanel && typeof inboundPanel.scrollIntoView === "function") {
+                        inboundPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                        inboundPanel.classList.add("ct-inbound-attention-pulse");
+                        window.setTimeout(function(){ inboundPanel.classList.remove("ct-inbound-attention-pulse"); }, 1400);
+                    }
+                    showActionNotice("Inbound queue condition is highlighted in the live command view.");
+                }
             }
         });
         refs.reset.addEventListener("click", function () {
@@ -3999,24 +4038,32 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             const loggedIn = queueNumber(q, "loggedIn");
             const maxWait = Math.max(queueNumber(q, "waitMax"), queueNumber(q, "waitAverage"));
             if (waiting > 0 && loggedIn === 0) {
-                upsert("INBOUND:" + name + ":CAPACITY", name, "critical", waiting + " caller" + (waiting === 1 ? " is" : "s are") + " waiting with 0 logged-in agents in this queue.", "Check queue membership and agent readiness immediately.", name, "CAPACITY|waiting:" + waiting + "|loggedIn:0");
+                const waitTier = waiting >= 5 ? "5+" : String(waiting);
+                upsert("INBOUND:" + name + ":CAPACITY", name, "critical", waiting + " caller" + (waiting === 1 ? " is" : "s are") + " waiting with 0 logged-in agents in this queue.", "Check queue membership and agent readiness immediately.", name, "CAPACITY|tier:" + waitTier);
             } else if (waiting > 0 && maxWait >= 60) {
-                upsert("INBOUND:" + name + ":WAIT", name, "critical", maxWait + "s maximum wait with " + waiting + " caller" + (waiting === 1 ? " waiting." : "s waiting."), "Review inbound capacity and the highest-wait queue first.", name, "WAIT|max:" + maxWait + "|waiting:" + waiting);
+                const waitBucket = Math.floor(waiting / 3);
+                upsert("INBOUND:" + name + ":WAIT", name, "critical", maxWait + "s maximum wait with " + waiting + " caller" + (waiting === 1 ? " waiting." : "s waiting."), "Review inbound capacity and the highest-wait queue first.", name, "WAIT|tier:60|bucket:" + waitBucket);
             } else if (waiting > 0 && maxWait >= 30) {
-                upsert("INBOUND:" + name + ":WAIT", name, "warning", maxWait + "s maximum wait with " + waiting + " caller" + (waiting === 1 ? " waiting." : "s waiting."), "Watch inbound wait growth and intervene if pressure continues.", name, "WAIT|max:" + maxWait + "|waiting:" + waiting);
+                const waitBucket = Math.floor(waiting / 3);
+                upsert("INBOUND:" + name + ":WAIT", name, "warning", maxWait + "s maximum wait with " + waiting + " caller" + (waiting === 1 ? " waiting." : "s waiting."), "Watch inbound wait growth and intervene if pressure continues.", name, "WAIT|tier:30|bucket:" + waitBucket);
             }
             if (waiting > 0 && loggedIn > 0 && queueNumber(q,"onQueueCalls") >= loggedIn) {
-                upsert("INBOUND:" + name + ":SATURATION", name, "warning", waiting + " waiting while all " + loggedIn + " logged-in agents are on queue calls.", "Watch the queue closely and add capacity if wait continues rising.", name, "SATURATION|waiting:" + waiting + "|loggedIn:" + loggedIn + "|onCall:" + queueNumber(q,"onQueueCalls"));
+                upsert("INBOUND:" + name + ":SATURATION", name, "warning", waiting + " waiting while all " + loggedIn + " logged-in agents are on queue calls.", "Watch the queue closely and add capacity if wait continues rising.", name, "SATURATION|loggedIn:" + loggedIn);
             }
         });
         const trend = inboundTrendMetrics(queues);
         if (trend.waitDelta !== null && trend.waitDelta >= 10 && (queues || []).some(function(q){ return !isArchivedQueue(q) && queueNumber(q,"waiting") > 0; })) {
-            upsert("INBOUND:GLOBAL:RISING_WAIT", "Inbound Operations", "warning", "Maximum queue wait rose " + signedValue(trend.waitDelta) + "s over the live trend window while callers are waiting.", "Review the highest-wait queue and available capacity now.", "Inbound Operations", "RISING_WAIT|delta:" + trend.waitDelta + "|waiting:" + ((queues || []).reduce(function(sum,q){ return sum + (!isArchivedQueue(q) ? queueNumber(q,"waiting") : 0); },0)));
+            upsert("INBOUND:GLOBAL:RISING_WAIT", "Inbound Operations", "warning", "Maximum queue wait rose " + signedValue(trend.waitDelta) + "s over the live trend window while callers are waiting.", "Review the highest-wait queue and available capacity now.", "Inbound Operations", "RISING_WAIT|tier:10+");
         }
         state.recentAlerts.forEach(function(a) {
             if (a && String(a.conditionKey || "").startsWith("INBOUND:") && !activeKeys.has(a.conditionKey)) {
                 state.dismissedConditions.delete(a.conditionKey);
-                if (a.id && String(a.id).indexOf("operational:") === 0) a.__inactive = true;
+                if (a.id && String(a.id).indexOf("operational:") === 0) {
+                    a.__inactive = true;
+                    state.recoveryCount++;
+                    state.lastRecoveryAt = Date.now();
+                    state.lastRecoveryReason = a.name + " condition resolved.";
+                }
             }
         });
         state.recentAlerts = state.recentAlerts.filter(function(a){ return !a.__inactive; }).slice(0, MAX_ALERTS);
@@ -5091,15 +5138,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     }
 
     function inboundNotAnswered(queue) {
-        const total = queueNumber(queue, "callsTodayTotal");
-        const answered = queueNumber(queue, "callsTodayAnswered");
-        const raw = queueNumber(queue, "callsTodayNotAnswered");
-        // CallTools exposes Calls Today as Total / Answered / Not Answered.
-        // If the rendered Not Answered cell is blank/zero while Total exceeds
-        // Answered, use the exact remainder so the dashboard cannot report a
-        // mathematically impossible 0% miss rate. Native non-zero values win.
-        if (raw > 0 || total <= answered) return raw;
-        return Math.max(0, total - answered);
+        if (!queue) return 0;
+        // Strictly use native CallTools Not Answered count. Never synthesize from Total - Answered.
+        if (queue._metrics && queue._metrics.callsTodayNotAnswered) {
+            return queue._metrics.callsTodayNotAnswered.value ?? 0;
+        }
+        return queueNumber(queue, "callsTodayNotAnswered");
     }
 
     function updateInboundPanel() {
@@ -5129,22 +5173,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             setText(refs.inboundHeroMaxWaitNote, "No verified wait signal");
             Object.keys(refs.inboundKpis).forEach(function (k) { updateInboundKpi(k, "—", connecting ? "Automatic Queue feed starting" : "Awaiting verified Queue data"); });
             if (refs.inboundStaffing) refs.inboundStaffing.innerHTML = '';
-            if (refs.inboundSignals) refs.inboundSignals.innerHTML = '';
+            if (refs.inboundSignals) { refs.inboundSignals.innerHTML = ''; refs.inboundSignals.style.display = 'none'; }
             if (refs.inboundFocus) refs.inboundFocus.innerHTML = '<div class="ct-inbound-empty"><strong>' + (blocked ? (state.queueFeedStatus === "AUTH_REQUIRED" ? 'INBOUND FEED AUTH REQUIRED' : 'INBOUND FEED LOAD ERROR') : (connecting ? 'INBOUND AUTO-FEED STARTING' : 'INBOUND FEED NOT LOADED')) + '</strong><span>' + (blocked ? (state.queueFeedStatus === "AUTH_REQUIRED" ? 'The native Queue context is showing the CallTools login screen, so stale queue numbers are intentionally hidden.' : 'The native Queue context could not load. No stale queue numbers are presented as live.') : (connecting ? 'The monitor is loading the native CallTools Queues DOM. No extra tab or window is required.' : 'No verified Queue data is currently available.')) + '</span></div>';
             if (refs.inboundTable) refs.inboundTable.innerHTML = '';
             return;
         }
 
-        // Build one immutable operational snapshot. Every KPI, primary queue card,
-        // alert signal, and table row below is derived from this exact snapshot.
-        // This prevents the dashboard from ever showing totals from one queue
-        // snapshot while the table is displaying another.
+        // Build one immutable operational snapshot. Every KPI, finding,
+        // and table row below is derived from this exact snapshot.
         const rows = active.map(function (q, index) {
             const today = queueNumber(q, "callsTodayTotal");
             const answered = queueNumber(q, "callsTodayAnswered");
             const notAnswered = inboundNotAnswered(q);
             return {
                 q: q,
+                id: q.id || q.name || "q-" + index,
                 index: index,
                 name: String(q.name || "Unnamed Queue").trim() || "Unnamed Queue",
                 loggedIn: queueNumber(q, "loggedIn"),
@@ -5170,12 +5213,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             acc.callsNow += row.callsNow;
             acc.goals += row.goals;
             acc.loggedMemberships += row.loggedIn;
-            acc.maxWait = Math.max(acc.maxWait, row.maxWait);
+            if (row.waiting > 0) {
+                acc.maxWait = Math.max(acc.maxWait, row.maxWait);
+            }
             return acc;
         }, { today: 0, answered: 0, notAnswered: 0, waiting: 0, onCall: 0, callsNow: 0, goals: 0, loggedMemberships: 0, maxWait: 0 });
 
         const waitingQueues = rows.filter(function (r) { return r.waiting > 0; });
-        const staffedQueues = rows.filter(function (r) { return r.loggedIn > 0; });
         const noCapacityQueues = rows.filter(function (r) { return r.waiting > 0 && r.loggedIn === 0; });
         const saturatedQueues = rows.filter(function (r) { return r.waiting > 0 && r.loggedIn > 0 && r.onCall >= r.loggedIn; });
         const answerRate = totals.today > 0 ? totals.answered / totals.today * 100 : 0;
@@ -5190,9 +5234,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setText(refs.inboundLive, hasLiveQueueFeed ? "LIVE" : "LAST KNOWN");
         setClass(refs.inboundLive, "ct-inbound-live " + (hasLiveQueueFeed ? "is-live" : "is-warning"));
 
-        // The hero is deliberately action-first: the first number is callers
-        // waiting right now, followed by live calls, today's queue-call volume,
-        // and the highest current wait.
+        // Compact hero metrics:
         setText(refs.inboundHeroWaiting, formatNumber(totals.waiting));
         setText(refs.inboundHeroWaitingNote, totals.waiting > 0
             ? waitingQueues.length + " active queue" + (waitingQueues.length === 1 ? "" : "s") + " holding callers"
@@ -5201,67 +5243,52 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setText(refs.inboundHeroCallsNowNote, totals.onCall + " agent" + (totals.onCall === 1 ? "" : "s") + " currently on queue calls");
         setText(refs.inboundHeroToday, formatNumber(totals.today));
         setText(refs.inboundHeroTodayNote, formatNumber(totals.answered) + " answered · " + formatNumber(totals.notAnswered) + " not answered");
-        setText(refs.inboundHeroMaxWait, formatNumber(totals.maxWait) + "s");
-        setText(refs.inboundHeroMaxWaitNote, totals.waiting > 0 ? "highest wait while callers are waiting" : "no active callers waiting");
+        setText(refs.inboundHeroMaxWait, totals.waiting > 0 ? formatNumber(totals.maxWait) + "s" : "0s");
+        setText(refs.inboundHeroMaxWaitNote, totals.waiting > 0 ? "highest wait while callers are waiting" : "no callers waiting");
         if (refs.inboundHeroWaiting) refs.inboundHeroWaiting.className = "ct-inbound-hero-value " + (totals.waiting >= 5 ? "is-critical" : totals.waiting > 0 ? "is-warning" : "is-good");
 
+        // Total strip:
         updateInboundKpi("queues", formatNumber(active.length), active.length + " active" + (archived.length ? " · " + archived.length + " archived excluded" : ""));
         updateInboundKpi("answeredToday", formatNumber(totals.answered), totals.today ? answerRate.toFixed(1) + "% of active-queue calls today" : "no calls today");
         updateInboundKpi("notAnsweredToday", formatNumber(totals.notAnswered), totals.today ? missRate.toFixed(1) + "% of active-queue calls today" : "no calls today");
         updateInboundKpi("answerRate", totals.today ? answerRate.toFixed(1) + "%" : "—", consistency ? "answered ÷ calls today" : "DATA CHECK");
         updateInboundKpi("onQueue", formatNumber(totals.onCall), "agents currently on live queue calls");
         updateInboundKpi("loggedMemberships", formatNumber(totals.loggedMemberships), "sum of queue-level Logged In · not unique agents");
-        updateInboundKpi("queues", formatNumber(active.length), active.length + " active queue" + (active.length === 1 ? "" : "s") + (archived.length ? " · " + archived.length + " archived excluded" : ""));
         updateInboundKpi("goalsToday", formatNumber(totals.goals), "queue outcomes · today");
 
         if (refs.inboundStaffing) refs.inboundStaffing.innerHTML = '';
 
+        // Priority Inbound Operational Findings (compact, high-density, action-oriented)
         if (refs.inboundFocus) {
-            const waitingQueueCount = waitingQueues.length;
-            const noCapacityCount = noCapacityQueues.length;
-            const demandTone = totals.waiting > 0 ? (totals.maxWait >= 60 ? 'is-critical' : totals.maxWait >= 30 ? 'is-warning' : 'is-active') : 'is-good';
-            const waitingRows = waitingQueues.slice().sort(function(a,b){ return b.waiting - a.waiting || b.maxWait - a.maxWait || a.name.localeCompare(b.name); }).slice(0, 4);
-            const extraWaiting = Math.max(0, waitingQueues.length - waitingRows.length);
-            const boardTitle = totals.waiting > 0 ? formatNumber(totals.waiting) + ' CALLER' + (totals.waiting === 1 ? '' : 'S') + ' WAITING' : 'NO CALLERS WAITING';
-            const boardIntro = totals.waiting > 0
-                ? waitingQueueCount + ' active queue' + (waitingQueueCount === 1 ? '' : 's') + ' currently holding callers · inspect queue capacity below'
-                : 'All active queues currently have zero callers waiting';
-            const waitingDetail = waitingRows.length ? waitingRows.map(function(r){
-                const notOnCall = Math.max(0, r.loggedIn - r.onCall);
-                const capacityText = r.loggedIn === 0 ? 'NO CAPACITY' : notOnCall > 0 ? notOnCall + ' logged in not on a live queue call' : 'all logged-in members on live calls';
-                const tone = r.loggedIn === 0 ? 'is-critical' : r.maxWait >= 60 ? 'is-critical' : r.maxWait >= 30 ? 'is-warning' : 'is-active';
-                return '<div class="ct-inbound-wait-row ' + tone + '">' +
-                    '<div class="ct-inbound-wait-name"><b>' + escapeHtml(r.name) + '</b><small>' + formatNumber(r.waiting) + ' waiting · max wait ' + formatNumber(r.maxWait) + 's</small></div>' +
-                    '<div><b>' + formatNumber(r.loggedIn) + '</b><small>logged in</small></div>' +
-                    '<div><b>' + formatNumber(r.onCall) + '</b><small>on live calls</small></div>' +
-                    '<div><b>' + formatNumber(notOnCall) + '</b><small>not on live call</small></div>' +
-                    '<div class="ct-inbound-wait-cap"><b>' + escapeHtml(capacityText) + '</b><small>Queue table does not expose ready/paused state, so not-on-call is not guaranteed available.</small></div>' +
-                '</div>';
-            }).join('') : '<div class="ct-inbound-wait-empty"><strong>QUEUE LOAD CLEAR</strong><span>No active queue has a caller waiting right now. Live calls: ' + formatNumber(totals.callsNow) + ' · Agents on queue calls: ' + formatNumber(totals.onCall) + '.</span></div>';
-            refs.inboundFocus.className = 'ct-inbound-command-board ' + demandTone;
+            const findings = [];
+            noCapacityQueues.forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-critical"><b>NO CAPACITY</b><span>' + escapeHtml(r.name) + ': ' + formatNumber(r.waiting) + ' waiting · 0 logged in</span></div>');
+            });
+            rows.filter(function(r){ return r.waiting > 0 && r.maxWait >= 60; }).forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-critical"><b>CRITICAL WAIT</b><span>' + escapeHtml(r.name) + ': ' + formatNumber(r.maxWait) + 's wait · ' + formatNumber(r.waiting) + ' waiting</span></div>');
+            });
+            rows.filter(function(r){ return r.waiting > 0 && r.maxWait >= 30 && r.maxWait < 60; }).forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-warning"><b>ELEVATED WAIT</b><span>' + escapeHtml(r.name) + ': ' + formatNumber(r.maxWait) + 's wait · ' + formatNumber(r.waiting) + ' waiting</span></div>');
+            });
+            saturatedQueues.forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-warning"><b>QUEUE SATURATED</b><span>' + escapeHtml(r.name) + ': all ' + formatNumber(r.loggedIn) + ' agents on calls · ' + formatNumber(r.waiting) + ' waiting</span></div>');
+            });
+            const demandTone = totals.waiting > 0 ? (totals.maxWait >= 60 || noCapacityQueues.length > 0 ? 'is-critical' : 'is-warning') : 'is-good';
+            const badgeLabel = totals.waiting > 0 ? formatNumber(totals.waiting) + ' WAITING' : 'COVERED';
+            const findingsHtml = findings.length ? findings.join('') : '<div class="ct-finding-pill is-good"><b>NORMAL OPERATIONS</b><span>All active queues covered · No callers waiting</span></div>';
+
+            refs.inboundFocus.className = 'ct-inbound-findings ' + demandTone;
             refs.inboundFocus.innerHTML =
-                '<div class="ct-inbound-command-head"><div><span>LIVE INBOUND COMMAND</span><strong>' + boardTitle + '</strong><small>' + boardIntro + '</small></div>' +
-                '<div class="ct-inbound-command-summary"><div><b>LIVE CALLS</b><strong>' + formatNumber(totals.callsNow) + '</strong><small>Calls (Now) total</small></div>' +
-                '<div><b>AGENTS ON CALLS</b><strong>' + formatNumber(totals.onCall) + '</strong><small>On Queue Calls</small></div>' +
-                '<div><b>MAX WAIT</b><strong>' + formatNumber(totals.maxWait) + 's</strong><small>longest current wait</small></div>' +
-                '<div><b>NO CAPACITY</b><strong>' + formatNumber(noCapacityCount) + '</strong><small>waiting queues with 0 logged in</small></div></div></div>' +
-                '<div class="ct-inbound-wait-title"><b>' + (totals.waiting > 0 ? 'WAITING QUEUES · CAPACITY DETAIL' : 'LIVE CAPACITY STATUS') + '</b><span>' + (totals.waiting > 0 ? 'Shows exactly where callers are waiting and what the native Queue feed says about staffing.' : 'No caller is currently waiting; live queue staffing remains visible.') + '</span></div>' +
-                '<div class="ct-inbound-wait-list">' + waitingDetail + '</div>' +
-                (extraWaiting ? '<div class="ct-inbound-wait-more">+' + extraWaiting + ' more waiting queue' + (extraWaiting === 1 ? '' : 's') + ' shown in Queue Detail below.</div>' : '') +
-                '<div class="ct-inbound-command-foot">' + (totals.waiting > 0 ? '<b>Operator reading:</b> Waiting = callers currently held in active queues. Logged In = queue membership. On Queue Calls = agents currently handling queue calls. "Not on live call" is a workload indicator only; CallTools Queue feed does not expose ready/paused status here.' : '<b>Operator reading:</b> No active queue is holding callers. Monitor live calls and max wait for immediate pressure.') + '</div>';
+                '<div class="ct-inbound-findings-head">' +
+                '<strong>INBOUND OPERATIONAL FINDINGS</strong>' +
+                '<span class="ct-inbound-findings-badge ' + demandTone + '">' + badgeLabel + '</span>' +
+                '</div>' +
+                '<div class="ct-inbound-findings-list">' + findingsHtml + '</div>';
         }
 
-        const trend = inboundTrendMetrics(active);
-        const risk = inboundRiskLabel(totals.waiting, noCapacityQueues.length, saturatedQueues.length, totals.maxWait);
         if (refs.inboundSignals) {
-            refs.inboundSignals.innerHTML = [
-                inboundSignal("CURRENT QUEUE LOAD", totals.waiting + " waiting", waitingQueues.length ? waitingQueues.length + " queue" + (waitingQueues.length === 1 ? "" : "s") + " currently holding callers" : "No queue is holding callers", totals.waiting > 0 ? (totals.maxWait >= 60 ? "critical" : "warning") : "good"),
-                inboundSignal("CAPACITY", noCapacityQueues.length ? noCapacityQueues.length + " NO CAPACITY" : "COVERED", noCapacityQueues.length ? "critical" : "good", noCapacityQueues.length ? "critical" : "good"),
-                inboundSignal("MISSED TODAY", formatNumber(totals.notAnswered), totals.today ? missRate.toFixed(1) + "% of queue-call total" : "No calls today", missRate >= 5 ? "warning" : "good"),
-                inboundSignal("SERVICE RISK", risk, inboundRiskNote(totals.waiting, noCapacityQueues.length, saturatedQueues.length, totals.maxWait, trend), risk === "CRITICAL" ? "critical" : risk === "WATCH" ? "warning" : "good"),
-                inboundSignal("WAIT TREND", trend.waitDelta === null ? "WARMING" : signedValue(trend.waitDelta) + "s", trend.waitDelta === null ? "Need live trend samples" : "change over trend window", trend.waitTone),
-                inboundSignal("WAITING TREND", trend.waitingDelta === null ? "WARMING" : signedValue(trend.waitingDelta), trend.waitingDelta === null ? "Need live trend samples" : "caller-load change", trend.waitingTone)
-            ].join('');
+            refs.inboundSignals.innerHTML = '';
+            refs.inboundSignals.style.display = 'none';
         }
 
         if (refs.inboundTable) {
@@ -5269,7 +5296,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 return b.waiting - a.waiting || b.maxWait - a.maxWait || b.onCall - a.onCall || b.today - a.today || a.name.localeCompare(b.name);
             });
             const archivedRows = archived.map(function (q, index) {
-                return { q:q, index:index, name:String(q.name || "Unnamed Queue").trim() || "Unnamed Queue", loggedIn:queueNumber(q,"loggedIn"), today:queueNumber(q,"callsTodayTotal"), answered:queueNumber(q,"callsTodayAnswered"), notAnswered:inboundNotAnswered(q), waiting:queueNumber(q,"waiting"), onCall:queueNumber(q,"onQueueCalls"), maxWait:queueNumber(q,"waitMax"), goals:queueNumber(q,"goals"), archived:true };
+                return { q:q, id: queueId(q, index), index:index, name:String(q.name || "Unnamed Queue").trim() || "Unnamed Queue", loggedIn:queueNumber(q,"loggedIn"), today:queueNumber(q,"callsTodayTotal"), answered:queueNumber(q,"callsTodayAnswered"), notAnswered:inboundNotAnswered(q), waiting:queueNumber(q,"waiting"), onCall:queueNumber(q,"onQueueCalls"), maxWait:queueNumber(q,"waitMax"), goals:queueNumber(q,"goals"), archived:true };
             });
             refs.inboundTable.innerHTML = sorted.concat(archivedRows).map(function (row) {
                 const archivedRow = Boolean(row.archived);
@@ -5278,13 +5305,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 const stateLabel = archivedRow ? "ARCHIVED" : qWaiting > 0 && qLoggedIn === 0 ? "NO CAPACITY" : qWait >= 60 && qWaiting > 0 ? "CRITICAL WAIT" : qWait >= 30 && qWaiting > 0 ? "HIGH WAIT" : qWaiting > 0 ? "CALLERS WAITING" : "READY";
                 const stateClass = archivedRow ? "is-neutral" : /CRITICAL|NO CAPACITY/.test(stateLabel) ? "is-critical" : /HIGH|WAITING/.test(stateLabel) ? "is-warning" : "is-good";
                 const loginNote = archivedRow ? "excluded from active totals" : qLoggedIn + " queue members logged in · " + qRate + " answer rate";
-                return '<div class="ct-inbound-row ' + stateClass + '"><span class="ct-inbound-name"><b>' + escapeHtml(row.name) + '</b><small>' + loginNote + '</small></span><span>' + formatNumber(qLoggedIn) + '</span><span>' + formatNumber(qToday) + '</span><span>' + formatNumber(qAnswered) + '</span><span>' + formatNumber(qNotAnswered) + '</span><span>' + formatNumber(qWaiting) + '</span><span>' + formatNumber(row.onCall) + '</span><span>' + formatNumber(qWait) + 's</span><span>' + formatNumber(row.goals) + '</span><span><em>' + stateLabel + '</em></span></div>';
+                return '<div class="ct-inbound-row ' + stateClass + '" data-queue-id="' + escapeHtml(row.id || row.name) + '" data-queue-name="' + escapeHtml(row.name) + '"><span class="ct-inbound-name"><b>' + escapeHtml(row.name) + '</b><small>' + loginNote + '</small></span><span>' + formatNumber(qLoggedIn) + '</span><span>' + formatNumber(qToday) + '</span><span>' + formatNumber(qAnswered) + '</span><span>' + formatNumber(qNotAnswered) + '</span><span>' + formatNumber(qWaiting) + '</span><span>' + formatNumber(row.onCall) + '</span><span>' + formatNumber(qWait) + 's</span><span>' + formatNumber(row.goals) + '</span><span><em>' + stateLabel + '</em></span></div>';
             }).join('');
         }
 
         if (refs.inboundNote) {
-            const consistencyNote = consistency ? "Totals reconcile: Today = Answered + Not Answered." : "DATA CHECK: Today does not reconcile with Answered + Not Answered.";
-            setText(refs.inboundNote, "Source: native CallTools Queues DOM · " + consistencyNote + " Scope: active queues only; archived queues excluded. Calls Today is the sum of active queue rows shown in Queue Detail. Logged In is queue membership, not a unique-agent count. Live changes are accepted from the Queue DOM immediately when the native values change." );
+            const consistencyNote = consistency ? "Native CallTools Queue totals reconcile (Total = Answered + Not Answered)." : "Notice: CallTools native Total does not equal Answered + Not Answered; reporting verified raw counts without synthesis.";
+            setText(refs.inboundNote, "Source: native CallTools Queues DOM · " + consistencyNote + " Scope: active queues only; archived queues excluded. Calls Today is the sum of active queue rows shown in Queue Detail. Logged In is queue membership, not a unique-agent count." );
         }
     }
 
@@ -5586,8 +5613,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         return Number.isFinite(number) ? number : 0;
     }
 
-    function formatNumber(value) {
-        return Number(value || 0).toLocaleString();
+    function formatNumber(value, fallback) {
+        if (value === null || value === undefined || String(value).trim() === "") {
+            return fallback !== undefined ? fallback : "—";
+        }
+        const num = parseFloat(String(value).replace(/,/g, ""));
+        if (!Number.isFinite(num)) {
+            return String(value).trim() || (fallback !== undefined ? fallback : "—");
+        }
+        return num.toLocaleString();
     }
 
     function safeValue(value, fallback) {

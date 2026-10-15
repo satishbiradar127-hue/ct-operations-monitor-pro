@@ -386,9 +386,21 @@ window.CTParser = {
 
     findQueueTable() {
         const tables = Array.from(document.querySelectorAll("table, mat-table"));
+        if (!tables.length) return null;
+        // Primary signature: CallTools Queues multi-tier table
+        const primary = tables.find(function(table) {
+            const text = String(table.innerText || table.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const hasCalls = /calls \(today\)|calls today/.test(text);
+            const hasAgents = /agents \(now\)|agents now/.test(text);
+            const hasWaitOrCallsNow = /wait time|calls \(now\)|calls now|on queue calls/.test(text);
+            return (hasCalls && hasAgents) || (hasAgents && hasWaitOrCallsNow);
+        });
+        if (primary) return primary;
+
+        // Fallback: table with characteristic queue columns
         return tables.find(function(table) {
             const text = String(table.innerText || table.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-            return /calls \(today\)/.test(text) && /agents \(now\)/.test(text) && /calls \(now\)/.test(text) && /wait time \(now\)/.test(text) && /outcomes \(today\)/.test(text);
+            return /logged in/.test(text) && /on queue calls/.test(text) && /waiting/.test(text);
         }) || null;
     },
 
@@ -427,7 +439,7 @@ window.CTParser = {
         // Geometry is the authoritative fallback because duplicate leaf labels
         // such as Total and Answered exist in multiple grouped sections.
         const rect = header.getBoundingClientRect ? header.getBoundingClientRect() : null;
-        const cells = Array.from(row.querySelectorAll('td, [role="cell"]'));
+        const cells = Array.from(row.querySelectorAll('td.mat-cell, td.mat-mdc-cell, td, [role="cell"]'));
         if (rect && rect.width) {
             const center = rect.left + rect.width / 2;
             const byGeometry = cells.find(function(cell) {
@@ -437,17 +449,33 @@ window.CTParser = {
             if (byGeometry) return byGeometry;
         }
 
-        const headersAll = Array.from(table.querySelectorAll('th, [role="columnheader"]'));
-        const index = headersAll.indexOf(header);
-        return index >= 0 && cells[index] ? cells[index] : null;
+        // Positional index must align with LEAF headers (not all multi-tier headers),
+        // because row cells map 1-to-1 to leaf columns.
+        const leafIndex = headers.indexOf(header);
+        return leafIndex >= 0 && cells[leafIndex] ? cells[leafIndex] : null;
     },
 
     queueValue(row, label, occurrence) {
         const cell = this.queueHeaderCell(row, label, occurrence);
-        if (!cell) return '';
+        if (!cell) return null;
         const select = cell.querySelector && cell.querySelector('select');
         if (select) return String(select.value || '').trim();
         return String(cell.innerText || cell.textContent || '').replace(/\s+/g,' ').trim();
+    },
+
+    parseMetricRecord(raw) {
+        if (raw === null || raw === undefined || String(raw).trim() === '') {
+            return { raw: raw, value: null, state: "MISSING", isValid: false };
+        }
+        const clean = String(raw).replace(/,/g, '').trim();
+        const n = parseFloat(clean);
+        if (isNaN(n)) {
+            return { raw: raw, value: null, state: "MALFORMED", isValid: false };
+        }
+        if (n === 0) {
+            return { raw: raw, value: 0, state: "VALID_ZERO", isValid: true };
+        }
+        return { raw: raw, value: n, state: "VALID_NONZERO", isValid: true };
     },
 
     readQueues() {
@@ -456,26 +484,63 @@ window.CTParser = {
         const rows = Array.from(table.querySelectorAll('tr.mat-row, tr.mat-mdc-row, tbody tr')).filter(function(row) {
             return String(row.innerText || row.textContent || '').trim();
         });
-        return rows.map((row, index) => ({
-            id: row.getAttribute('data-queue-id') || row.getAttribute('data-id') || '',
-            rowIndex: index,
-            name: this.queueValue(row, 'Name', 0),
-            callsTodayTotal: this.queueValue(row, 'Total', 0),
-            callsTodayAnswered: this.queueValue(row, 'Answered', 0),
-            callsTodayNotAnswered: this.queueValue(row, 'Not Answered', 0),
-            inboundMachine: this.queueValue(row, 'Inbound Machine', 0),
-            inboundNoAnswer: this.queueValue(row, 'Inbound No Answer', 0),
-            loggedIn: this.queueValue(row, 'Logged In', 0),
-            onQueueCalls: this.queueValue(row, 'On Queue Calls', 0),
-            callsNowTotal: this.queueValue(row, 'Total', 1),
-            waiting: this.queueValue(row, 'Waiting', 0),
-            callsNowAnswered: this.queueValue(row, 'Answered', 1),
-            waitAverage: this.queueValue(row, 'Average', 0),
-            waitMax: this.queueValue(row, 'Max', 0),
-            calendarEvents: this.queueValue(row, 'Calender Events', 0) || this.queueValue(row, 'Calendar Events', 0),
-            opportunities: this.queueValue(row, 'Opportunities', 0),
-            goals: this.queueValue(row, 'Goals', 0)
-        }));
+        const parse = this.parseMetricRecord.bind(this);
+        return rows.map((row, index) => {
+            const rawCallsTodayTotal = this.queueValue(row, 'Total', 0);
+            const rawCallsTodayAnswered = this.queueValue(row, 'Answered', 0);
+            const rawCallsTodayNotAnswered = this.queueValue(row, 'Not Answered', 0);
+            const rawInboundMachine = this.queueValue(row, 'Inbound Machine', 0);
+            const rawInboundNoAnswer = this.queueValue(row, 'Inbound No Answer', 0);
+            const rawLoggedIn = this.queueValue(row, 'Logged In', 0);
+            const rawOnQueueCalls = this.queueValue(row, 'On Queue Calls', 0);
+            const rawCallsNowTotal = this.queueValue(row, 'Total', 1);
+            const rawWaiting = this.queueValue(row, 'Waiting', 0);
+            const rawCallsNowAnswered = this.queueValue(row, 'Answered', 1);
+            const rawWaitAverage = this.queueValue(row, 'Average', 0);
+            const rawWaitMax = this.queueValue(row, 'Max', 0);
+            const rawCalendarEvents = this.queueValue(row, 'Calender Events', 0) || this.queueValue(row, 'Calendar Events', 0);
+            const rawOpportunities = this.queueValue(row, 'Opportunities', 0);
+            const rawGoals = this.queueValue(row, 'Goals', 0);
+
+            return {
+                id: row.getAttribute('data-queue-id') || row.getAttribute('data-id') || '',
+                rowIndex: index,
+                name: this.queueValue(row, 'Name', 0) || '',
+                callsTodayTotal: rawCallsTodayTotal ?? '',
+                callsTodayAnswered: rawCallsTodayAnswered ?? '',
+                callsTodayNotAnswered: rawCallsTodayNotAnswered ?? '',
+                inboundMachine: rawInboundMachine ?? '',
+                inboundNoAnswer: rawInboundNoAnswer ?? '',
+                loggedIn: rawLoggedIn ?? '',
+                onQueueCalls: rawOnQueueCalls ?? '',
+                callsNowTotal: rawCallsNowTotal ?? '',
+                waiting: rawWaiting ?? '',
+                callsNowAnswered: rawCallsNowAnswered ?? '',
+                waitAverage: rawWaitAverage ?? '',
+                waitMax: rawWaitMax ?? '',
+                calendarEvents: rawCalendarEvents ?? '',
+                opportunities: rawOpportunities ?? '',
+                goals: rawGoals ?? '',
+                // Typed metric validity records:
+                _metrics: {
+                    callsTodayTotal: parse(rawCallsTodayTotal),
+                    callsTodayAnswered: parse(rawCallsTodayAnswered),
+                    callsTodayNotAnswered: parse(rawCallsTodayNotAnswered),
+                    inboundMachine: parse(rawInboundMachine),
+                    inboundNoAnswer: parse(rawInboundNoAnswer),
+                    loggedIn: parse(rawLoggedIn),
+                    onQueueCalls: parse(rawOnQueueCalls),
+                    callsNowTotal: parse(rawCallsNowTotal),
+                    waiting: parse(rawWaiting),
+                    callsNowAnswered: parse(rawCallsNowAnswered),
+                    waitAverage: parse(rawWaitAverage),
+                    waitMax: parse(rawWaitMax),
+                    calendarEvents: parse(rawCalendarEvents),
+                    opportunities: parse(rawOpportunities),
+                    goals: parse(rawGoals)
+                }
+            };
+        });
     },
 
     readCampaigns() {
