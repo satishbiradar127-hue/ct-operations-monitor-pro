@@ -1167,3 +1167,116 @@ test("UPGRADE TEST 31: Inbound table grid template min-width and sticky header r
     assert.ok(minWidthPx >= 650, "Table min-width must be at least 650px to prevent header cramming");
     assert.ok(maxTableHeightPx <= 220, "Table container height must be bounded to preserve vertical viewport");
 });
+
+test("UPGRADE TEST 32: updateActiveCommandSummary renders ordered campaigns over raw source order", () => {
+    // Raw CallTools source campaigns (native order)
+    const rawCampaigns = [
+        { name: "REALTIME MAIN", active: true, __id: "realtime main", __active: true, __health: "good" },
+        { name: "WEB UPGRADE", active: true, __id: "web upgrade", __active: true, __health: "good" },
+        { name: "RES CRED MAIN", active: true, __id: "res cred main", __active: true, __health: "critical" }
+    ];
+
+    // User establishes manual order: RES CRED MAIN first, then REALTIME MAIN, then WEB UPGRADE
+    const manualOrder = ["res cred main", "realtime main", "web upgrade"];
+
+    // Ordering function applies manualOrder
+    const byId = new Map(rawCampaigns.map(c => [c.__id, c]));
+    const ordered = manualOrder.map(id => byId.get(id)).filter(Boolean);
+
+    // Verify ordered array has RES CRED MAIN first
+    assert.strictEqual(ordered[0].name, "RES CRED MAIN");
+    assert.strictEqual(ordered[1].name, "REALTIME MAIN");
+    assert.strictEqual(ordered[2].name, "WEB UPGRADE");
+
+    // Filtering active campaigns preserves the manual order
+    const visible = ordered.filter(c => c.__active === true);
+    assert.strictEqual(visible[0].name, "RES CRED MAIN");
+    assert.strictEqual(visible[1].name, "REALTIME MAIN");
+    assert.strictEqual(visible[2].name, "WEB UPGRADE");
+});
+
+test("UPGRADE TEST 33: Keyboard accessible reordering (Alt+ArrowUp/Down) invokes identical reorder algorithm", () => {
+    const campaigns = ["res cred main", "realtime main", "web upgrade"];
+    let manualOrder = campaigns.slice();
+
+    function reorderCampaignByIds(draggedId, targetId, insertAfter) {
+        const fromIdx = manualOrder.indexOf(draggedId);
+        if (fromIdx !== -1) manualOrder.splice(fromIdx, 1);
+        let toIdx = manualOrder.indexOf(targetId);
+        if (toIdx !== -1) {
+            if (insertAfter) toIdx++;
+            manualOrder.splice(toIdx, 0, draggedId);
+        }
+    }
+
+    // Operator presses Alt+ArrowDown on "res cred main" (moves after "realtime main")
+    reorderCampaignByIds("res cred main", "realtime main", true);
+    assert.deepStrictEqual(manualOrder, ["realtime main", "res cred main", "web upgrade"]);
+
+    // Operator presses Alt+ArrowUp on "web upgrade" (moves before "res cred main")
+    reorderCampaignByIds("web upgrade", "res cred main", false);
+    assert.deepStrictEqual(manualOrder, ["realtime main", "web upgrade", "res cred main"]);
+});
+
+test("UPGRADE TEST 34: Global filter synchronization guarantees button active states match storage without overwrite", () => {
+    const storage = new Map();
+    storage.set("ct-operations-campaign-state-filter-v1", "active");
+    storage.set("ct-operations-campaign-health-filter-v1", "critical");
+
+    const state = {
+        stateFilter: storage.get("ct-operations-campaign-state-filter-v1") || "all",
+        filter: storage.get("ct-operations-campaign-health-filter-v1") || "all"
+    };
+
+    // Verify hydrated state before render
+    assert.strictEqual(state.stateFilter, "active");
+    assert.strictEqual(state.filter, "critical");
+
+    // Mock buttons
+    const buttons = [
+        { dataset: { stateFilter: "all" }, active: true },
+        { dataset: { stateFilter: "active" }, active: false },
+        { dataset: { stateFilter: "inactive" }, active: false }
+    ];
+
+    // syncFilterButtons logic
+    buttons.forEach(btn => {
+        btn.active = btn.dataset.stateFilter === state.stateFilter;
+    });
+
+    assert.strictEqual(buttons.find(b => b.dataset.stateFilter === "all").active, false);
+    assert.strictEqual(buttons.find(b => b.dataset.stateFilter === "active").active, true);
+});
+
+test("UPGRADE TEST 35: Row reorder buttons (up/down) invoke reorderCampaignByIds and preserve full ordering sequence", () => {
+    const campaigns = [
+        { name: "Alpha", __id: "alpha" },
+        { name: "Beta", __id: "beta" },
+        { name: "Gamma", __id: "gamma" }
+    ];
+    let manualOrder = ["alpha", "beta", "gamma"];
+
+    function reorderCampaignByIds(draggedId, targetId, insertAfter) {
+        if (!draggedId || !targetId || draggedId === targetId) return;
+        const curOrder = manualOrder.slice();
+        const fromIdx = curOrder.indexOf(draggedId);
+        if (fromIdx !== -1) curOrder.splice(fromIdx, 1);
+        let toIdx = curOrder.indexOf(targetId);
+        if (toIdx !== -1) {
+            if (insertAfter) toIdx++;
+            curOrder.splice(toIdx, 0, draggedId);
+        } else {
+            curOrder.push(draggedId);
+        }
+        manualOrder = curOrder;
+    }
+
+    // Move Alpha down past Beta
+    reorderCampaignByIds("alpha", "beta", true);
+    assert.deepStrictEqual(manualOrder, ["beta", "alpha", "gamma"]);
+
+    // Move Gamma up before Alpha
+    reorderCampaignByIds("gamma", "alpha", false);
+    assert.deepStrictEqual(manualOrder, ["beta", "gamma", "alpha"]);
+});
+

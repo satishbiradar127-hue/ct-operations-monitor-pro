@@ -250,6 +250,26 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         if (changed) captureOperatingBaseline(clean, state.campaigns);
     }
 
+    function syncFilterButtons() {
+        if (!root) return;
+        const stateBtns = root.querySelectorAll("[data-state-filter]");
+        stateBtns.forEach(function (button) {
+            button.classList.toggle("is-active", (button.dataset.stateFilter || "all") === state.stateFilter);
+        });
+        const healthBtns = root.querySelectorAll("[data-health-filter]");
+        healthBtns.forEach(function (button) {
+            button.classList.toggle("is-active", (button.dataset.healthFilter || "all") === state.filter);
+        });
+        const filterBtns = root.querySelectorAll(".ct-filter-btn");
+        filterBtns.forEach(function (button) {
+            button.classList.toggle("is-active", (button.dataset.filter || "all") === state.filter);
+        });
+        const searchInput = root.querySelector(".ct-search input");
+        if (searchInput && searchInput.value !== (state.query || "")) {
+            searchInput.value = state.query || "";
+        }
+    }
+
     const root = ensureRoot();
     const cardCache = new Map();
     let refs = {};
@@ -2536,17 +2556,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-active-summary-table th.ct-th-center, #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-center { text-align:center; }
             #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border-bottom:1px solid rgba(148,163,184,.1); color:#e2e8f0; font-size:11.5px; }
             #${DASHBOARD_ID} .ct-active-summary-table tr:hover { background:rgba(59,130,246,.08); }
-            #${DASHBOARD_ID} .ct-th-drag, #${DASHBOARD_ID} .ct-td-drag { width:28px; text-align:center; user-select:none; }
-            #${DASHBOARD_ID} .ct-th-select, #${DASHBOARD_ID} .ct-td-select { width:28px; text-align:center; }
-            #${DASHBOARD_ID} .ct-table-drag-handle { display:inline-block; padding:1px 3px; border-radius:3px; cursor:grab; color:#64748b; font-size:12px; font-weight:900; letter-spacing:-1px; }
+            #${DASHBOARD_ID} .ct-th-drag, #${DASHBOARD_ID} .ct-td-drag { width:46px; min-width:46px; text-align:center; user-select:none; }
+            #${DASHBOARD_ID} .ct-drag-cell-inner { display:inline-flex; align-items:center; justify-content:center; gap:2px; }
+            #${DASHBOARD_ID} .ct-table-drag-handle { display:inline-block; padding:1px 2px; border-radius:3px; cursor:grab; color:#64748b; font-size:12px; font-weight:900; letter-spacing:-1px; }
             #${DASHBOARD_ID} .ct-table-drag-handle:hover { color:#93c5fd; background:rgba(59,130,246,.2); }
             #${DASHBOARD_ID} .ct-table-drag-handle:active { cursor:grabbing; }
+            #${DASHBOARD_ID} .ct-row-order-btns { display:inline-flex; flex-direction:column; gap:1px; }
+            #${DASHBOARD_ID} .ct-row-order-btn { border:none; background:none; color:#64748b; font-size:8px; line-height:8px; padding:1px 2px; cursor:pointer; border-radius:2px; }
+            #${DASHBOARD_ID} .ct-row-order-btn:hover { color:#38bdf8; background:rgba(59,130,246,.25); }
+            #${DASHBOARD_ID} .ct-row-order-btn:disabled { opacity:.2; cursor:not-allowed; }
+            #${DASHBOARD_ID} .ct-th-select, #${DASHBOARD_ID} .ct-td-select { width:28px; text-align:center; }
             #${DASHBOARD_ID} .ct-table-select-cb { cursor:pointer; accent-color:#3b82f6; width:13px; height:13px; margin:0; vertical-align:middle; }
-            #${DASHBOARD_ID} .ct-active-row.is-selected { background:rgba(37,99,235,.18) !important; }
-            #${DASHBOARD_ID} .ct-active-row.is-selected .ct-active-name b { color:#93c5fd !important; }
-            #${DASHBOARD_ID} .ct-active-row.is-dragging { opacity:.4; background:rgba(59,130,246,.25) !important; }
-            #${DASHBOARD_ID} .ct-active-row.is-drop-target.is-drop-before > td { border-top:3px solid #3b82f6 !important; }
-            #${DASHBOARD_ID} .ct-active-row.is-drop-target.is-drop-after > td { border-bottom:3px solid #3b82f6 !important; }
+
             #${DASHBOARD_ID} .ct-active-name { color:#f8fafc; font-weight:700; }
             #${DASHBOARD_ID} .ct-active-status-tag { display:inline-block; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
             #${DASHBOARD_ID} .ct-active-status-tag.is-inactive { background:rgba(148,163,184,.15); color:#94a3b8; border-color:rgba(148,163,184,.3); }
@@ -3083,6 +3104,26 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         refs.clearAlerts.addEventListener("click", clearAttentionCenter);
         if (refs.activeSummaryRows) {
             refs.activeSummaryRows.addEventListener("click", function (event) {
+                const orderBtn = event.target.closest("[data-row-order-action]");
+                if (orderBtn) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const tr = orderBtn.closest("tr.ct-active-row");
+                    if (!tr) return;
+                    const id = tr.dataset.campaignId;
+                    const visibleTrs = Array.from(refs.activeSummaryRows.querySelectorAll("tr.ct-active-row"));
+                    const visibleIdx = visibleTrs.indexOf(tr);
+                    if (visibleIdx === -1) return;
+                    const action = orderBtn.dataset.rowOrderAction;
+                    if (action === "up" && visibleIdx > 0) {
+                        const prevId = visibleTrs[visibleIdx - 1].dataset.campaignId;
+                        reorderCampaignByIds(id, prevId, false);
+                    } else if (action === "down" && visibleIdx < visibleTrs.length - 1) {
+                        const nextId = visibleTrs[visibleIdx + 1].dataset.campaignId;
+                        reorderCampaignByIds(id, nextId, true);
+                    }
+                    return;
+                }
                 const btn = event.target.closest("[data-campaign-focus]");
                 if (btn) {
                     event.preventDefault();
@@ -3136,7 +3177,6 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 showActionNotice("Campaign display order updated.");
             }
 
-            let tableDraggedId = null;
             let pointerDragState = {
                 active: false,
                 pointerId: null,
@@ -3145,139 +3185,100 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 insertAfter: false
             };
 
-            // Pointer-based reordering for smooth desktop and mobile interaction
+            // Pure Pointer-based drag-and-drop on campaign table rows
             refs.activeSummaryRows.addEventListener("pointerdown", function (event) {
                 const handle = event.target.closest(".ct-table-drag-handle, .ct-td-drag");
                 if (!handle || event.button !== 0) return;
                 const tr = handle.closest("tr.ct-active-row");
                 if (!tr) return;
 
+                event.preventDefault();
                 pointerDragState.active = true;
                 pointerDragState.pointerId = event.pointerId;
                 pointerDragState.draggedId = tr.dataset.campaignId;
-                tableDraggedId = tr.dataset.campaignId;
-                state.draggingCampaignId = tableDraggedId;
+                pointerDragState.targetId = null;
+                pointerDragState.insertAfter = false;
                 tr.classList.add("is-dragging");
-
-                try {
-                    if (event.target.setPointerCapture) event.target.setPointerCapture(event.pointerId);
-                } catch (e) {}
+                document.documentElement.style.cursor = "grabbing";
+                document.documentElement.style.userSelect = "none";
             });
 
-            refs.activeSummaryRows.addEventListener("pointermove", function (event) {
+            document.addEventListener("pointermove", function (event) {
                 if (!pointerDragState.active) return;
+                event.preventDefault();
+
                 const el = document.elementFromPoint(event.clientX, event.clientY);
                 const tr = el ? el.closest("tr.ct-active-row") : null;
                 if (!tr || tr.dataset.campaignId === pointerDragState.draggedId) {
-                    refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
-                        row.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
-                    });
+                    if (refs.activeSummaryRows) {
+                        refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                            row.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
+                        });
+                    }
                     pointerDragState.targetId = null;
                     return;
                 }
 
-                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
-                    if (row !== tr) row.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
-                });
+                if (refs.activeSummaryRows) {
+                    refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                        if (row !== tr) row.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
+                    });
+                }
 
                 const rect = tr.getBoundingClientRect();
-                const isAfter = event.clientY > rect.top + rect.height / 2;
+                const allVisible = Array.from(refs.activeSummaryRows.querySelectorAll("tr.ct-active-row"));
+                const draggedTr = refs.activeSummaryRows.querySelector('tr.ct-active-row[data-campaign-id="' + pointerDragState.draggedId + '"]');
+                const fromIdx = draggedTr ? allVisible.indexOf(draggedTr) : -1;
+                const toIdx = allVisible.indexOf(tr);
+
+                let isAfter;
+                if (fromIdx !== -1 && toIdx !== -1) {
+                    if (fromIdx < toIdx) {
+                        isAfter = event.clientY > (rect.top + rect.height * 0.25);
+                    } else {
+                        isAfter = event.clientY > (rect.bottom - rect.height * 0.25);
+                    }
+                } else {
+                    isAfter = event.clientY > (rect.top + rect.height / 2);
+                }
+
                 tr.classList.add("is-drop-target");
                 tr.classList.toggle("is-drop-after", isAfter);
                 tr.classList.toggle("is-drop-before", !isAfter);
 
                 pointerDragState.targetId = tr.dataset.campaignId;
                 pointerDragState.insertAfter = isAfter;
-            });
+            }, { passive: false });
 
-            const finishPointerDrag = function () {
+            const finishTablePointerDrag = function () {
                 if (!pointerDragState.active) return;
                 const draggedId = pointerDragState.draggedId;
                 const targetId = pointerDragState.targetId;
                 const insertAfter = pointerDragState.insertAfter;
 
-                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
-                    row.classList.remove("is-dragging", "is-drop-target", "is-drop-before", "is-drop-after");
-                });
+                if (refs.activeSummaryRows) {
+                    refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                        row.classList.remove("is-dragging", "is-drop-target", "is-drop-before", "is-drop-after");
+                    });
+                }
 
                 pointerDragState.active = false;
                 pointerDragState.pointerId = null;
                 pointerDragState.draggedId = null;
                 pointerDragState.targetId = null;
-                tableDraggedId = null;
                 state.draggingCampaignId = "";
+                document.documentElement.style.cursor = "";
+                document.documentElement.style.userSelect = "";
 
                 if (draggedId && targetId && draggedId !== targetId) {
                     reorderCampaignByIds(draggedId, targetId, insertAfter);
                 }
             };
 
-            refs.activeSummaryRows.addEventListener("pointerup", finishPointerDrag);
-            refs.activeSummaryRows.addEventListener("pointercancel", finishPointerDrag);
+            document.addEventListener("pointerup", finishTablePointerDrag);
+            document.addEventListener("pointercancel", finishTablePointerDrag);
 
-            // Native HTML5 Drag and drop
-            refs.activeSummaryRows.addEventListener("dragstart", function (event) {
-                const tr = event.target.closest("tr.ct-active-row");
-                if (!tr) return;
-                tableDraggedId = tr.dataset.campaignId;
-                state.draggingCampaignId = tableDraggedId;
-                event.dataTransfer.effectAllowed = "move";
-                event.dataTransfer.setData("text/plain", tableDraggedId);
-                tr.classList.add("is-dragging");
-            });
-
-            refs.activeSummaryRows.addEventListener("dragover", function (event) {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-                const tr = event.target.closest("tr.ct-active-row");
-                if (!tr || tr.dataset.campaignId === tableDraggedId) return;
-
-                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
-                    if (row !== tr) row.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
-                });
-
-                const rect = tr.getBoundingClientRect();
-                const isAfter = event.clientY > rect.top + rect.height / 2;
-                tr.classList.add("is-drop-target");
-                tr.classList.toggle("is-drop-after", isAfter);
-                tr.classList.toggle("is-drop-before", !isAfter);
-            });
-
-            refs.activeSummaryRows.addEventListener("dragleave", function (event) {
-                const tr = event.target.closest("tr.ct-active-row");
-                if (tr && !tr.contains(event.relatedTarget)) {
-                    tr.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
-                }
-            });
-
-            refs.activeSummaryRows.addEventListener("drop", function (event) {
-                event.preventDefault();
-                const tr = event.target.closest("tr.ct-active-row");
-                const targetId = tr ? tr.dataset.campaignId : null;
-                const draggedId = tableDraggedId || event.dataTransfer.getData("text/plain");
-
-                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
-                    row.classList.remove("is-dragging", "is-drop-target", "is-drop-before", "is-drop-after");
-                });
-
-                if (draggedId && targetId && draggedId !== targetId) {
-                    const rect = tr.getBoundingClientRect();
-                    const insertAfter = event.clientY > rect.top + rect.height / 2;
-                    reorderCampaignByIds(draggedId, targetId, insertAfter);
-                }
-                tableDraggedId = null;
-                state.draggingCampaignId = "";
-            });
-
-            refs.activeSummaryRows.addEventListener("dragend", function () {
-                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
-                    row.classList.remove("is-dragging", "is-drop-target", "is-drop-before", "is-drop-after");
-                });
-                tableDraggedId = null;
-                state.draggingCampaignId = "";
-            });
-
-            // Alt+Up / Alt+Down keyboard reordering on visible rows
+            // Alt+Up / Alt+Down accessible keyboard alternative
             refs.activeSummaryRows.addEventListener("keydown", function (event) {
                 if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
                 const tr = event.target.closest("tr.ct-active-row");
@@ -3290,32 +3291,40 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 const visibleIdx = visibleTrs.indexOf(tr);
                 if (visibleIdx === -1) return;
 
+                const focusMoved = function () {
+                    setTimeout(function () {
+                        if (!refs || !refs.activeSummaryRows) return;
+                        const handle = refs.activeSummaryRows.querySelector('tr.ct-active-row[data-campaign-id="' + id + '"] .ct-table-drag-handle');
+                        if (handle) handle.focus();
+                    }, 40);
+                };
+
                 if (event.key === "ArrowUp" && visibleIdx > 0) {
                     const prevId = visibleTrs[visibleIdx - 1].dataset.campaignId;
                     reorderCampaignByIds(id, prevId, false);
+                    focusMoved();
                 } else if (event.key === "ArrowDown" && visibleIdx < visibleTrs.length - 1) {
                     const nextId = visibleTrs[visibleIdx + 1].dataset.campaignId;
                     reorderCampaignByIds(id, nextId, true);
+                    focusMoved();
                 }
             });
         }
-
-        // Header toggle select all
         const toggleSelectAll = root ? root.querySelector('input[data-campaign-action="toggle-select-all"]') : null;
         if (toggleSelectAll) {
             toggleSelectAll.addEventListener("change", function () {
                 if (!state.selectedCampaignIds) state.selectedCampaignIds = new Set();
-                const visibleCamps = (state.campaigns || []).filter(function (c) {
+                const prepared = prepareCampaigns(state.campaigns);
+                const visibleCamps = prepared.filter(function (c) {
                     if (state.stateFilter === "active" && !c.__active) return false;
                     if (state.stateFilter === "inactive" && c.__active) return false;
                     if (state.filter === "critical" && c.__health !== "critical") return false;
                     if (state.filter === "warning" && c.__health !== "warning") return false;
                     if (state.filter === "healthy" && c.__health !== "good" && c.__health !== "excellent") return false;
                     if (state.filter === "data" && !c.__dataCheck) return false;
-                    const needle = state.query.trim().toLowerCase();
+                    const needle = (state.query || "").trim().toLowerCase();
                     return !needle || String(c.name || "").toLowerCase().includes(needle);
                 });
-
                 if (toggleSelectAll.checked) {
                     visibleCamps.forEach(function (c) { state.selectedCampaignIds.add(c.__id); });
                 } else {
@@ -3883,15 +3892,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const filtered = filterCampaigns(ordered);
         const stats = summarize(prepared);
 
-        updateSummary(stats, filtered.length);
+        updateSummary(stats, filtered.length, ordered);
         updateInsights(stats);
         updateInboundPanel();
         updateAlerts();
         updateCampaignList(filtered);
         if (state.reorderMode) renderOrderEditor();
+        syncFilterButtons();
     }
 
-    function updateSummary(stats, filteredCount) {
+    function updateSummary(stats, filteredCount, ordered) {
         const dataAge = state.lastDataChangeAt ? Math.max(0, Math.floor((Date.now() - state.lastDataChangeAt) / 1000)) : null;
         const cachedOutbound = state.route === "queues" && state.campaigns.length ? readLastKnownCampaigns() : null;
         const outboundAge = cachedOutbound && cachedOutbound.updatedAt ? Math.max(0, Math.floor((Date.now() - cachedOutbound.updatedAt) / 1000)) : null;
@@ -3969,7 +3979,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             setText(refs.footerVisibleTotals, stats.visibleTotal + " total rows · " + formatNumber(stats.allOutbound) + " attempts · " + formatNumber(stats.allHuman) + " human connects · " + formatNumber(stats.allContacts) + " leads");
         }
 
-        updateActiveCommandSummary(stats.campaigns || state.campaigns);
+        updateActiveCommandSummary(ordered || orderCampaigns(prepareCampaigns(state.campaigns)));
     }
 
     function updateActiveCommandSummary(campaigns) {
@@ -4019,7 +4029,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             const tr = document.createElement("tr");
             tr.className = "ct-active-row is-" + (c.__health || "good") + (isSelected ? " is-selected" : "");
             tr.dataset.campaignId = c.__id;
-            tr.draggable = true;
+            tr.draggable = false;
 
             const runway = estimateCampaignRunway(c);
             const agentsText = c.__loggedInAvailable ? formatNumber(c.__loggedIn) : "—";
@@ -4045,7 +4055,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 : "No outbound attempts recorded today";
             const connectRateClass = c.__outbound > 0 ? (connectRate >= 3 ? "is-good" : connectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
 
-            tr.innerHTML = '<td class="ct-td-drag" title="Drag to reorder row (or use Alt+Up/Down)"><span class="ct-table-drag-handle" draggable="true" data-campaign-id="' + escapeHtml(c.__id) + '">⋮⋮</span></td>' +
+            tr.innerHTML = '<td class="ct-td-drag" tabindex="0" role="button" aria-label="Drag or click arrows to reorder ' + escapeHtml(c.name) + '" data-campaign-id="' + escapeHtml(c.__id) + '">' +
+                '<div class="ct-drag-cell-inner">' +
+                '<span class="ct-table-drag-handle" title="Drag to reorder (or use Alt+Up/Down)">⋮⋮</span>' +
+                '<div class="ct-row-order-btns">' +
+                '<button type="button" class="ct-row-order-btn is-up" data-row-order-action="up" title="Move ' + escapeHtml(c.name) + ' up" aria-label="Move ' + escapeHtml(c.name) + ' up">▲</button>' +
+                '<button type="button" class="ct-row-order-btn is-down" data-row-order-action="down" title="Move ' + escapeHtml(c.name) + ' down" aria-label="Move ' + escapeHtml(c.name) + ' down">▼</button>' +
+                '</div>' +
+                '</div></td>' +
                 '<td class="ct-td-select"><input type="checkbox" class="ct-table-select-cb" data-campaign-id="' + escapeHtml(c.__id) + '" ' + (isSelected ? 'checked' : '') + ' aria-label="Select ' + escapeHtml(c.name) + '"></td>' +
                 '<td class="ct-active-name" style="text-align:left"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
                 '<td style="text-align:center"><span class="ct-active-status-tag ' + (c.__active ? 'is-live' : 'is-inactive') + '">' + (c.__active ? 'ACTIVE' : 'INACTIVE') + '</span></td>' +
