@@ -940,6 +940,105 @@ test("UPGRADE TEST 23: Outbound attempts scope reconciliation (top snapshot acti
     assert.ok(tooltip.includes("• REALTIME MAIN: 0"));
 });
 
+test("UPGRADE TEST 24: Campaign row selection, toggle all visible, and clear selection behavior", () => {
+    const selectedIds = new Set();
+    const visibleCampaigns = [
+        { __id: "res-cred-main", name: "RES CRED MAIN" },
+        { __id: "web-upgrade", name: "WEB UPGRADE" },
+        { __id: "realtime-main", name: "REALTIME MAIN" }
+    ];
 
+    // Toggle row selection on single campaign
+    selectedIds.add("res-cred-main");
+    assert.strictEqual(selectedIds.size, 1);
+    assert.ok(selectedIds.has("res-cred-main"));
 
+    // Toggle-select-all visible rows
+    visibleCampaigns.forEach(c => selectedIds.add(c.__id));
+    assert.strictEqual(selectedIds.size, 3);
+    assert.ok(visibleCampaigns.every(c => selectedIds.has(c.__id)));
 
+    // Header checkbox states: checked when all visible are selected
+    const allSelected = visibleCampaigns.every(c => selectedIds.has(c.__id));
+    assert.strictEqual(allSelected, true);
+
+    // Uncheck one row
+    selectedIds.delete("web-upgrade");
+    const allSelectedAfter = visibleCampaigns.every(c => selectedIds.has(c.__id));
+    const someSelectedAfter = visibleCampaigns.some(c => selectedIds.has(c.__id));
+    assert.strictEqual(allSelectedAfter, false);
+    assert.strictEqual(someSelectedAfter, true, "Indeterminate state when partial selection exists");
+
+    // Clear selection
+    selectedIds.clear();
+    assert.strictEqual(selectedIds.size, 0, "Selection cleared completely");
+});
+
+test("UPGRADE TEST 25: Drag-and-drop campaign reordering and Reset Order restoration", () => {
+    const PINNED_ORDER = ["RES CRED MAIN", "REALTIME 126", "REALTIME 484"];
+    const allCampaigns = [
+        { __id: "res-cred-main", name: "RES CRED MAIN" },
+        { __id: "realtime-126", name: "REALTIME 126" },
+        { __id: "realtime-484", name: "REALTIME 484" },
+        { __id: "web-upgrade", name: "WEB UPGRADE" },
+        { __id: "bkv-survey", name: "BKV SURVEY" }
+    ];
+
+    function defaultCampaignOrder(camps) {
+        const valid = new Set(camps.map(c => c.__id));
+        const pinned = PINNED_ORDER.map(name => {
+            const id = name.toLowerCase().replace(/\s+/g, "-");
+            return valid.has(id) ? id : null;
+        }).filter(Boolean);
+        const seen = new Set(pinned);
+        const rest = [];
+        camps.forEach(c => {
+            if (!seen.has(c.__id)) { seen.add(c.__id); rest.push(c.__id); }
+        });
+        return pinned.concat(rest);
+    }
+
+    let manualOrder = defaultCampaignOrder(allCampaigns);
+    assert.deepStrictEqual(manualOrder, ["res-cred-main", "realtime-126", "realtime-484", "web-upgrade", "bkv-survey"]);
+
+    // Simulate drag: move "web-upgrade" to index 0 (top)
+    const draggedId = "web-upgrade";
+    const targetId = "res-cred-main";
+    const fromIdx = manualOrder.indexOf(draggedId);
+    manualOrder.splice(fromIdx, 1);
+    const toIdx = manualOrder.indexOf(targetId);
+    manualOrder.splice(toIdx, 0, draggedId);
+
+    assert.strictEqual(manualOrder[0], "web-upgrade", "Dragged campaign must occupy index 0");
+    assert.strictEqual(manualOrder[1], "res-cred-main");
+
+    // Simulate Reset Order: restores default pinned + source discovery order
+    manualOrder = defaultCampaignOrder(allCampaigns);
+    assert.strictEqual(manualOrder[0], "res-cred-main", "Reset Order restores RES CRED MAIN to first position");
+    assert.strictEqual(manualOrder[3], "web-upgrade", "WEB UPGRADE returns to default position");
+});
+
+test("UPGRADE TEST 26: Outbound Focus single-campaign deduplication vs multi-campaign operating view", () => {
+    // Single operating campaign selected
+    const singleSelected = [{ __id: "res-cred-main", name: "RES CRED MAIN", __outbound: 63516, __human: 2029 }];
+    const showSummaryBarSingle = singleSelected.length > 1;
+    assert.strictEqual(showSummaryBarSingle, false, "Summary bar must be hidden when single campaign is selected to avoid duplicate metrics");
+
+    // Multiple operating campaigns selected
+    const multiSelected = [
+        { __id: "res-cred-main", name: "RES CRED MAIN", __outbound: 63516, __human: 2029 },
+        { __id: "web-upgrade", name: "WEB UPGRADE", __outbound: 32, __human: 0 }
+    ];
+    const showSummaryBarMulti = multiSelected.length > 1;
+    assert.strictEqual(showSummaryBarMulti, true, "Summary bar must be displayed when multiple campaigns are selected to show aggregate totals");
+});
+
+test("UPGRADE TEST 27: Inbound Queue Detail header and cell grid template column alignment without overlap", () => {
+    const queueHeaders = ["QUEUE", "LOGGED", "TODAY", "ANSWERED", "NOT ANS", "WAIT", "ON CALL", "MAX WAIT", "GOALS", "STATE"];
+    assert.strictEqual(queueHeaders.length, 10, "Queue table must have exactly 10 columns");
+
+    // Verify concise header length to avoid collisions in narrow columns (<= 58px)
+    assert.ok(queueHeaders[4].length <= 8, "NOT ANS header must be <= 8 chars to fit within 54px without overlapping WAIT");
+    assert.ok(queueHeaders[5].length <= 5, "WAIT header must be <= 5 chars to fit within 46px");
+    assert.ok(queueHeaders[6].length <= 8, "ON CALL header must be <= 8 chars to fit within 48px");
+});

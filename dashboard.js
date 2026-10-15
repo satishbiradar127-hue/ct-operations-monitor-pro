@@ -15,9 +15,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     const THEME_KEY = "ct-operations-dashboard-theme";
     const CONTACT_THRESHOLD_KEY = "ct-operations-contact-threshold";
     const ZOOM_KEY = "ct-operations-dashboard-zoom";
-    const LAYOUT_KEY = "ct-operations-dashboard-layout-v16";
+    const LAYOUT_KEY = "ct-operations-dashboard-layout-v17";
     const LAYOUT_VERSION_KEY = "ct-operations-dashboard-layout-version";
-    const LAYOUT_VERSION = 16;
+    const LAYOUT_VERSION = 17;
+    const SELECTED_CAMPAIGNS_KEY = "ct-operations-selected-campaign-ids-v1";
     const ORDER_KEY = "ct-operations-dashboard-campaign-order";
     const ORDER_META_KEY = "ct-operations-dashboard-campaign-order-meta";
     const EMPTY = "-";
@@ -118,11 +119,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         sourceState: "WAITING",
         feedStatus: "WAITING",
         runwayHistory: new Map(),
-        inboundHistory: []
+        inboundHistory: [],
+        selectedCampaignIds: new Set(readJsonStorage(SELECTED_CAMPAIGNS_KEY, []))
     };
 
     function readJsonStorage(key, fallback) {
         try { return JSON.parse(localStorage.getItem(key) || "") || fallback; } catch (e) { return fallback; }
+    }
+
+    function persistSelectedCampaigns() {
+        try {
+            localStorage.setItem(SELECTED_CAMPAIGNS_KEY, JSON.stringify(Array.from(state.selectedCampaignIds || [])));
+        } catch (e) {}
     }
 
     function readLastKnownQueues() {
@@ -2488,20 +2496,36 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-order-editor-move button { width:23px; height:23px; padding:0; border:1px solid rgba(148,163,184,.26); border-radius:5px; color:#dbe7f8; background:rgba(255,255,255,.05); font-size:12px; font-weight:950; }
             #${DASHBOARD_ID} .ct-order-editor-move button:hover:not(:disabled) { background:#2563eb; border-color:#7fb0ff; color:#fff; }
             #${DASHBOARD_ID} .ct-order-editor-move button:disabled { opacity:.28; cursor:default; }
-            #${DASHBOARD_ID} .ct-active-command-summary { margin:8px 0 10px; border:1px solid rgba(139,182,255,.35); border-radius:9px; background:linear-gradient(180deg,rgba(23,32,51,.95),rgba(15,23,42,.95)); box-shadow:0 4px 16px rgba(0,0,0,.22); overflow:hidden; }
-            #${DASHBOARD_ID} .ct-active-summary-head { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(37,99,235,.12); border-bottom:1px solid rgba(148,163,184,.16); }
+            #${DASHBOARD_ID} .ct-active-command-summary { margin:6px 0 8px; border:1px solid rgba(139,182,255,.35); border-radius:9px; background:linear-gradient(180deg,rgba(23,32,51,.95),rgba(15,23,42,.95)); box-shadow:0 4px 16px rgba(0,0,0,.22); overflow:hidden; }
+            #${DASHBOARD_ID} .ct-active-summary-head { display:flex; align-items:center; justify-content:space-between; padding:7px 12px; background:rgba(37,99,235,.12); border-bottom:1px solid rgba(148,163,184,.16); }
             #${DASHBOARD_ID} .ct-active-summary-title { display:flex; align-items:center; gap:8px; }
             #${DASHBOARD_ID} .ct-active-pulse-dot { width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981; animation:ct-pulse 2s infinite ease-in-out; }
             @keyframes ct-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.85); } }
             #${DASHBOARD_ID} .ct-active-summary-title strong { font-size:12px; font-weight:900; color:#f8fafc; letter-spacing:.06em; }
             #${DASHBOARD_ID} .ct-active-summary-title small { color:#94a3b8; font-size:10.5px; }
+            #${DASHBOARD_ID} .ct-active-summary-status { display:flex; align-items:center; gap:6px; }
             #${DASHBOARD_ID} .ct-active-summary-badge { padding:3px 9px; border-radius:999px; font-size:10px; font-weight:900; letter-spacing:.05em; border:1px solid rgba(16,185,129,.4); background:rgba(16,185,129,.12); color:#6ee7b7; }
             #${DASHBOARD_ID} .ct-active-summary-badge.is-inactive { border-color:rgba(148,163,184,.3); background:rgba(148,163,184,.1); color:#94a3b8; }
-            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:260px; overflow-x:auto; overflow-y:auto; }
+            #${DASHBOARD_ID} .ct-clear-selection-btn { padding:2px 8px; border-radius:4px; font-size:9.5px; font-weight:850; background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); cursor:pointer; }
+            #${DASHBOARD_ID} .ct-clear-selection-btn:hover { background:rgba(239,68,68,.28); color:#fff; }
+            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:200px; overflow-x:auto; overflow-y:auto; }
             #${DASHBOARD_ID} .ct-active-summary-table { width:100%; min-width:980px; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:9.5px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; padding:7px 9px; text-align:left; border-bottom:1px solid rgba(148,163,184,.2); }
-            #${DASHBOARD_ID} .ct-active-summary-table td { padding:7px 9px; border-bottom:1px solid rgba(148,163,184,.1); color:#e2e8f0; font-size:11.5px; }
+            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:9.5px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; padding:6px 8px; text-align:left; border-bottom:1px solid rgba(148,163,184,.2); }
+            #${DASHBOARD_ID} .ct-active-summary-table th.ct-th-num, #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-num { text-align:right; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-active-summary-table th.ct-th-center, #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-center { text-align:center; }
+            #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border-bottom:1px solid rgba(148,163,184,.1); color:#e2e8f0; font-size:11.5px; }
             #${DASHBOARD_ID} .ct-active-summary-table tr:hover { background:rgba(59,130,246,.08); }
+            #${DASHBOARD_ID} .ct-th-drag, #${DASHBOARD_ID} .ct-td-drag { width:28px; text-align:center; user-select:none; }
+            #${DASHBOARD_ID} .ct-th-select, #${DASHBOARD_ID} .ct-td-select { width:28px; text-align:center; }
+            #${DASHBOARD_ID} .ct-table-drag-handle { display:inline-block; padding:1px 3px; border-radius:3px; cursor:grab; color:#64748b; font-size:12px; font-weight:900; letter-spacing:-1px; }
+            #${DASHBOARD_ID} .ct-table-drag-handle:hover { color:#93c5fd; background:rgba(59,130,246,.2); }
+            #${DASHBOARD_ID} .ct-table-drag-handle:active { cursor:grabbing; }
+            #${DASHBOARD_ID} .ct-table-select-cb { cursor:pointer; accent-color:#3b82f6; width:13px; height:13px; margin:0; vertical-align:middle; }
+            #${DASHBOARD_ID} .ct-active-row.is-selected { background:rgba(37,99,235,.18) !important; }
+            #${DASHBOARD_ID} .ct-active-row.is-selected .ct-active-name b { color:#93c5fd !important; }
+            #${DASHBOARD_ID} .ct-active-row.is-dragging { opacity:.4; background:rgba(59,130,246,.25) !important; }
+            #${DASHBOARD_ID} .ct-active-row.is-drop-target.is-drop-before { border-top:2px solid #3b82f6 !important; }
+            #${DASHBOARD_ID} .ct-active-row.is-drop-target.is-drop-after { border-bottom:2px solid #3b82f6 !important; }
             #${DASHBOARD_ID} .ct-active-name { color:#f8fafc; font-weight:700; }
             #${DASHBOARD_ID} .ct-active-status-tag { display:inline-block; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
             #${DASHBOARD_ID} .ct-active-status-tag.is-inactive { background:rgba(148,163,184,.15); color:#94a3b8; border-color:rgba(148,163,184,.3); }
@@ -2512,9 +2536,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-active-focus-btn { padding:3px 9px; border-radius:4px; border:1px solid rgba(148,163,184,.3); background:rgba(255,255,255,.05); color:#93c5fd; font-size:9.5px; font-weight:850; cursor:pointer; }
             #${DASHBOARD_ID} .ct-active-focus-btn:hover { background:#2563eb; color:#fff; border-color:#3b82f6; }
             #${DASHBOARD_ID} .ct-active-empty { text-align:center; padding:18px; color:#94a3b8; font-style:italic; }
-            #${DASHBOARD_ID} .ct-reconciled-footer { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; margin-top:6px; border:1px solid rgba(148,163,184,.15); border-radius:6px; background:rgba(15,23,42,.6); font-size:10.5px; color:#94a3b8; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-reconciled-footer { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; margin-top:6px; border:1px solid rgba(148,163,184,.15); border-radius:6px; background:rgba(15,23,42,.6); font-size:10.5px; color:#94a3b8; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-reconciled-footer b { color:#f1f5f9; }
             #${DASHBOARD_ID} .ct-kpi-value, #${DASHBOARD_ID} .ct-command-value, #${DASHBOARD_ID} .ct-row-cell { font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { display:grid; grid-template-columns:minmax(130px,1.8fr) 52px 46px 54px 54px 46px 48px 52px 42px 84px; gap:0; align-items:center; }
+            #${DASHBOARD_ID} .ct-inbound-table-head { padding:6px 8px; background:var(--ct-surface-2); color:var(--ct-muted); font-size:9.5px; font-weight:850; letter-spacing:.05em; }
+            #${DASHBOARD_ID} .ct-inbound-table-head span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-inbound-row span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-inbound-table-wrap { max-height:180px; overflow-y:auto; overflow-x:auto; border-radius:6px; border:1px solid rgba(148,163,184,.15); }
             @media (max-width:900px) { #${DASHBOARD_ID} .ct-focus-grid { grid-template-columns:1fr !important; } }
             @media (max-width:700px) { #${DASHBOARD_ID} .ct-order-editor-head { align-items:flex-start; flex-direction:column; } #${DASHBOARD_ID} .ct-order-editor-row { grid-template-columns:26px 22px minmax(0,1fr) 52px 50px; } }
         `;
@@ -2576,6 +2605,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                 <small data-ref="activeSummaryCount">Waiting for verified campaign data</small>
                             </div>
                             <div class="ct-active-summary-status">
+                                <button type="button" class="ct-btn ct-clear-selection-btn" data-ref="clearSelectionBtn" hidden title="Clear selected campaign rows">Clear Selection (<span data-ref="selectionCount">0</span>)</button>
                                 <span class="ct-active-summary-badge" data-ref="activeSummaryBadge">— ACTIVE</span>
                             </div>
                         </div>
@@ -2583,24 +2613,26 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                             <table class="ct-active-summary-table">
                                 <thead>
                                     <tr>
-                                        <th>CAMPAIGN</th>
-                                        <th>STATE</th>
-                                        <th>AGENTS</th>
-                                        <th>WAIT NOW</th>
-                                        <th>WAIT TODAY</th>
-                                        <th>OUTBOUND ATTEMPTS</th>
-                                        <th>HUMAN CONNECTS</th>
-                                        <th>AGENT CONNECTS</th>
-                                        <th>ABANDONED</th>
-                                        <th>CONNECT RATE</th>
-                                        <th>LIVE LEADS</th>
-                                        <th>LEAD RUNWAY</th>
-                                        <th>HEALTH</th>
-                                        <th>FOCUS</th>
+                                        <th class="ct-th-drag" style="width:28px" title="Drag to reorder rows">↕</th>
+                                        <th class="ct-th-select" style="width:28px" title="Select visible rows"><input type="checkbox" data-campaign-action="toggle-select-all" title="Select all visible campaigns"></th>
+                                        <th class="ct-th-name" style="min-width:130px">CAMPAIGN</th>
+                                        <th class="ct-th-state" style="width:68px;text-align:center">STATE</th>
+                                        <th class="ct-th-num" style="width:54px;text-align:right" title="Logged in agents (if exposed)">AGENTS</th>
+                                        <th class="ct-th-num" style="width:58px;text-align:right" title="Current caller wait time">WAIT NOW</th>
+                                        <th class="ct-th-num" style="width:62px;text-align:right" title="Maximum caller wait time today">WAIT TODAY</th>
+                                        <th class="ct-th-num" style="width:90px;text-align:right" title="Total outbound call attempts today">OUTBOUND ATTEMPTS</th>
+                                        <th class="ct-th-num" style="width:84px;text-align:right" title="Total human answered connects">HUMAN CONNECTS</th>
+                                        <th class="ct-th-num" style="width:84px;text-align:right" title="Total agent connected calls">AGENT CONNECTS</th>
+                                        <th class="ct-th-num" style="width:88px;text-align:right" title="Abandoned calls and abandonment rate">ABANDONED</th>
+                                        <th class="ct-th-num" style="width:78px;text-align:right" title="Verified Human Connects ÷ Outbound Attempts %">CONNECT RATE</th>
+                                        <th class="ct-th-num" style="width:78px;text-align:right" title="Current live contacts in campaign">LIVE LEADS</th>
+                                        <th class="ct-th-center" style="width:90px;text-align:center" title="Estimated contact runway">LEAD RUNWAY</th>
+                                        <th class="ct-th-center" style="width:76px;text-align:center" title="Campaign operational health rating">HEALTH</th>
+                                        <th class="ct-th-center" style="width:56px;text-align:center" title="Focus Outbound monitor on this campaign">FOCUS</th>
                                     </tr>
                                 </thead>
                                 <tbody data-ref="activeSummaryRows">
-                                    <tr><td colspan="14" class="ct-active-empty">Waiting for active campaigns…</td></tr>
+                                    <tr><td colspan="16" class="ct-active-empty">Waiting for active campaigns…</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2718,7 +2750,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
                         <div class="ct-inbound-table-title"><strong>QUEUE DETAIL</strong><span>Every row uses the same verified snapshot as the totals above.</span></div>
                         <div class="ct-inbound-table-wrap">
-                            <div class="ct-inbound-table-head"><span>QUEUE</span><span>LOGGED IN</span><span>TODAY</span><span>ANSWERED</span><span>NOT ANSWERED</span><span>WAITING</span><span>ON CALL</span><span>MAX WAIT</span><span>GOALS</span><span>STATE</span></div>
+                            <div class="ct-inbound-table-head"><span style="text-align:left">QUEUE</span><span style="text-align:right" title="Logged in queue members">LOGGED</span><span style="text-align:right" title="Total calls today">TODAY</span><span style="text-align:right" title="Answered calls today">ANSWERED</span><span style="text-align:right" title="Not answered calls today">NOT ANS</span><span style="text-align:right" title="Current callers waiting">WAIT</span><span style="text-align:right" title="Agents on queue calls">ON CALL</span><span style="text-align:right" title="Maximum wait time">MAX WAIT</span><span style="text-align:right" title="Goals achieved today">GOALS</span><span style="text-align:center" title="Queue operational state">STATE</span></div>
                             <div class="ct-inbound-table" data-ref="inboundTable"></div>
                         </div>
                         <div class="ct-inbound-note" data-ref="inboundNote">Inbound source: native CallTools Queues DOM. Queue Logged In is a queue-level membership metric, not a unique-agent count.</div>
@@ -2726,39 +2758,43 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                         </section>
                     </div>
 
-                    <section class="ct-command-strip ct-source-strip" aria-label="Source health">
-                        <div class="ct-command-item"><div class="ct-command-label">Data Freshness</div><div class="ct-command-value" data-ref="dataAge">Waiting</div></div>
-                        <div class="ct-command-item"><div class="ct-command-label">Feed Heartbeat</div><div class="ct-command-value" data-ref="feedHeartbeat">Waiting</div></div>
-                        <div class="ct-command-item"><div class="ct-command-label">Lead Runway</div><div class="ct-command-value" data-ref="leadRunway">Measuring…</div></div>
-                        <div class="ct-command-item"><div class="ct-command-label">Recovery</div><div class="ct-command-value" data-ref="recoveryState">Standby</div></div>
-                    </section>
-
-                    <div class="ct-campaigns-head" aria-label="Campaign list status">
-                        <div><strong>CAMPAIGNS</strong><small data-ref="campaignSectionCount">Waiting for CallTools campaign data</small></div>
-                        <span class="ct-campaigns-state" data-ref="campaignSectionState">WAITING</span>
-                    </div>
-                    <div class="ct-filter-bar" aria-label="Campaign filters">
-                        <button class="ct-filter-btn is-active" type="button" data-filter="all">All</button>
-                        <button class="ct-filter-btn" type="button" data-filter="critical">Critical</button>
-                        <button class="ct-filter-btn" type="button" data-filter="warning">At Risk</button>
-                        <button class="ct-filter-btn" type="button" data-filter="healthy">Healthy</button>
-                        <button class="ct-filter-btn" type="button" data-filter="data">Data Check</button>
-                    </div>
-                    <div class="ct-order-hint" data-ref="orderHint" hidden><span class="ct-order-icon">↕</span><span>ARRANGE MODE ON — use the dedicated order workspace below. Live metrics never change your manual order.</span></div>
-                    <section class="ct-order-editor" data-ref="orderEditor" hidden aria-label="Campaign arrangement workspace">
-                        <div class="ct-order-editor-head">
-                            <div><strong>ARRANGE CAMPAIGNS</strong><small>Set the exact display order once. This order stays fixed while live metrics update.</small></div>
-                            <div class="ct-order-editor-actions"><button type="button" class="ct-order-editor-btn" data-order-action="reset">Reset to default</button><button type="button" class="ct-order-editor-btn is-primary" data-order-action="done">Done</button></div>
-                        </div>
-                        <div class="ct-order-editor-tip"><span>↕</span><span>Use <b>↑ / ↓</b> for precise positioning. The order affects display only — it never changes CallTools campaign settings. Changes persist immediately.</span></div>
-                        <div class="ct-order-editor-list" data-ref="orderEditorList"></div>
-                    </section>
-                    <div class="ct-table-head" aria-hidden="true"><span>#</span><span>CAMPAIGN</span><span>STATUS</span><span>TOTAL AGENTS</span><span>WAITING</span><span>ON CALL</span><span>WORST WAIT</span><span>LIVE LEADS</span><span>CONNECTED</span><span>CALL ATTEMPTS</span><span>ABANDONED</span><span>RUNWAY</span><span>ACTIONS</span></div>
-                    <div class="ct-list" aria-live="polite"></div>
                     <div class="ct-reconciled-footer" data-ref="reconciledFooter">
                         <span><b>Active Campaigns:</b> <span data-ref="footerActiveTotals">—</span></span>
                         <span><b>All Visible Directory Rows:</b> <span data-ref="footerVisibleTotals">—</span></span>
                     </div>
+
+                    <details class="ct-directory-drawer" style="margin-top:6px;border:1px solid rgba(148,163,184,.15);border-radius:6px;padding:3px 8px;background:rgba(15,23,42,.35);">
+                        <summary style="cursor:pointer;color:#94a3b8;font-size:10px;font-weight:700;padding:3px 0;user-select:none;">▸ Secondary Campaign Directory & Detailed Cards (<span data-ref="campaignSectionCount">18 campaigns</span>)</summary>
+                        <section class="ct-command-strip ct-source-strip" aria-label="Source health">
+                            <div class="ct-command-item"><div class="ct-command-label">Data Freshness</div><div class="ct-command-value" data-ref="dataAge">Waiting</div></div>
+                            <div class="ct-command-item"><div class="ct-command-label">Feed Heartbeat</div><div class="ct-command-value" data-ref="feedHeartbeat">Waiting</div></div>
+                            <div class="ct-command-item"><div class="ct-command-label">Lead Runway</div><div class="ct-command-value" data-ref="leadRunway">Measuring…</div></div>
+                            <div class="ct-command-item"><div class="ct-command-label">Recovery</div><div class="ct-command-value" data-ref="recoveryState">Standby</div></div>
+                        </section>
+
+                        <div class="ct-campaigns-head" aria-label="Campaign list status">
+                            <div><strong>CAMPAIGNS</strong><small data-ref="campaignSectionCountSub">Waiting for CallTools campaign data</small></div>
+                            <span class="ct-campaigns-state" data-ref="campaignSectionState">WAITING</span>
+                        </div>
+                        <div class="ct-filter-bar" aria-label="Campaign filters">
+                            <button class="ct-filter-btn is-active" type="button" data-filter="all">All</button>
+                            <button class="ct-filter-btn" type="button" data-filter="critical">Critical</button>
+                            <button class="ct-filter-btn" type="button" data-filter="warning">At Risk</button>
+                            <button class="ct-filter-btn" type="button" data-filter="healthy">Healthy</button>
+                            <button class="ct-filter-btn" type="button" data-filter="data">Data Check</button>
+                        </div>
+                        <div class="ct-order-hint" data-ref="orderHint" hidden><span class="ct-order-icon">↕</span><span>ARRANGE MODE ON — use the dedicated order workspace below. Live metrics never change your manual order.</span></div>
+                        <section class="ct-order-editor" data-ref="orderEditor" hidden aria-label="Campaign arrangement workspace">
+                            <div class="ct-order-editor-head">
+                                <div><strong>ARRANGE CAMPAIGNS</strong><small>Set the exact display order once. This order stays fixed while live metrics update.</small></div>
+                                <div class="ct-order-editor-actions"><button type="button" class="ct-order-editor-btn" data-order-action="reset">Reset to default</button><button type="button" class="ct-order-editor-btn is-primary" data-order-action="done">Done</button></div>
+                            </div>
+                            <div class="ct-order-editor-tip"><span>↕</span><span>Use <b>↑ / ↓</b> for precise positioning. The order affects display only — it never changes CallTools campaign settings. Changes persist immediately.</span></div>
+                            <div class="ct-order-editor-list" data-ref="orderEditorList"></div>
+                        </section>
+                        <div class="ct-table-head" aria-hidden="true"><span>#</span><span>CAMPAIGN</span><span>STATUS</span><span>TOTAL AGENTS</span><span>WAITING</span><span>ON CALL</span><span>WORST WAIT</span><span>LIVE LEADS</span><span>CONNECTED</span><span>CALL ATTEMPTS</span><span>ABANDONED</span><span>RUNWAY</span><span>ACTIONS</span></div>
+                        <div class="ct-list" aria-live="polite"></div>
+                    </details>
 
                 </main>
                 <div class="ct-resize-handle" title="Resize dashboard" aria-hidden="true"></div>
@@ -2776,6 +2812,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             activeSummaryCount: root.querySelector('[data-ref="activeSummaryCount"]'),
             activeSummaryBadge: root.querySelector('[data-ref="activeSummaryBadge"]'),
             activeSummaryRows: root.querySelector('[data-ref="activeSummaryRows"]'),
+            clearSelectionBtn: root.querySelector('[data-ref="clearSelectionBtn"]'),
+            selectionCount: root.querySelector('[data-ref="selectionCount"]'),
             reconciledFooter: root.querySelector('[data-ref="reconciledFooter"]'),
             footerActiveTotals: root.querySelector('[data-ref="footerActiveTotals"]'),
             footerVisibleTotals: root.querySelector('[data-ref="footerVisibleTotals"]'),
@@ -3019,11 +3057,177 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         if (refs.activeSummaryRows) {
             refs.activeSummaryRows.addEventListener("click", function (event) {
                 const btn = event.target.closest("[data-campaign-focus]");
-                if (!btn) return;
+                if (btn) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const id = btn.getAttribute("data-campaign-focus");
+                    if (id) focusCampaign(id, false);
+                    return;
+                }
+            });
+
+            // Checkbox selection in rows
+            refs.activeSummaryRows.addEventListener("change", function (event) {
+                const cb = event.target.closest(".ct-table-select-cb");
+                if (!cb) return;
+                const id = cb.dataset.campaignId;
+                if (!id) return;
+
+                if (!state.selectedCampaignIds) state.selectedCampaignIds = new Set();
+                if (cb.checked) {
+                    state.selectedCampaignIds.add(id);
+                } else {
+                    state.selectedCampaignIds.delete(id);
+                }
+                persistSelectedCampaigns();
+                scheduleRender();
+            });
+
+            // Drag and drop reordering
+            let tableDraggedId = null;
+            refs.activeSummaryRows.addEventListener("dragstart", function (event) {
+                const tr = event.target.closest("tr.ct-active-row");
+                if (!tr) return;
+                tableDraggedId = tr.dataset.campaignId;
+                state.draggingCampaignId = tableDraggedId;
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("text/plain", tableDraggedId);
+                tr.classList.add("is-dragging");
+            });
+
+            refs.activeSummaryRows.addEventListener("dragover", function (event) {
                 event.preventDefault();
-                event.stopPropagation();
-                const id = btn.getAttribute("data-campaign-focus");
-                if (id) focusCampaign(id, false);
+                event.dataTransfer.dropEffect = "move";
+                const tr = event.target.closest("tr.ct-active-row");
+                if (!tr || tr.dataset.campaignId === tableDraggedId) return;
+
+                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                    if (row !== tr) row.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
+                });
+
+                const rect = tr.getBoundingClientRect();
+                const isAfter = event.clientY > rect.top + rect.height / 2;
+                tr.classList.add("is-drop-target");
+                tr.classList.toggle("is-drop-after", isAfter);
+                tr.classList.toggle("is-drop-before", !isAfter);
+            });
+
+            refs.activeSummaryRows.addEventListener("dragleave", function (event) {
+                const tr = event.target.closest("tr.ct-active-row");
+                if (tr && !tr.contains(event.relatedTarget)) {
+                    tr.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
+                }
+            });
+
+            refs.activeSummaryRows.addEventListener("drop", function (event) {
+                event.preventDefault();
+                const tr = event.target.closest("tr.ct-active-row");
+                const targetId = tr ? tr.dataset.campaignId : null;
+
+                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                    row.classList.remove("is-dragging", "is-drop-target", "is-drop-before", "is-drop-after");
+                });
+
+                if (tableDraggedId && targetId && tableDraggedId !== targetId) {
+                    const rect = tr.getBoundingClientRect();
+                    const insertAfter = event.clientY > rect.top + rect.height / 2;
+
+                    const curOrder = Array.isArray(state.manualOrder) ? state.manualOrder.slice() : [];
+                    const fromIdx = curOrder.indexOf(tableDraggedId);
+                    if (fromIdx !== -1) curOrder.splice(fromIdx, 1);
+                    let toIdx = curOrder.indexOf(targetId);
+                    if (toIdx !== -1) {
+                        if (insertAfter) toIdx++;
+                        curOrder.splice(toIdx, 0, tableDraggedId);
+                    } else {
+                        curOrder.push(tableDraggedId);
+                    }
+                    state.manualOrder = curOrder;
+                    state.sortedIds = curOrder.slice();
+                    persistCampaignOrder();
+                    scheduleRender();
+                    showActionNotice("Campaign display order updated.");
+                }
+                tableDraggedId = null;
+                state.draggingCampaignId = "";
+            });
+
+            refs.activeSummaryRows.addEventListener("dragend", function () {
+                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                    row.classList.remove("is-dragging", "is-drop-target", "is-drop-before", "is-drop-after");
+                });
+                tableDraggedId = null;
+                state.draggingCampaignId = "";
+            });
+
+            // Alt+Up / Alt+Down keyboard reordering
+            refs.activeSummaryRows.addEventListener("keydown", function (event) {
+                if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+                const tr = event.target.closest("tr.ct-active-row");
+                if (!tr) return;
+                const id = tr.dataset.campaignId;
+                if (!id) return;
+
+                event.preventDefault();
+                const curOrder = Array.isArray(state.manualOrder) ? state.manualOrder.slice() : [];
+                const idx = curOrder.indexOf(id);
+                if (idx === -1) return;
+
+                if (event.key === "ArrowUp" && idx > 0) {
+                    const temp = curOrder[idx - 1];
+                    curOrder[idx - 1] = curOrder[idx];
+                    curOrder[idx] = temp;
+                    state.manualOrder = curOrder;
+                    state.sortedIds = curOrder.slice();
+                    persistCampaignOrder();
+                    scheduleRender();
+                    showActionNotice("Campaign moved up.");
+                } else if (event.key === "ArrowDown" && idx < curOrder.length - 1) {
+                    const temp = curOrder[idx + 1];
+                    curOrder[idx + 1] = curOrder[idx];
+                    curOrder[idx] = temp;
+                    state.manualOrder = curOrder;
+                    state.sortedIds = curOrder.slice();
+                    persistCampaignOrder();
+                    scheduleRender();
+                    showActionNotice("Campaign moved down.");
+                }
+            });
+        }
+
+        // Header toggle select all
+        const toggleSelectAll = root ? root.querySelector('input[data-campaign-action="toggle-select-all"]') : null;
+        if (toggleSelectAll) {
+            toggleSelectAll.addEventListener("change", function () {
+                if (!state.selectedCampaignIds) state.selectedCampaignIds = new Set();
+                const visibleCamps = (state.campaigns || []).filter(function (c) {
+                    if (state.stateFilter === "active" && !c.__active) return false;
+                    if (state.stateFilter === "inactive" && c.__active) return false;
+                    if (state.filter === "critical" && c.__health !== "critical") return false;
+                    if (state.filter === "warning" && c.__health !== "warning") return false;
+                    if (state.filter === "healthy" && c.__health !== "good" && c.__health !== "excellent") return false;
+                    if (state.filter === "data" && !c.__dataCheck) return false;
+                    const needle = state.query.trim().toLowerCase();
+                    return !needle || String(c.name || "").toLowerCase().includes(needle);
+                });
+
+                if (toggleSelectAll.checked) {
+                    visibleCamps.forEach(function (c) { state.selectedCampaignIds.add(c.__id); });
+                } else {
+                    visibleCamps.forEach(function (c) { state.selectedCampaignIds.delete(c.__id); });
+                }
+                persistSelectedCampaigns();
+                scheduleRender();
+            });
+        }
+
+        // Clear selection button in header
+        if (refs.clearSelectionBtn) {
+            refs.clearSelectionBtn.addEventListener("click", function () {
+                if (state.selectedCampaignIds) state.selectedCampaignIds.clear();
+                persistSelectedCampaigns();
+                scheduleRender();
+                showActionNotice("Campaign selections cleared.");
             });
         }
         refs.alerts.addEventListener("click", function (event) {
@@ -3658,21 +3862,40 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             return !needle || String(c.name || "").toLowerCase().includes(needle);
         });
 
+        const selectedCount = state.selectedCampaignIds ? state.selectedCampaignIds.size : 0;
         if (refs.activeSummaryCount) {
-            setText(refs.activeSummaryCount, active.length + " active of " + allCamp.length + " campaigns (" + visible.length + " shown)");
+            setText(refs.activeSummaryCount, active.length + " active of " + allCamp.length + " campaigns (" + visible.length + " shown" + (selectedCount ? ", " + selectedCount + " selected" : "") + ")");
         }
         if (refs.activeSummaryBadge) {
             setText(refs.activeSummaryBadge, active.length ? active.length + " ACTIVE" : "0 ACTIVE");
             setClass(refs.activeSummaryBadge, "ct-active-summary-badge " + (active.length ? "is-live" : "is-inactive"));
         }
+        if (refs.clearSelectionBtn) {
+            refs.clearSelectionBtn.hidden = selectedCount === 0;
+            if (refs.selectionCount) setText(refs.selectionCount, selectedCount);
+        }
+
+        const headerSelectAll = root ? root.querySelector('input[data-campaign-action="toggle-select-all"]') : null;
+        if (headerSelectAll) {
+            const visibleIds = visible.map(function (c) { return c.__id; });
+            const allSel = visibleIds.length > 0 && visibleIds.every(function (id) { return state.selectedCampaignIds && state.selectedCampaignIds.has(id); });
+            const someSel = visibleIds.some(function (id) { return state.selectedCampaignIds && state.selectedCampaignIds.has(id); });
+            headerSelectAll.checked = allSel;
+            headerSelectAll.indeterminate = !allSel && someSel;
+        }
+
         if (!visible.length) {
-            refs.activeSummaryRows.innerHTML = '<tr><td colspan="14" class="ct-active-empty">No campaigns match current filters.</td></tr>';
+            refs.activeSummaryRows.innerHTML = '<tr><td colspan="16" class="ct-active-empty">No campaigns match current filters.</td></tr>';
             return;
         }
         const fragment = document.createDocumentFragment();
         visible.forEach(function (c) {
+            const isSelected = Boolean(state.selectedCampaignIds && state.selectedCampaignIds.has(c.__id));
             const tr = document.createElement("tr");
-            tr.className = "ct-active-row is-" + (c.__health || "good");
+            tr.className = "ct-active-row is-" + (c.__health || "good") + (isSelected ? " is-selected" : "");
+            tr.dataset.campaignId = c.__id;
+            tr.draggable = true;
+
             const runway = estimateCampaignRunway(c);
             const agentsText = c.__loggedInAvailable ? formatNumber(c.__loggedIn) : "—";
             const agentsTitle = c.__loggedInAvailable ? c.__loggedIn + " logged in" : "Not exposed in Campaigns feed";
@@ -3697,20 +3920,22 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 : "No outbound attempts recorded today";
             const connectRateClass = c.__outbound > 0 ? (connectRate >= 3 ? "is-good" : connectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
 
-            tr.innerHTML = '<td class="ct-active-name"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
-                '<td><span class="ct-active-status-tag ' + (c.__active ? 'is-live' : 'is-inactive') + '">' + (c.__active ? 'ACTIVE' : 'INACTIVE') + '</span></td>' +
-                '<td title="' + escapeHtml(agentsTitle) + '">' + escapeHtml(agentsText) + '</td>' +
-                '<td class="' + (c.__wait >= 60 ? 'is-critical' : c.__wait >= 30 ? 'is-warning' : '') + '">' + escapeHtml(waitNowText) + '</td>' +
-                '<td>' + escapeHtml(waitTodayText) + '</td>' +
-                '<td>' + escapeHtml(outboundText) + '</td>' +
-                '<td class="is-highlight">' + escapeHtml(humanText) + '</td>' +
-                '<td>' + escapeHtml(agentConnectText) + '</td>' +
-                '<td class="' + (c.__abandoned >= 500 || abandonRate >= 5 ? 'is-critical' : abandonRate >= 2 ? 'is-warning' : '') + '" title="' + escapeHtml(abandonedTitle) + '">' + escapeHtml(abandonedText) + '</td>' +
-                '<td class="' + escapeHtml(connectRateClass) + '" title="' + escapeHtml(connectRateTitle) + '">' + escapeHtml(connectRateText) + '</td>' +
-                '<td>' + escapeHtml(contactsText) + '</td>' +
-                '<td class="' + escapeHtml(runway.tone) + '">' + escapeHtml(runway.label) + '</td>' +
-                '<td><span class="ct-health-pill is-' + escapeHtml(c.__health || 'good') + '">' + escapeHtml(healthLabel) + '</span></td>' +
-                '<td><button type="button" class="ct-active-focus-btn" data-campaign-focus="' + escapeHtml(c.__id) + '">Focus</button></td>';
+            tr.innerHTML = '<td class="ct-td-drag" title="Drag to reorder row (or use Alt+Up/Down)"><span class="ct-table-drag-handle" draggable="true" data-campaign-id="' + escapeHtml(c.__id) + '">⋮⋮</span></td>' +
+                '<td class="ct-td-select"><input type="checkbox" class="ct-table-select-cb" data-campaign-id="' + escapeHtml(c.__id) + '" ' + (isSelected ? 'checked' : '') + ' aria-label="Select ' + escapeHtml(c.name) + '"></td>' +
+                '<td class="ct-active-name" style="text-align:left"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
+                '<td style="text-align:center"><span class="ct-active-status-tag ' + (c.__active ? 'is-live' : 'is-inactive') + '">' + (c.__active ? 'ACTIVE' : 'INACTIVE') + '</span></td>' +
+                '<td class="ct-td-num" title="' + escapeHtml(agentsTitle) + '">' + escapeHtml(agentsText) + '</td>' +
+                '<td class="ct-td-num ' + (c.__wait >= 60 ? 'is-critical' : c.__wait >= 30 ? 'is-warning' : '') + '">' + escapeHtml(waitNowText) + '</td>' +
+                '<td class="ct-td-num">' + escapeHtml(waitTodayText) + '</td>' +
+                '<td class="ct-td-num">' + escapeHtml(outboundText) + '</td>' +
+                '<td class="ct-td-num is-highlight">' + escapeHtml(humanText) + '</td>' +
+                '<td class="ct-td-num">' + escapeHtml(agentConnectText) + '</td>' +
+                '<td class="ct-td-num ' + (c.__abandoned >= 500 || abandonRate >= 5 ? 'is-critical' : abandonRate >= 2 ? 'is-warning' : '') + '" title="' + escapeHtml(abandonedTitle) + '">' + escapeHtml(abandonedText) + '</td>' +
+                '<td class="ct-td-num ' + escapeHtml(connectRateClass) + '" title="' + escapeHtml(connectRateTitle) + '">' + escapeHtml(connectRateText) + '</td>' +
+                '<td class="ct-td-num">' + escapeHtml(contactsText) + '</td>' +
+                '<td class="ct-td-center ' + escapeHtml(runway.tone) + '">' + escapeHtml(runway.label) + '</td>' +
+                '<td class="ct-td-center"><span class="ct-health-pill is-' + escapeHtml(c.__health || 'good') + '">' + escapeHtml(healthLabel) + '</span></td>' +
+                '<td class="ct-td-center"><button type="button" class="ct-active-focus-btn" data-campaign-focus="' + escapeHtml(c.__id) + '" title="Focus Outbound Monitor on ' + escapeHtml(c.name) + '">Focus</button></td>';
             fragment.appendChild(tr);
         });
         refs.activeSummaryRows.replaceChildren(fragment);
@@ -3818,6 +4043,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setText(refs.opRunway, runwayText);
         setClass(refs.opRunway, "ct-operating-metric-value " + runwayTone);
 
+        const summaryBar = root ? root.querySelector(".ct-operating-summary-bar") : null;
+        if (summaryBar) summaryBar.style.display = count > 1 ? "grid" : "none";
+
         // Per-campaign cards are authoritative source views. Agent state is always
         // presented first, followed by CallTools campaign data, so multi-selection
         // never collapses two campaigns into one opaque aggregate.
@@ -3833,6 +4061,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                     const abandonRate = c.__outbound > 0 ? (c.__abandoned / c.__outbound) * 100 : 0;
                     const abandonTone = c.__abandoned >= 500 || abandonRate >= 5 ? "is-critical" : abandonRate >= 2 ? "is-warning" : "is-good";
                     const leadTone = c.__active === true && c.__contacts <= state.contactThreshold ? "is-warning" : "is-good";
+                    const connectRate = c.__outbound > 0 ? (c.__human / c.__outbound) * 100 : 0;
+                    const connectRateText = c.__outbound > 0 ? connectRate.toFixed(1) + "%" : "—";
+                    const connectRateClass = c.__outbound > 0 ? (connectRate >= 3 ? "is-good" : connectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
                     return '<article class="ct-operating-campaign-card" data-operating-campaign="' + escapeHtml(c.__id) + '">' +
                         '<div class="ct-operating-campaign-head"><b>' + escapeHtml(safeValue(c.name, "Unnamed Campaign")) + '</b><span class="ct-operating-campaign-state ' + (active ? 'is-live' : '') + '">' + stateLabel + '</span></div>' +
                         '<div class="ct-operating-agent-band">' +
@@ -3844,9 +4075,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                         '<div class="ct-operating-data-grid">' +
                             '<div class="ct-operating-card-metric ' + leadTone + '"><b>Live Leads</b><strong>' + formatNumber(c.__contacts) + '</strong><small>CallTools Leads</small></div>' +
                             '<div class="ct-operating-card-metric"><b>Connected</b><strong>' + formatNumber(c.__human) + '</strong><small>Native Human</small></div>' +
+                            '<div class="ct-operating-card-metric ' + connectRateClass + '" title="Verified Human Connects ÷ Outbound Attempts"><b>Connect Rate</b><strong>' + escapeHtml(connectRateText) + '</strong><small>Human ÷ Outbound</small></div>' +
                             '<div class="ct-operating-card-metric"><b>Call Attempts</b><strong>' + formatNumber(c.__outbound) + '</strong><small>Native Outbound</small></div>' +
                             '<div class="ct-operating-card-metric ' + abandonTone + '"><b>Abandoned</b><strong>' + formatNumber(c.__abandoned) + '</strong><small>Native reported</small></div>' +
-                            '<div class="ct-operating-card-metric ' + runway.tone + '"><b>Lead Runway</b><strong>' + escapeHtml(runway.label) + '</strong><small>Observed depletion only</small></div>' +
+                            '<div class="ct-operating-card-metric ' + runway.tone + '"><b>Lead Runway</b><strong>' + escapeHtml(runway.label) + '</strong><small>Observed depletion</small></div>' +
                         '</div>' +
                     '</article>';
                 }).join("");
