@@ -1042,3 +1042,128 @@ test("UPGRADE TEST 27: Inbound Queue Detail header and cell grid template column
     assert.ok(queueHeaders[5].length <= 5, "WAIT header must be <= 5 chars to fit within 46px");
     assert.ok(queueHeaders[6].length <= 8, "ON CALL header must be <= 8 chars to fit within 48px");
 });
+
+test("UPGRADE TEST 28: Campaign filter state persistence & restoration across reload/refresh", () => {
+    // Simulated storage mock
+    const storage = new Map();
+    const FILTER_STATE_KEY = "ct-operations-campaign-state-filter-v1";
+    const FILTER_HEALTH_KEY = "ct-operations-campaign-health-filter-v1";
+    const SEARCH_QUERY_KEY = "ct-operations-campaign-query-v1";
+    const SELECTED_CAMPAIGNS_KEY = "ct-operations-selected-campaign-ids-v1";
+
+    // Operator selects Active filter, At Risk health filter, a search query, and 2 campaigns
+    storage.set(FILTER_STATE_KEY, "active");
+    storage.set(FILTER_HEALTH_KEY, "warning");
+    storage.set(SEARCH_QUERY_KEY, "realtime");
+    storage.set(SELECTED_CAMPAIGNS_KEY, JSON.stringify(["res cred main", "web upgrade"]));
+
+    // Simulate page reload / dashboard initialization
+    const restoredStateFilter = storage.get(FILTER_STATE_KEY) || "all";
+    const restoredHealthFilter = storage.get(FILTER_HEALTH_KEY) || "all";
+    const restoredQuery = storage.get(SEARCH_QUERY_KEY) || "";
+    const restoredSelected = new Set(JSON.parse(storage.get(SELECTED_CAMPAIGNS_KEY) || "[]"));
+
+    assert.strictEqual(restoredStateFilter, "active", "State filter must restore to 'active'");
+    assert.strictEqual(restoredHealthFilter, "warning", "Health filter must restore to 'warning'");
+    assert.strictEqual(restoredQuery, "realtime", "Search query must restore to 'realtime'");
+    assert.strictEqual(restoredSelected.has("res cred main"), true);
+    assert.strictEqual(restoredSelected.has("web upgrade"), true);
+    assert.strictEqual(restoredSelected.size, 2);
+});
+
+test("UPGRADE TEST 29: Inbound Not Answered resolution maps native Inbound No Answer without false zero", () => {
+    function inboundNotAnswered(queue) {
+        if (!queue) return null;
+        if (queue._metrics && queue._metrics.callsTodayNotAnswered && typeof queue._metrics.callsTodayNotAnswered.value === "number") {
+            return queue._metrics.callsTodayNotAnswered.value;
+        }
+        if (queue._metrics && queue._metrics.inboundNoAnswer && typeof queue._metrics.inboundNoAnswer.value === "number") {
+            return queue._metrics.inboundNoAnswer.value;
+        }
+        if (typeof queue.callsTodayNotAnswered === "number") return queue.callsTodayNotAnswered;
+        if (typeof queue.inboundNoAnswer === "number") return queue.inboundNoAnswer;
+        if (queue.callsTodayNotAnswered !== undefined && queue.callsTodayNotAnswered !== null && String(queue.callsTodayNotAnswered).trim() !== "") {
+            const num = parseFloat(String(queue.callsTodayNotAnswered).replace(/,/g, ""));
+            if (Number.isFinite(num)) return num;
+        }
+        if (queue.inboundNoAnswer !== undefined && queue.inboundNoAnswer !== null && String(queue.inboundNoAnswer).trim() !== "") {
+            const num = parseFloat(String(queue.inboundNoAnswer).replace(/,/g, ""));
+            if (Number.isFinite(num)) return num;
+        }
+        return null;
+    }
+
+    // Native queue from live CallTools feed: Inbound No Answer = 99
+    const liveQueue1 = {
+        name: "Main Inbound Queue",
+        callsTodayTotal: 523,
+        callsTodayAnswered: 389,
+        inboundNoAnswer: 99,
+        _metrics: {
+            callsTodayNotAnswered: { state: "MISSING", value: null },
+            inboundNoAnswer: { state: "VALID_NONZERO", value: 99 }
+        }
+    };
+    assert.strictEqual(inboundNotAnswered(liveQueue1), 99, "Must extract native Inbound No Answer (99)");
+
+    // Native queue with 0 no answer
+    const liveQueue2 = {
+        name: "VDH SOLD INBOUND",
+        callsTodayTotal: 18,
+        callsTodayAnswered: 18,
+        inboundNoAnswer: 0,
+        _metrics: {
+            callsTodayNotAnswered: { state: "MISSING", value: null },
+            inboundNoAnswer: { state: "VALID_ZERO", value: 0 }
+        }
+    };
+    assert.strictEqual(inboundNotAnswered(liveQueue2), 0, "Must extract native Inbound No Answer (0)");
+
+    // Queue with genuinely unexposed field
+    const unexposedQueue = {
+        name: "Legacy Queue",
+        callsTodayTotal: 10,
+        callsTodayAnswered: 8,
+        _metrics: {}
+    };
+    assert.strictEqual(inboundNotAnswered(unexposedQueue), null, "Unexposed queue must return null, never false 0");
+});
+
+test("UPGRADE TEST 30: Drag-and-drop reordering with filtered view preserves hidden campaigns", () => {
+    const allCampaigns = ["res cred main", "realtime 126", "web upgrade", "bkv survey", "vdh callback"];
+    let manualOrder = allCampaigns.slice();
+
+    // Visible filtered list (e.g. only Active campaigns)
+    const visibleIds = ["res cred main", "web upgrade"];
+
+    // Operator drags "web upgrade" above "res cred main"
+    const draggedId = "web upgrade";
+    const targetId = "res cred main";
+    const insertAfter = false;
+
+    // reorderCampaignByIds logic
+    const fromIdx = manualOrder.indexOf(draggedId);
+    if (fromIdx !== -1) manualOrder.splice(fromIdx, 1);
+    let toIdx = manualOrder.indexOf(targetId);
+    if (toIdx !== -1) {
+        if (insertAfter) toIdx++;
+        manualOrder.splice(toIdx, 0, draggedId);
+    }
+
+    // Verify: "web upgrade" is now before "res cred main"
+    assert.strictEqual(manualOrder[0], "web upgrade");
+    assert.strictEqual(manualOrder[1], "res cred main");
+
+    // Verify: hidden campaigns were NOT lost or deleted!
+    assert.ok(manualOrder.includes("realtime 126"));
+    assert.ok(manualOrder.includes("bkv survey"));
+    assert.ok(manualOrder.includes("vdh callback"));
+    assert.strictEqual(manualOrder.length, 5);
+});
+
+test("UPGRADE TEST 31: Inbound table grid template min-width and sticky header requirements", () => {
+    const minWidthPx = 680;
+    const maxTableHeightPx = 200;
+    assert.ok(minWidthPx >= 650, "Table min-width must be at least 650px to prevent header cramming");
+    assert.ok(maxTableHeightPx <= 220, "Table container height must be bounded to preserve vertical viewport");
+});

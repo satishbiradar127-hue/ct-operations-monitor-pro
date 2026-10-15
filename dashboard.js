@@ -15,10 +15,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     const THEME_KEY = "ct-operations-dashboard-theme";
     const CONTACT_THRESHOLD_KEY = "ct-operations-contact-threshold";
     const ZOOM_KEY = "ct-operations-dashboard-zoom";
-    const LAYOUT_KEY = "ct-operations-dashboard-layout-v17";
+    const LAYOUT_KEY = "ct-operations-dashboard-layout-v18";
     const LAYOUT_VERSION_KEY = "ct-operations-dashboard-layout-version";
-    const LAYOUT_VERSION = 17;
+    const LAYOUT_VERSION = 18;
     const SELECTED_CAMPAIGNS_KEY = "ct-operations-selected-campaign-ids-v1";
+    const FILTER_STATE_KEY = "ct-operations-campaign-state-filter-v1";
+    const FILTER_HEALTH_KEY = "ct-operations-campaign-health-filter-v1";
+    const SEARCH_QUERY_KEY = "ct-operations-campaign-query-v1";
     const ORDER_KEY = "ct-operations-dashboard-campaign-order";
     const ORDER_META_KEY = "ct-operations-dashboard-campaign-order-meta";
     const EMPTY = "-";
@@ -86,9 +89,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         queueFeedStatus: readLastKnownInboundStatus().status,
         route: window.location.pathname.replace(/\/+$/, "") === "/manager/queues" ? "queues" : "campaigns",
         previousById: new Map(),
-        query: "",
-        filter: "all",
-        stateFilter: "all",
+        query: readStorage(SEARCH_QUERY_KEY, ""),
+        filter: readStorage(FILTER_HEALTH_KEY, "all"),
+        stateFilter: readStorage(FILTER_STATE_KEY, "active"),
         allCollapsed: false,
         theme: readStorage(THEME_KEY, "dark") === "light" ? "light" : "dark",
         contactThreshold: numberValue(readStorage(CONTACT_THRESHOLD_KEY, "2000")),
@@ -130,6 +133,24 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     function persistSelectedCampaigns() {
         try {
             localStorage.setItem(SELECTED_CAMPAIGNS_KEY, JSON.stringify(Array.from(state.selectedCampaignIds || [])));
+        } catch (e) {}
+    }
+
+    function persistFilterState() {
+        try {
+            localStorage.setItem(FILTER_STATE_KEY, state.stateFilter || "all");
+        } catch (e) {}
+    }
+
+    function persistHealthFilter() {
+        try {
+            localStorage.setItem(FILTER_HEALTH_KEY, state.filter || "all");
+        } catch (e) {}
+    }
+
+    function persistSearchQuery() {
+        try {
+            localStorage.setItem(SEARCH_QUERY_KEY, state.query || "");
         } catch (e) {}
     }
 
@@ -2524,8 +2545,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-active-row.is-selected { background:rgba(37,99,235,.18) !important; }
             #${DASHBOARD_ID} .ct-active-row.is-selected .ct-active-name b { color:#93c5fd !important; }
             #${DASHBOARD_ID} .ct-active-row.is-dragging { opacity:.4; background:rgba(59,130,246,.25) !important; }
-            #${DASHBOARD_ID} .ct-active-row.is-drop-target.is-drop-before { border-top:2px solid #3b82f6 !important; }
-            #${DASHBOARD_ID} .ct-active-row.is-drop-target.is-drop-after { border-bottom:2px solid #3b82f6 !important; }
+            #${DASHBOARD_ID} .ct-active-row.is-drop-target.is-drop-before > td { border-top:3px solid #3b82f6 !important; }
+            #${DASHBOARD_ID} .ct-active-row.is-drop-target.is-drop-after > td { border-bottom:3px solid #3b82f6 !important; }
             #${DASHBOARD_ID} .ct-active-name { color:#f8fafc; font-weight:700; }
             #${DASHBOARD_ID} .ct-active-status-tag { display:inline-block; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
             #${DASHBOARD_ID} .ct-active-status-tag.is-inactive { background:rgba(148,163,184,.15); color:#94a3b8; border-color:rgba(148,163,184,.3); }
@@ -2539,11 +2560,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-reconciled-footer { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; margin-top:6px; border:1px solid rgba(148,163,184,.15); border-radius:6px; background:rgba(15,23,42,.6); font-size:10.5px; color:#94a3b8; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-reconciled-footer b { color:#f1f5f9; }
             #${DASHBOARD_ID} .ct-kpi-value, #${DASHBOARD_ID} .ct-command-value, #${DASHBOARD_ID} .ct-row-cell { font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { display:grid; grid-template-columns:minmax(130px,1.8fr) 52px 46px 54px 54px 46px 48px 52px 42px 84px; gap:0; align-items:center; }
-            #${DASHBOARD_ID} .ct-inbound-table-head { padding:6px 8px; background:var(--ct-surface-2); color:var(--ct-muted); font-size:9.5px; font-weight:850; letter-spacing:.05em; }
-            #${DASHBOARD_ID} .ct-inbound-table-head span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-inbound-row span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-inbound-table-wrap { max-height:180px; overflow-y:auto; overflow-x:auto; border-radius:6px; border:1px solid rgba(148,163,184,.15); }
+            #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { display:grid; grid-template-columns:minmax(140px,2fr) 56px 52px 64px 60px 50px 56px 64px 50px 88px; gap:0; align-items:center; min-width:680px; }
+            #${DASHBOARD_ID} .ct-inbound-table-head { position:sticky; top:0; z-index:5; padding:7px 10px; background:var(--ct-surface-2); border-bottom:1px solid var(--ct-border); color:var(--ct-muted); font-size:10px; font-weight:850; letter-spacing:.05em; }
+            #${DASHBOARD_ID} .ct-inbound-table-head span:not(:first-child):not(:last-child) { text-align:right; padding-right:6px; }
+            #${DASHBOARD_ID} .ct-inbound-table-head span:last-child { text-align:center; }
+            #${DASHBOARD_ID} .ct-inbound-row { padding:6px 10px; border-bottom:1px solid rgba(148,163,184,.08); font-size:11px; }
+            #${DASHBOARD_ID} .ct-inbound-row span:not(:first-child):not(:last-child) { text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; font-weight:600; }
+            #${DASHBOARD_ID} .ct-inbound-row span:last-child { text-align:center; }
+            #${DASHBOARD_ID} .ct-inbound-table-wrap { max-height:200px; overflow-y:auto; overflow-x:auto; border-radius:6px; border:1px solid rgba(148,163,184,.15); }
             @media (max-width:900px) { #${DASHBOARD_ID} .ct-focus-grid { grid-template-columns:1fr !important; } }
             @media (max-width:700px) { #${DASHBOARD_ID} .ct-order-editor-head { align-items:flex-start; flex-direction:column; } #${DASHBOARD_ID} .ct-order-editor-row { grid-template-columns:26px 22px minmax(0,1fr) 52px 50px; } }
         `;
@@ -2919,10 +2943,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         refs.collapse.textContent = state.allCollapsed ? "Expand" : "Collapse";
         refs.collapse.setAttribute("aria-label", state.allCollapsed ? "Expand operations panel" : "Collapse operations panel");
         root.classList.toggle("is-panel-collapsed", state.allCollapsed);
-        setReorderMode(false);
+        if (refs.search && state.query) {
+            refs.search.value = state.query;
+        }
 
         const applyCampaignSearch = function () {
             state.query = String(refs.search.value || "").trim();
+            persistSearchQuery();
             scheduleRender();
         };
         refs.search.addEventListener("input", applyCampaignSearch);
@@ -3083,8 +3110,112 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 scheduleRender();
             });
 
-            // Drag and drop reordering
+            // Robust Drag and drop & Pointer event reordering
+            function reorderCampaignByIds(draggedId, targetId, insertAfter) {
+                if (!draggedId || !targetId || draggedId === targetId) return;
+                const allPrepared = prepareCampaigns(state.campaigns);
+                const allIds = allPrepared.map(function (c) { return c.__id; });
+                let curOrder = Array.isArray(state.manualOrder) && state.manualOrder.length ? state.manualOrder.slice() : allIds.slice();
+                allIds.forEach(function (id) {
+                    if (!curOrder.includes(id)) curOrder.push(id);
+                });
+
+                const fromIdx = curOrder.indexOf(draggedId);
+                if (fromIdx !== -1) curOrder.splice(fromIdx, 1);
+                let toIdx = curOrder.indexOf(targetId);
+                if (toIdx !== -1) {
+                    if (insertAfter) toIdx++;
+                    curOrder.splice(toIdx, 0, draggedId);
+                } else {
+                    curOrder.push(draggedId);
+                }
+                state.manualOrder = curOrder;
+                state.sortedIds = curOrder.slice();
+                persistCampaignOrder();
+                scheduleRender();
+                showActionNotice("Campaign display order updated.");
+            }
+
             let tableDraggedId = null;
+            let pointerDragState = {
+                active: false,
+                pointerId: null,
+                draggedId: null,
+                targetId: null,
+                insertAfter: false
+            };
+
+            // Pointer-based reordering for smooth desktop and mobile interaction
+            refs.activeSummaryRows.addEventListener("pointerdown", function (event) {
+                const handle = event.target.closest(".ct-table-drag-handle, .ct-td-drag");
+                if (!handle || event.button !== 0) return;
+                const tr = handle.closest("tr.ct-active-row");
+                if (!tr) return;
+
+                pointerDragState.active = true;
+                pointerDragState.pointerId = event.pointerId;
+                pointerDragState.draggedId = tr.dataset.campaignId;
+                tableDraggedId = tr.dataset.campaignId;
+                state.draggingCampaignId = tableDraggedId;
+                tr.classList.add("is-dragging");
+
+                try {
+                    if (event.target.setPointerCapture) event.target.setPointerCapture(event.pointerId);
+                } catch (e) {}
+            });
+
+            refs.activeSummaryRows.addEventListener("pointermove", function (event) {
+                if (!pointerDragState.active) return;
+                const el = document.elementFromPoint(event.clientX, event.clientY);
+                const tr = el ? el.closest("tr.ct-active-row") : null;
+                if (!tr || tr.dataset.campaignId === pointerDragState.draggedId) {
+                    refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                        row.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
+                    });
+                    pointerDragState.targetId = null;
+                    return;
+                }
+
+                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                    if (row !== tr) row.classList.remove("is-drop-target", "is-drop-before", "is-drop-after");
+                });
+
+                const rect = tr.getBoundingClientRect();
+                const isAfter = event.clientY > rect.top + rect.height / 2;
+                tr.classList.add("is-drop-target");
+                tr.classList.toggle("is-drop-after", isAfter);
+                tr.classList.toggle("is-drop-before", !isAfter);
+
+                pointerDragState.targetId = tr.dataset.campaignId;
+                pointerDragState.insertAfter = isAfter;
+            });
+
+            const finishPointerDrag = function () {
+                if (!pointerDragState.active) return;
+                const draggedId = pointerDragState.draggedId;
+                const targetId = pointerDragState.targetId;
+                const insertAfter = pointerDragState.insertAfter;
+
+                refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
+                    row.classList.remove("is-dragging", "is-drop-target", "is-drop-before", "is-drop-after");
+                });
+
+                pointerDragState.active = false;
+                pointerDragState.pointerId = null;
+                pointerDragState.draggedId = null;
+                pointerDragState.targetId = null;
+                tableDraggedId = null;
+                state.draggingCampaignId = "";
+
+                if (draggedId && targetId && draggedId !== targetId) {
+                    reorderCampaignByIds(draggedId, targetId, insertAfter);
+                }
+            };
+
+            refs.activeSummaryRows.addEventListener("pointerup", finishPointerDrag);
+            refs.activeSummaryRows.addEventListener("pointercancel", finishPointerDrag);
+
+            // Native HTML5 Drag and drop
             refs.activeSummaryRows.addEventListener("dragstart", function (event) {
                 const tr = event.target.closest("tr.ct-active-row");
                 if (!tr) return;
@@ -3123,30 +3254,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 event.preventDefault();
                 const tr = event.target.closest("tr.ct-active-row");
                 const targetId = tr ? tr.dataset.campaignId : null;
+                const draggedId = tableDraggedId || event.dataTransfer.getData("text/plain");
 
                 refs.activeSummaryRows.querySelectorAll("tr.ct-active-row").forEach(function (row) {
                     row.classList.remove("is-dragging", "is-drop-target", "is-drop-before", "is-drop-after");
                 });
 
-                if (tableDraggedId && targetId && tableDraggedId !== targetId) {
+                if (draggedId && targetId && draggedId !== targetId) {
                     const rect = tr.getBoundingClientRect();
                     const insertAfter = event.clientY > rect.top + rect.height / 2;
-
-                    const curOrder = Array.isArray(state.manualOrder) ? state.manualOrder.slice() : [];
-                    const fromIdx = curOrder.indexOf(tableDraggedId);
-                    if (fromIdx !== -1) curOrder.splice(fromIdx, 1);
-                    let toIdx = curOrder.indexOf(targetId);
-                    if (toIdx !== -1) {
-                        if (insertAfter) toIdx++;
-                        curOrder.splice(toIdx, 0, tableDraggedId);
-                    } else {
-                        curOrder.push(tableDraggedId);
-                    }
-                    state.manualOrder = curOrder;
-                    state.sortedIds = curOrder.slice();
-                    persistCampaignOrder();
-                    scheduleRender();
-                    showActionNotice("Campaign display order updated.");
+                    reorderCampaignByIds(draggedId, targetId, insertAfter);
                 }
                 tableDraggedId = null;
                 state.draggingCampaignId = "";
@@ -3160,7 +3277,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 state.draggingCampaignId = "";
             });
 
-            // Alt+Up / Alt+Down keyboard reordering
+            // Alt+Up / Alt+Down keyboard reordering on visible rows
             refs.activeSummaryRows.addEventListener("keydown", function (event) {
                 if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
                 const tr = event.target.closest("tr.ct-active-row");
@@ -3169,28 +3286,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 if (!id) return;
 
                 event.preventDefault();
-                const curOrder = Array.isArray(state.manualOrder) ? state.manualOrder.slice() : [];
-                const idx = curOrder.indexOf(id);
-                if (idx === -1) return;
+                const visibleTrs = Array.from(refs.activeSummaryRows.querySelectorAll("tr.ct-active-row"));
+                const visibleIdx = visibleTrs.indexOf(tr);
+                if (visibleIdx === -1) return;
 
-                if (event.key === "ArrowUp" && idx > 0) {
-                    const temp = curOrder[idx - 1];
-                    curOrder[idx - 1] = curOrder[idx];
-                    curOrder[idx] = temp;
-                    state.manualOrder = curOrder;
-                    state.sortedIds = curOrder.slice();
-                    persistCampaignOrder();
-                    scheduleRender();
-                    showActionNotice("Campaign moved up.");
-                } else if (event.key === "ArrowDown" && idx < curOrder.length - 1) {
-                    const temp = curOrder[idx + 1];
-                    curOrder[idx + 1] = curOrder[idx];
-                    curOrder[idx] = temp;
-                    state.manualOrder = curOrder;
-                    state.sortedIds = curOrder.slice();
-                    persistCampaignOrder();
-                    scheduleRender();
-                    showActionNotice("Campaign moved down.");
+                if (event.key === "ArrowUp" && visibleIdx > 0) {
+                    const prevId = visibleTrs[visibleIdx - 1].dataset.campaignId;
+                    reorderCampaignByIds(id, prevId, false);
+                } else if (event.key === "ArrowDown" && visibleIdx < visibleTrs.length - 1) {
+                    const nextId = visibleTrs[visibleIdx + 1].dataset.campaignId;
+                    reorderCampaignByIds(id, nextId, true);
                 }
             });
         }
@@ -3314,13 +3419,34 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             if (card) { card.collapsed = !card.collapsed; card.node.classList.toggle("is-collapsed", card.collapsed || state.allCollapsed); header.setAttribute('aria-expanded', String(!card.collapsed && !state.allCollapsed)); }
         });
         installCampaignReordering();
+
+        function syncFilterButtons() {
+            if (refs.stateFilterButtons) {
+                refs.stateFilterButtons.forEach(function (button) {
+                    button.classList.toggle("is-active", (button.dataset.stateFilter || "all") === state.stateFilter);
+                });
+            }
+            if (refs.healthFilterButtons) {
+                refs.healthFilterButtons.forEach(function (button) {
+                    button.classList.toggle("is-active", (button.dataset.healthFilter || "all") === state.filter);
+                });
+            }
+            if (refs.filterButtons) {
+                refs.filterButtons.forEach(function (button) {
+                    button.classList.toggle("is-active", (button.dataset.filter || "all") === state.filter);
+                });
+            }
+            if (refs.search && refs.search.value !== state.query) {
+                refs.search.value = state.query || "";
+            }
+        }
+        syncFilterButtons();
+
         refs.filterButtons.forEach(function (button) {
             button.addEventListener("click", function () {
                 state.filter = button.dataset.filter || "all";
-                refs.filterButtons.forEach(function (item) { item.classList.toggle("is-active", item === button); });
-                if (refs.healthFilterButtons) {
-                    refs.healthFilterButtons.forEach(function (b) { b.classList.toggle("is-active", (b.dataset.healthFilter || "all") === state.filter); });
-                }
+                persistHealthFilter();
+                syncFilterButtons();
                 scheduleRender();
             });
         });
@@ -3328,7 +3454,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             refs.stateFilterButtons.forEach(function (button) {
                 button.addEventListener("click", function () {
                     state.stateFilter = button.dataset.stateFilter || "all";
-                    refs.stateFilterButtons.forEach(function (b) { b.classList.toggle("is-active", b === button); });
+                    persistFilterState();
+                    syncFilterButtons();
                     scheduleRender();
                 });
             });
@@ -3337,10 +3464,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             refs.healthFilterButtons.forEach(function (button) {
                 button.addEventListener("click", function () {
                     state.filter = button.dataset.healthFilter || "all";
-                    refs.healthFilterButtons.forEach(function (b) { b.classList.toggle("is-active", b === button); });
-                    if (refs.filterButtons) {
-                        refs.filterButtons.forEach(function (b) { b.classList.toggle("is-active", (b.dataset.filter || "all") === state.filter); });
-                    }
+                    persistHealthFilter();
+                    syncFilterButtons();
                     scheduleRender();
                 });
             });
@@ -3401,8 +3526,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                     interactionState.layout.left = clamp(interactionState.startLeft + dx, 0, maxLeft);
                     interactionState.layout.top = clamp(interactionState.startTop + dy, 0, maxTop);
                 } else if (interactionState.mode === "resize") {
-                    interactionState.layout.width = clamp(interactionState.startWidth + dx, 360, Math.max(360, window.innerWidth - interactionState.layout.left - 10));
-                    interactionState.layout.height = clamp(interactionState.startHeight + dy, 260, Math.max(260, window.innerHeight - interactionState.layout.top - 10));
+                    interactionState.layout.width = clamp(interactionState.startWidth + dx, 980, Math.max(980, window.innerWidth - interactionState.layout.left - 10));
+                    interactionState.layout.height = clamp(interactionState.startHeight + dy, 540, Math.max(540, window.innerHeight - interactionState.layout.top - 10));
                 }
 
                 interactionState.applyLayout(interactionState.layout);
@@ -5631,15 +5756,25 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
     function inboundNotAnswered(queue) {
         if (!queue) return null;
-        // Strictly use native CallTools Not Answered count. Never synthesize from Total - Answered.
+        // Strictly use verified native CallTools Not Answered / Inbound No Answer count. Never synthesize from Total - Answered.
         if (queue._metrics && queue._metrics.callsTodayNotAnswered && typeof queue._metrics.callsTodayNotAnswered.value === "number") {
             return queue._metrics.callsTodayNotAnswered.value;
+        }
+        if (queue._metrics && queue._metrics.inboundNoAnswer && typeof queue._metrics.inboundNoAnswer.value === "number") {
+            return queue._metrics.inboundNoAnswer.value;
         }
         if (typeof queue.callsTodayNotAnswered === "number") {
             return queue.callsTodayNotAnswered;
         }
+        if (typeof queue.inboundNoAnswer === "number") {
+            return queue.inboundNoAnswer;
+        }
         if (queue.callsTodayNotAnswered !== undefined && queue.callsTodayNotAnswered !== null && String(queue.callsTodayNotAnswered).trim() !== "") {
             const num = parseFloat(String(queue.callsTodayNotAnswered).replace(/,/g, ""));
+            if (Number.isFinite(num)) return num;
+        }
+        if (queue.inboundNoAnswer !== undefined && queue.inboundNoAnswer !== null && String(queue.inboundNoAnswer).trim() !== "") {
+            const num = parseFloat(String(queue.inboundNoAnswer).replace(/,/g, ""));
             if (Number.isFinite(num)) return num;
         }
         return null;
@@ -6249,10 +6384,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     }
 
     function defaultLayout() {
-        const maxWidth = Math.max(760, window.innerWidth - 36);
+        const maxWidth = Math.max(980, window.innerWidth - 36);
         const targetWidth = window.innerWidth >= 1680 ? 1520 : window.innerWidth >= 1440 ? 1380 : window.innerWidth >= 1200 ? 1160 : Math.min(DEFAULT_LAYOUT.width, maxWidth);
         const width = Math.min(targetWidth, maxWidth);
-        const height = Math.min(DEFAULT_LAYOUT.height, Math.max(480, window.innerHeight - 36));
+        const height = Math.min(DEFAULT_LAYOUT.height, Math.max(540, window.innerHeight - 36));
 
         return {
             left: Math.max(10, Math.floor((window.innerWidth - width) / 2)),
@@ -6266,10 +6401,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     function normalizeLayout(layout) {
         const def = defaultLayout();
         const source = Object.assign(def, layout || {});
-        const maxWidth = Math.max(760, window.innerWidth - 10);
-        const maxHeight = Math.max(480, window.innerHeight - 10);
-        const width = clamp(numberValue(source.width) || def.width, 760, maxWidth);
-        const height = clamp(numberValue(source.height) || def.height, 480, maxHeight);
+        const maxWidth = Math.max(980, window.innerWidth - 10);
+        const maxHeight = Math.max(540, window.innerHeight - 10);
+        const width = clamp(numberValue(source.width) || def.width, 980, maxWidth);
+        const height = clamp(numberValue(source.height) || def.height, 540, maxHeight);
         // IMPORTANT: the saved left/top coordinates must be bounded using the
         // saved panel dimensions.
         const maxLeft = Math.max(0, window.innerWidth - width - 10);
