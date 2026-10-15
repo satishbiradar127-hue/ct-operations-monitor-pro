@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "CT Operations Monitor Pro",
+  "version": "11.1.53",
+  "description": "CallTools Operations Monitor Pro \u2014 unified outbound Campaigns + inbound Queue command center with same-page native Queue DOM bridge, accurate inbound totals, queue-level staffing, aggressive inbound command center, queue-capacity detail, and rapid live updates, balanced outbound/inbound workspace, and dedicated manual campaign arrangement controls.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://east-2.calltools.io/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://east-2.calltools.io/manager/campaigns*",
+        "https://east-2.calltools.io/manager/queues*"
+      ],
+      "js": [
+        "parser.js",
+        "helpers.js",
+        "dashboard.js",
+        "content.js"
+      ],
+      "css": [
+        "dashboard.css"
+      ],
+      "all_frames": true
+    }
+  ]
+}
