@@ -15,9 +15,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     const THEME_KEY = "ct-operations-dashboard-theme";
     const CONTACT_THRESHOLD_KEY = "ct-operations-contact-threshold";
     const ZOOM_KEY = "ct-operations-dashboard-zoom";
-    const LAYOUT_KEY = "ct-operations-dashboard-layout-v15";
+    const LAYOUT_KEY = "ct-operations-dashboard-layout-v16";
     const LAYOUT_VERSION_KEY = "ct-operations-dashboard-layout-version";
-    const LAYOUT_VERSION = 15;
+    const LAYOUT_VERSION = 16;
     const ORDER_KEY = "ct-operations-dashboard-campaign-order";
     const ORDER_META_KEY = "ct-operations-dashboard-campaign-order-meta";
     const EMPTY = "-";
@@ -44,8 +44,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     const DEFAULT_LAYOUT = {
         left: 18,
         top: 18,
-        width: 1040,
-        height: 860,
+        width: 1440,
+        height: 920,
         collapsed: false
     };
 
@@ -87,6 +87,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         previousById: new Map(),
         query: "",
         filter: "all",
+        stateFilter: "all",
         allCollapsed: false,
         theme: readStorage(THEME_KEY, "dark") === "light" ? "light" : "dark",
         contactThreshold: numberValue(readStorage(CONTACT_THRESHOLD_KEY, "2000")),
@@ -507,8 +508,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 z-index: 999999;
                 display: flex;
                 flex-direction: column;
-                width: min(1040px, calc(100vw - 28px));
-                max-height: calc(100vh - 36px);
+                width: min(1520px, calc(100vw - 28px));
+                max-height: calc(100vh - 24px);
                 color: var(--ct-text);
                 background: var(--ct-bg);
                 border: 1px solid rgba(17, 24, 39, 0.14);
@@ -2305,21 +2306,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-inbound-signal.is-critical { border-color:#e3a6a0; }
             #${DASHBOARD_ID} .ct-inbound-signal.is-good { border-color:#a8dfc2; }
             #${DASHBOARD_ID} .ct-inbound-table-title { margin-top:9px; display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
-            #${DASHBOARD_ID} .ct-inbound-table-title strong { font-size:9px; letter-spacing:.1em; }
-            #${DASHBOARD_ID} .ct-inbound-table-title span { font-size:8px; color:var(--ct-muted); }
+            #${DASHBOARD_ID} .ct-inbound-table-title strong { font-size:11px; letter-spacing:.08em; }
+            #${DASHBOARD_ID} .ct-inbound-table-title span { font-size:10px; color:var(--ct-muted); }
             #${DASHBOARD_ID} .ct-inbound-table-wrap { margin-top:5px; overflow:hidden; border:1px solid var(--ct-border); border-radius:9px; }
-            #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { display:grid; grid-template-columns:minmax(190px,2.2fr) 76px 70px 78px 88px 70px 70px 76px 62px 112px; gap:0; align-items:center; }
-            #${DASHBOARD_ID} .ct-inbound-table-head { padding:6px 8px; background:var(--ct-surface-2); color:var(--ct-muted); font-size:8px; font-weight:800; letter-spacing:.07em; }
-            #${DASHBOARD_ID} .ct-inbound-row { padding:7px 8px; border-top:1px solid var(--ct-border); font-size:10px; }
+            #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { display:grid; grid-template-columns:minmax(130px,1.8fr) 52px 48px 56px 62px 46px 48px 52px 44px 84px; gap:0; align-items:center; }
+            #${DASHBOARD_ID} .ct-inbound-table-head { padding:6px 8px; background:var(--ct-surface-2); color:var(--ct-muted); font-size:9.5px; font-weight:850; letter-spacing:.05em; }
+            #${DASHBOARD_ID} .ct-inbound-row { padding:7px 8px; border-top:1px solid var(--ct-border); font-size:11px; }
             #${DASHBOARD_ID} .ct-inbound-row > span:not(.ct-inbound-name) { text-align:right; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-inbound-name { min-width:0; }
             #${DASHBOARD_ID} .ct-inbound-name b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-inbound-name small { display:block; color:var(--ct-muted); font-size:8px; margin-top:2px; line-height:1.25; white-space:normal; }
-            #${DASHBOARD_ID} .ct-inbound-row em { justify-self:end; font-style:normal; font-size:8px; font-weight:800; padding:3px 5px; border-radius:999px; background:var(--ct-green-bg); color:var(--ct-green); white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-inbound-name small { display:block; color:var(--ct-muted); font-size:9.5px; margin-top:2px; line-height:1.25; white-space:normal; }
+            #${DASHBOARD_ID} .ct-inbound-row em { justify-self:end; font-style:normal; font-size:9.5px; font-weight:850; padding:3px 6px; border-radius:999px; background:var(--ct-green-bg); color:var(--ct-green); white-space:nowrap; }
             #${DASHBOARD_ID} .ct-inbound-row.is-warning em { background:var(--ct-amber-bg); color:var(--ct-amber); }
             #${DASHBOARD_ID} .ct-inbound-row.is-critical em { background:var(--ct-red-bg); color:var(--ct-red); }
             #${DASHBOARD_ID} .ct-inbound-row.is-neutral em { background:var(--ct-surface-2); color:var(--ct-muted); }
-            #${DASHBOARD_ID} .ct-inbound-note { margin-top:7px; font-size:8px; line-height:1.35; color:var(--ct-muted); }
+            #${DASHBOARD_ID} .ct-inbound-note { margin-top:7px; font-size:10px; line-height:1.35; color:var(--ct-muted); }
             #${DASHBOARD_ID} .ct-inbound-empty { padding:12px; border:1px dashed var(--ct-border); border-radius:8px; display:flex; flex-direction:column; gap:4px; }
             #${DASHBOARD_ID} .ct-inbound-empty strong { font-size:10px; }
             #${DASHBOARD_ID} .ct-inbound-empty span { font-size:9px; color:var(--ct-muted); line-height:1.35; }
@@ -2374,7 +2375,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 #${DASHBOARD_ID} .ct-inbound-focus-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
                 #${DASHBOARD_ID} .ct-inbound-signal-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
                 #${DASHBOARD_ID} .ct-inbound-table-wrap { overflow-x:auto; }
-                #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { min-width:980px; }
+                #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { min-width:650px; }
                 #${DASHBOARD_ID} .ct-search { flex-basis:100%; }
                 #${DASHBOARD_ID} .ct-operating-wrap { flex-basis:100%; }
                 #${DASHBOARD_ID} .ct-insights-grid { grid-template-columns:1fr; }
@@ -2441,41 +2442,45 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             @media (max-width:900px) { #${DASHBOARD_ID} .ct-focus-grid { grid-template-columns:1fr; } #${DASHBOARD_ID} .ct-inbound-total-strip { grid-template-columns:repeat(3,minmax(0,1fr)); } #${DASHBOARD_ID} .ct-inbound-wait-row { grid-template-columns:1.5fr repeat(3,70px); } #${DASHBOARD_ID} .ct-inbound-wait-cap { grid-column:1/-1; border-left:0 !important; border-top:1px solid rgba(148,163,184,.13); } }
         `;
         style.textContent += `
-            #${DASHBOARD_ID} .ct-summary-section-label { display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:1px 1px 0; color:rgba(255,255,255,.9); }
-            #${DASHBOARD_ID} .ct-summary-section-label span { font-size:8px; font-weight:950; letter-spacing:.12em; }
-            #${DASHBOARD_ID} .ct-summary-section-label small { color:rgba(255,255,255,.55); font-size:7px; font-weight:750; }
+            #${DASHBOARD_ID} .ct-summary-section-label { display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:2px 2px 0; color:rgba(255,255,255,.9); }
+            #${DASHBOARD_ID} .ct-summary-section-label span { font-size:11px; font-weight:950; letter-spacing:.1em; }
+            #${DASHBOARD_ID} .ct-summary-section-label small { color:rgba(255,255,255,.65); font-size:10px; font-weight:750; }
 
             /* v11.1.53 balanced command-center lock */
             #${DASHBOARD_ID} .ct-focus-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important; gap:12px !important; align-items:start; }
             #${DASHBOARD_ID} .ct-focus-column { min-width:0; }
             #${DASHBOARD_ID} .ct-focus-column-head { min-height:42px; padding:8px 10px; border:1px solid var(--ct-border); border-radius:9px 9px 0 0; background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018)); }
-            #${DASHBOARD_ID} .ct-focus-column-head span { color:#dbe7f8; font-size:10px; font-weight:950; letter-spacing:.09em; }
-            #${DASHBOARD_ID} .ct-focus-column-head small { color:#8290a5; font-size:8px; }
-            #${DASHBOARD_ID} .ct-focus-column-head b { flex:0 0 auto; padding:3px 7px; border:1px solid rgba(34,197,94,.45); border-radius:999px; color:#8fe0ac; background:rgba(34,197,94,.08); font-size:7px; letter-spacing:.08em; }
+            #${DASHBOARD_ID} .ct-focus-column-head span { color:#dbe7f8; font-size:11.5px; font-weight:950; letter-spacing:.09em; }
+            #${DASHBOARD_ID} .ct-focus-column-head small { color:#8290a5; font-size:10px; }
+            #${DASHBOARD_ID} .ct-focus-column-head b { flex:0 0 auto; padding:3px 7px; border:1px solid rgba(34,197,94,.45); border-radius:999px; color:#8fe0ac; background:rgba(34,197,94,.08); font-size:9.5px; letter-spacing:.08em; }
             #${DASHBOARD_ID} .ct-focus-outbound > .ct-operating-panel, #${DASHBOARD_ID} .ct-focus-inbound > .ct-inbound-panel { border-radius:0 0 10px 10px !important; }
             #${DASHBOARD_ID} .ct-focus-inbound .ct-inbound-panel { border-top:0 !important; box-shadow:0 8px 22px rgba(0,0,0,.16) !important; }
             #${DASHBOARD_ID} .ct-focus-outbound .ct-operating-panel { border-top:0; }
             #${DASHBOARD_ID} .ct-inbound-table-wrap { max-height:390px; overflow:auto; }
-            #${DASHBOARD_ID} .ct-inbound-row, #${DASHBOARD_ID} .ct-inbound-table-head { min-width:900px; }
+            #${DASHBOARD_ID} .ct-inbound-row, #${DASHBOARD_ID} .ct-inbound-table-head { min-width:650px; }
+            #${DASHBOARD_ID} .ct-filter-group { display:inline-flex; align-items:center; border:1px solid var(--ct-border); border-radius:7px; background:var(--ct-surface-2); padding:2px; gap:2px; }
+            #${DASHBOARD_ID} .ct-filter-pill { padding:3px 8px; border:none; border-radius:5px; background:transparent; color:var(--ct-muted); font-size:10px; font-weight:850; cursor:pointer; transition:all .15s ease; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-filter-pill:hover { color:var(--ct-text); background:rgba(255,255,255,.08); }
+            #${DASHBOARD_ID} .ct-filter-pill.is-active { color:#fff; background:#2563eb; box-shadow:0 1px 3px rgba(0,0,0,.25); }
             #${DASHBOARD_ID} .ct-order-editor { margin:7px 0 8px; border:1px solid rgba(139,182,255,.48); border-radius:10px; background:linear-gradient(180deg,rgba(20,34,58,.98),rgba(13,23,40,.98)); box-shadow:0 10px 26px rgba(0,0,0,.2); overflow:hidden; }
             #${DASHBOARD_ID} .ct-order-editor-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 11px; border-bottom:1px solid rgba(148,163,184,.18); }
-            #${DASHBOARD_ID} .ct-order-editor-head strong { display:block; color:#f8fafc; font-size:11px; letter-spacing:.08em; }
-            #${DASHBOARD_ID} .ct-order-editor-head small { display:block; margin-top:3px; color:#8f9db1; font-size:8px; }
+            #${DASHBOARD_ID} .ct-order-editor-head strong { display:block; color:#f8fafc; font-size:12px; letter-spacing:.08em; }
+            #${DASHBOARD_ID} .ct-order-editor-head small { display:block; margin-top:3px; color:#8f9db1; font-size:10px; }
             #${DASHBOARD_ID} .ct-order-editor-actions { display:flex; gap:5px; flex:0 0 auto; }
-            #${DASHBOARD_ID} .ct-order-editor-btn { height:27px; padding:0 9px; border:1px solid rgba(148,163,184,.3); border-radius:6px; color:#c8d3e2; background:rgba(255,255,255,.05); font-size:8px; font-weight:900; }
+            #${DASHBOARD_ID} .ct-order-editor-btn { height:27px; padding:0 9px; border:1px solid rgba(148,163,184,.3); border-radius:6px; color:#c8d3e2; background:rgba(255,255,255,.05); font-size:10px; font-weight:900; }
             #${DASHBOARD_ID} .ct-order-editor-btn:hover { background:rgba(255,255,255,.1); }
             #${DASHBOARD_ID} .ct-order-editor-btn.is-primary { color:#fff; border-color:#7fb0ff; background:#2563eb; }
-            #${DASHBOARD_ID} .ct-order-editor-tip { display:flex; align-items:center; gap:7px; padding:6px 10px; color:#9aa9bf; background:rgba(59,130,246,.08); border-bottom:1px solid rgba(148,163,184,.12); font-size:8px; }
+            #${DASHBOARD_ID} .ct-order-editor-tip { display:flex; align-items:center; gap:7px; padding:6px 10px; color:#9aa9bf; background:rgba(59,130,246,.08); border-bottom:1px solid rgba(148,163,184,.12); font-size:10px; }
             #${DASHBOARD_ID} .ct-order-editor-tip > span:first-child { color:#8bb6ff; font-size:13px; font-weight:950; }
             #${DASHBOARD_ID} .ct-order-editor-list { display:grid; gap:4px; max-height:310px; overflow:auto; padding:7px; }
             #${DASHBOARD_ID} .ct-order-editor-row { display:grid; grid-template-columns:28px 24px minmax(0,1fr) 58px 54px; align-items:center; min-height:42px; border:1px solid rgba(148,163,184,.17); border-radius:7px; background:rgba(255,255,255,.035); }
             #${DASHBOARD_ID} .ct-order-editor-row:hover { border-color:rgba(139,182,255,.4); background:rgba(59,130,246,.07); }
-            #${DASHBOARD_ID} .ct-order-editor-number { margin-left:7px; color:#8fb9ff; font-size:9px; font-weight:950; text-align:center; }
+            #${DASHBOARD_ID} .ct-order-editor-number { margin-left:7px; color:#8fb9ff; font-size:10.5px; font-weight:950; text-align:center; }
             #${DASHBOARD_ID} .ct-order-editor-drag { color:#718096; font-size:13px; text-align:center; cursor:grab; user-select:none; }
             #${DASHBOARD_ID} .ct-order-editor-name { min-width:0; padding:6px 7px; }
-            #${DASHBOARD_ID} .ct-order-editor-name b { display:block; overflow:hidden; color:#f8fafc; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-order-editor-name small { display:block; margin-top:2px; color:#7f8da2; font-size:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-order-editor-state { justify-self:center; padding:3px 6px; border:1px solid rgba(148,163,184,.22); border-radius:999px; font-size:7px; font-weight:950; }
+            #${DASHBOARD_ID} .ct-order-editor-name b { display:block; overflow:hidden; color:#f8fafc; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-order-editor-name small { display:block; margin-top:2px; color:#7f8da2; font-size:9.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-order-editor-state { justify-self:center; padding:3px 6px; border:1px solid rgba(148,163,184,.22); border-radius:999px; font-size:9px; font-weight:950; }
             #${DASHBOARD_ID} .ct-order-editor-state.is-live { color:#8fe0ac; border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.08); }
             #${DASHBOARD_ID} .ct-order-editor-state.is-inactive { color:#9aa9bf; }
             #${DASHBOARD_ID} .ct-order-editor-state.is-check { color:#f4c56d; border-color:rgba(245,158,11,.35); }
@@ -2488,25 +2493,26 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-active-summary-title { display:flex; align-items:center; gap:8px; }
             #${DASHBOARD_ID} .ct-active-pulse-dot { width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981; animation:ct-pulse 2s infinite ease-in-out; }
             @keyframes ct-pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.85); } }
-            #${DASHBOARD_ID} .ct-active-summary-title strong { font-size:11px; font-weight:900; color:#f8fafc; letter-spacing:.06em; }
-            #${DASHBOARD_ID} .ct-active-summary-title small { color:#94a3b8; font-size:9px; }
-            #${DASHBOARD_ID} .ct-active-summary-badge { padding:3px 8px; border-radius:999px; font-size:8px; font-weight:900; letter-spacing:.05em; border:1px solid rgba(16,185,129,.4); background:rgba(16,185,129,.12); color:#6ee7b7; }
+            #${DASHBOARD_ID} .ct-active-summary-title strong { font-size:12px; font-weight:900; color:#f8fafc; letter-spacing:.06em; }
+            #${DASHBOARD_ID} .ct-active-summary-title small { color:#94a3b8; font-size:10.5px; }
+            #${DASHBOARD_ID} .ct-active-summary-badge { padding:3px 9px; border-radius:999px; font-size:10px; font-weight:900; letter-spacing:.05em; border:1px solid rgba(16,185,129,.4); background:rgba(16,185,129,.12); color:#6ee7b7; }
             #${DASHBOARD_ID} .ct-active-summary-badge.is-inactive { border-color:rgba(148,163,184,.3); background:rgba(148,163,184,.1); color:#94a3b8; }
-            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:240px; overflow-x:auto; overflow-y:auto; }
-            #${DASHBOARD_ID} .ct-active-summary-table { width:100%; border-collapse:collapse; font-size:10px; font-variant-numeric:tabular-nums; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:8px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; padding:6px 8px; text-align:left; border-bottom:1px solid rgba(148,163,184,.2); }
-            #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border-bottom:1px solid rgba(148,163,184,.1); color:#e2e8f0; }
+            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:260px; overflow-x:auto; overflow-y:auto; }
+            #${DASHBOARD_ID} .ct-active-summary-table { width:100%; min-width:980px; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:9.5px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; padding:7px 9px; text-align:left; border-bottom:1px solid rgba(148,163,184,.2); }
+            #${DASHBOARD_ID} .ct-active-summary-table td { padding:7px 9px; border-bottom:1px solid rgba(148,163,184,.1); color:#e2e8f0; font-size:11.5px; }
             #${DASHBOARD_ID} .ct-active-summary-table tr:hover { background:rgba(59,130,246,.08); }
             #${DASHBOARD_ID} .ct-active-name { color:#f8fafc; font-weight:700; }
-            #${DASHBOARD_ID} .ct-active-status-tag { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:900; background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
-            #${DASHBOARD_ID} .ct-health-pill { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:900; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-active-status-tag { display:inline-block; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
+            #${DASHBOARD_ID} .ct-active-status-tag.is-inactive { background:rgba(148,163,184,.15); color:#94a3b8; border-color:rgba(148,163,184,.3); }
+            #${DASHBOARD_ID} .ct-health-pill { display:inline-block; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; text-transform:uppercase; }
             #${DASHBOARD_ID} .ct-health-pill.is-excellent, #${DASHBOARD_ID} .ct-health-pill.is-good { background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
             #${DASHBOARD_ID} .ct-health-pill.is-warning { background:rgba(245,158,11,.15); color:#fbbf24; border:1px solid rgba(245,158,11,.3); }
             #${DASHBOARD_ID} .ct-health-pill.is-critical { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); }
-            #${DASHBOARD_ID} .ct-active-focus-btn { padding:2px 8px; border-radius:4px; border:1px solid rgba(148,163,184,.3); background:rgba(255,255,255,.05); color:#93c5fd; font-size:8px; font-weight:800; cursor:pointer; }
+            #${DASHBOARD_ID} .ct-active-focus-btn { padding:3px 9px; border-radius:4px; border:1px solid rgba(148,163,184,.3); background:rgba(255,255,255,.05); color:#93c5fd; font-size:9.5px; font-weight:850; cursor:pointer; }
             #${DASHBOARD_ID} .ct-active-focus-btn:hover { background:#2563eb; color:#fff; border-color:#3b82f6; }
-            #${DASHBOARD_ID} .ct-active-empty { text-align:center; padding:16px; color:#94a3b8; font-style:italic; }
-            #${DASHBOARD_ID} .ct-reconciled-footer { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; margin-top:6px; border:1px solid rgba(148,163,184,.15); border-radius:6px; background:rgba(15,23,42,.6); font-size:9px; color:#94a3b8; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-active-empty { text-align:center; padding:18px; color:#94a3b8; font-style:italic; }
+            #${DASHBOARD_ID} .ct-reconciled-footer { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; margin-top:6px; border:1px solid rgba(148,163,184,.15); border-radius:6px; background:rgba(15,23,42,.6); font-size:10.5px; color:#94a3b8; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-reconciled-footer b { color:#f1f5f9; }
             #${DASHBOARD_ID} .ct-kpi-value, #${DASHBOARD_ID} .ct-command-value, #${DASHBOARD_ID} .ct-row-cell { font-variant-numeric:tabular-nums; }
             @media (max-width:900px) { #${DASHBOARD_ID} .ct-focus-grid { grid-template-columns:1fr !important; } }
@@ -2578,13 +2584,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                 <thead>
                                     <tr>
                                         <th>CAMPAIGN</th>
-                                        <th>STATUS</th>
+                                        <th>STATE</th>
                                         <th>AGENTS</th>
                                         <th>WAIT NOW</th>
                                         <th>WAIT TODAY</th>
-                                        <th>OUTBOUND CALLS</th>
+                                        <th>OUTBOUND ATTEMPTS</th>
                                         <th>HUMAN CONNECTS</th>
-                                        <th>TO AGENTS</th>
+                                        <th>AGENT CONNECTS</th>
+                                        <th>ABANDONED</th>
+                                        <th>CONNECT RATE</th>
                                         <th>LIVE LEADS</th>
                                         <th>LEAD RUNWAY</th>
                                         <th>HEALTH</th>
@@ -2592,7 +2600,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                     </tr>
                                 </thead>
                                 <tbody data-ref="activeSummaryRows">
-                                    <tr><td colspan="12" class="ct-active-empty">Waiting for active campaigns…</td></tr>
+                                    <tr><td colspan="14" class="ct-active-empty">Waiting for active campaigns…</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -2601,9 +2609,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
 
                     <div class="ct-actions">
-                        <label class="ct-search" title="Filter campaigns">
-                            <input type="search" placeholder="Filter campaigns…" aria-label="Filter campaigns" autocomplete="off">
+                        <label class="ct-search" title="Filter campaigns by name">
+                            <input type="search" placeholder="Search campaigns…" aria-label="Search campaigns" autocomplete="off">
                         </label>
+                        <div class="ct-filter-group ct-state-filters" role="group" aria-label="Campaign state filter">
+                            <button class="ct-filter-pill is-active" type="button" data-state-filter="all">All</button>
+                            <button class="ct-filter-pill" type="button" data-state-filter="active">Active</button>
+                            <button class="ct-filter-pill" type="button" data-state-filter="inactive">Inactive</button>
+                        </div>
+                        <div class="ct-filter-group ct-health-filters" role="group" aria-label="Campaign health filter">
+                            <button class="ct-filter-pill is-active" type="button" data-health-filter="all">All Health</button>
+                            <button class="ct-filter-pill" type="button" data-health-filter="critical">Critical</button>
+                            <button class="ct-filter-pill" type="button" data-health-filter="warning">At Risk</button>
+                            <button class="ct-filter-pill" type="button" data-health-filter="healthy">Healthy</button>
+                            <button class="ct-filter-pill" type="button" data-health-filter="data">Data Check</button>
+                        </div>
                         <label class="ct-threshold-wrap" title="Low lead alert threshold">
                             <span class="ct-threshold-label">Lead alert</span>
                             <input class="ct-threshold" type="number" min="0" step="1" aria-label="Low lead alert threshold" placeholder="2000">
@@ -2620,7 +2640,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                             </div>
                         </div>
                         <button class="ct-btn ct-btn-text ct-refresh-btn" type="button" title="Refresh live CallTools data" aria-label="Refresh live CallTools data">↻ Refresh Data</button>
-                        <button class="ct-btn ct-btn-text ct-manage-order-btn" type="button" title="Open the campaign arrangement workspace" aria-label="Arrange campaign order">☷ Arrange</button>
+                        <button class="ct-btn ct-btn-text ct-manage-order-btn" type="button" title="Arrange campaign order" aria-label="Arrange campaign order">⚙ Order</button>
                         <button class="ct-btn ct-btn-text ct-order-reset-btn" type="button" title="Reset campaign order" aria-label="Reset campaign order">Reset Order</button>
                         <button class="ct-btn ct-theme-btn" type="button" title="Toggle dark mode" aria-label="Toggle dark mode">${themeIcon()}</button>
                         <button class="ct-btn ct-btn-text ct-reset-btn" type="button" title="Reset dashboard position and size" aria-label="Reset dashboard position and size">Reset</button>
@@ -2687,7 +2707,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                             ${inboundKpiShell("notAnsweredToday", "NOT ANSWERED")}
                             ${inboundKpiShell("answerRate", "ANSWER RATE")}
                             ${inboundKpiShell("onQueue", "AGENTS ON QUEUE CALLS")}
-                            ${inboundKpiShell("loggedMemberships", "LOGGED-IN QUEUE MEMBERS")}
+                            ${inboundKpiShell("loggedMemberships", "QUEUE MEMBERSHIPS")}
                             ${inboundKpiShell("queues", "ACTIVE QUEUES")}
                             ${inboundKpiShell("goalsToday", "GOALS TODAY")}
                         </div>
@@ -2835,7 +2855,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             inboundKpis: {
                 queues: inboundKpiRefs("queues"), todayCalls: inboundKpiRefs("todayCalls"), answeredToday: inboundKpiRefs("answeredToday"),
                 notAnsweredToday: inboundKpiRefs("notAnsweredToday"), callsNow: inboundKpiRefs("callsNow"), waiting: inboundKpiRefs("waiting"),
-                onQueue: inboundKpiRefs("onQueue"), maxWait: inboundKpiRefs("maxWait"), goalsToday: inboundKpiRefs("goalsToday"), answerRate: inboundKpiRefs("answerRate")
+                onQueue: inboundKpiRefs("onQueue"), maxWait: inboundKpiRefs("maxWait"), goalsToday: inboundKpiRefs("goalsToday"), answerRate: inboundKpiRefs("answerRate"),
+                loggedMemberships: inboundKpiRefs("loggedMemberships")
             },
             inboundStaffing: root.querySelector('[data-ref="inboundStaffing"]'),
             clearAlerts: root.querySelector('[data-ref="clearAlerts"]'),
@@ -2847,6 +2868,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             dataConfidence: root.querySelector('[data-ref="dataConfidence"]'),
             list: root.querySelector(".ct-list"),
             filterButtons: Array.from(root.querySelectorAll(".ct-filter-btn")),
+            stateFilterButtons: Array.from(root.querySelectorAll("[data-state-filter]")),
+            healthFilterButtons: Array.from(root.querySelectorAll("[data-health-filter]")),
             kpis: {
                 campaigns: kpiRefs("campaigns"), waiting: kpiRefs("waiting"), onCall: kpiRefs("onCall"),
                 contacts: kpiRefs("contacts"), outbound: kpiRefs("outbound"), connected: kpiRefs("connected"), loggedIn: kpiRefs("loggedIn"),
@@ -3091,9 +3114,33 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             button.addEventListener("click", function () {
                 state.filter = button.dataset.filter || "all";
                 refs.filterButtons.forEach(function (item) { item.classList.toggle("is-active", item === button); });
+                if (refs.healthFilterButtons) {
+                    refs.healthFilterButtons.forEach(function (b) { b.classList.toggle("is-active", (b.dataset.healthFilter || "all") === state.filter); });
+                }
                 scheduleRender();
             });
         });
+        if (refs.stateFilterButtons) {
+            refs.stateFilterButtons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    state.stateFilter = button.dataset.stateFilter || "all";
+                    refs.stateFilterButtons.forEach(function (b) { b.classList.toggle("is-active", b === button); });
+                    scheduleRender();
+                });
+            });
+        }
+        if (refs.healthFilterButtons) {
+            refs.healthFilterButtons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    state.filter = button.dataset.healthFilter || "all";
+                    refs.healthFilterButtons.forEach(function (b) { b.classList.toggle("is-active", b === button); });
+                    if (refs.filterButtons) {
+                        refs.filterButtons.forEach(function (b) { b.classList.toggle("is-active", (b.dataset.filter || "all") === state.filter); });
+                    }
+                    scheduleRender();
+                });
+            });
+        }
     }
 
     function setReorderMode(enabled) {
@@ -3522,11 +3569,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setText(refs.updated, state.route === "queues"
             ? (state.feedStatus === "LIVE" ? "INBOUND LIVE · outbound snapshot " + (outboundAge !== null ? formatAge(outboundAge) : "not loaded") + " ago" : "INBOUND " + (state.feedStatus || "WAITING"))
             : (state.lastDataChangeAt ? (state.sourceState === "LIVE" ? "LIVE · data " + formatAge(dataAge) + " · " + formatDateTime(new Date(state.lastDataChangeAt)) : "Data " + formatAge(dataAge) + " · " + state.sourceState) : "Waiting for verified CallTools data"));
+        const activeCampaigns = (stats.campaigns || state.campaigns || []).filter(function (c) { return c.__active === true; });
+        const outboundTooltip = stats.outbound > 0
+            ? "Total Outbound Attempts: " + formatNumber(stats.outbound) + "\n" +
+              (activeCampaigns.length > 1
+                  ? activeCampaigns.map(function (c) { return "• " + safeValue(c.name) + ": " + formatNumber(c.__outbound); }).join("\n")
+                  : "Single active campaign")
+            : "No outbound attempts recorded";
         const outboundNote = state.route === "queues"
             ? "LAST KNOWN OUTBOUND · " + (outboundAge !== null ? formatAge(outboundAge) + " old" : "not loaded")
             : (stats.total < stats.visibleTotal && stats.allOutbound !== stats.outbound
                 ? "Active: " + formatNumber(stats.outbound) + " · All: " + formatNumber(stats.allOutbound)
-                : "Active campaign attempts");
+                : (activeCampaigns.length > 1
+                    ? "Active sum · " + activeCampaigns.length + " campaigns"
+                    : "Active campaign attempts"));
         const connectedNote = state.route === "queues"
             ? "LAST KNOWN OUTBOUND"
             : (stats.total < stats.visibleTotal && stats.allHuman !== stats.connected
@@ -3536,7 +3592,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         updateKpi("waiting", stats.waitingAvailable ? formatNumber(stats.waiting) : "—", stats.waitingAvailable ? "current queue load" : "Not exposed by Campaigns feed");
         updateKpi("onCall", stats.onCallAvailable ? formatNumber(stats.onCall) : "—", stats.onCallAvailable ? "active calls" : "Not exposed by Campaigns feed");
         updateKpi("contacts", formatNumber(stats.contacts), stats.realtimeShared ? "shared CallTools contact pool · deduped" : "CallTools saved contact count");
-        updateKpi("outbound", formatNumber(stats.outbound), outboundNote);
+        updateKpi("outbound", formatNumber(stats.outbound), outboundNote, outboundTooltip);
         updateKpi("connected", formatNumber(stats.connected), connectedNote);
         updateKpi("loggedIn", state.route === "queues" ? formatNumber(stats.loggedIn) : (stats.loggedInAvailable ? formatNumber(stats.loggedIn) : "—"), state.route === "queues" ? "LAST KNOWN OUTBOUND" : (stats.loggedInAvailable ? "agents in feed" : "Not exposed by Campaigns feed"));
         updateKpi("maxWait", stats.highestWait ? safeValue(stats.highestWait.waitNow) + "s" : "0s", stats.highestWait ? safeValue(stats.highestWait.name) : "no wait signal");
@@ -3589,20 +3645,32 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
     function updateActiveCommandSummary(campaigns) {
         if (!refs || !refs.activeSummaryRows) return;
-        const active = (campaigns || []).filter(function (c) { return c.__active === true; });
+        const allCamp = campaigns || [];
+        const active = allCamp.filter(function (c) { return c.__active === true; });
+        const visible = allCamp.filter(function (c) {
+            if (state.stateFilter === "active" && !c.__active) return false;
+            if (state.stateFilter === "inactive" && c.__active) return false;
+            if (state.filter === "critical" && c.__health !== "critical") return false;
+            if (state.filter === "warning" && c.__health !== "warning") return false;
+            if (state.filter === "healthy" && c.__health !== "good" && c.__health !== "excellent") return false;
+            if (state.filter === "data" && !c.__dataCheck) return false;
+            const needle = state.query.trim().toLowerCase();
+            return !needle || String(c.name || "").toLowerCase().includes(needle);
+        });
+
         if (refs.activeSummaryCount) {
-            setText(refs.activeSummaryCount, active.length + " active of " + (campaigns ? campaigns.length : 0) + " campaigns dialing");
+            setText(refs.activeSummaryCount, active.length + " active of " + allCamp.length + " campaigns (" + visible.length + " shown)");
         }
         if (refs.activeSummaryBadge) {
             setText(refs.activeSummaryBadge, active.length ? active.length + " ACTIVE" : "0 ACTIVE");
             setClass(refs.activeSummaryBadge, "ct-active-summary-badge " + (active.length ? "is-live" : "is-inactive"));
         }
-        if (!active.length) {
-            refs.activeSummaryRows.innerHTML = '<tr><td colspan="12" class="ct-active-empty">No campaigns currently active or dialing.</td></tr>';
+        if (!visible.length) {
+            refs.activeSummaryRows.innerHTML = '<tr><td colspan="14" class="ct-active-empty">No campaigns match current filters.</td></tr>';
             return;
         }
         const fragment = document.createDocumentFragment();
-        active.forEach(function (c) {
+        visible.forEach(function (c) {
             const tr = document.createElement("tr");
             tr.className = "ct-active-row is-" + (c.__health || "good");
             const runway = estimateCampaignRunway(c);
@@ -3616,14 +3684,29 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             const contactsText = formatNumber(c.__contacts);
             const healthLabel = (HEALTH[c.__health] && HEALTH[c.__health].label) || "HEALTHY";
 
+            const abandonRate = c.__outbound > 0 ? (c.__abandoned / c.__outbound) * 100 : 0;
+            const abandonedText = c.__abandoned > 0
+                ? (c.__outbound > 0 ? formatNumber(c.__abandoned) + " (" + abandonRate.toFixed(1) + "%)" : formatNumber(c.__abandoned))
+                : "0 (0%)";
+            const abandonedTitle = c.__abandoned + " abandoned call" + (c.__abandoned === 1 ? "" : "s") + (c.__outbound > 0 ? " (" + abandonRate.toFixed(2) + "% of outbound attempts)" : "");
+
+            const connectRate = c.__outbound > 0 ? (c.__human / c.__outbound) * 100 : 0;
+            const connectRateText = c.__outbound > 0 ? connectRate.toFixed(1) + "%" : "—";
+            const connectRateTitle = c.__outbound > 0
+                ? formatNumber(c.__human) + " human connects ÷ " + formatNumber(c.__outbound) + " outbound attempts (" + connectRate.toFixed(2) + "%)"
+                : "No outbound attempts recorded today";
+            const connectRateClass = c.__outbound > 0 ? (connectRate >= 3 ? "is-good" : connectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
+
             tr.innerHTML = '<td class="ct-active-name"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
-                '<td><span class="ct-active-status-tag is-live">ACTIVE</span></td>' +
+                '<td><span class="ct-active-status-tag ' + (c.__active ? 'is-live' : 'is-inactive') + '">' + (c.__active ? 'ACTIVE' : 'INACTIVE') + '</span></td>' +
                 '<td title="' + escapeHtml(agentsTitle) + '">' + escapeHtml(agentsText) + '</td>' +
                 '<td class="' + (c.__wait >= 60 ? 'is-critical' : c.__wait >= 30 ? 'is-warning' : '') + '">' + escapeHtml(waitNowText) + '</td>' +
                 '<td>' + escapeHtml(waitTodayText) + '</td>' +
                 '<td>' + escapeHtml(outboundText) + '</td>' +
                 '<td class="is-highlight">' + escapeHtml(humanText) + '</td>' +
                 '<td>' + escapeHtml(agentConnectText) + '</td>' +
+                '<td class="' + (c.__abandoned >= 500 || abandonRate >= 5 ? 'is-critical' : abandonRate >= 2 ? 'is-warning' : '') + '" title="' + escapeHtml(abandonedTitle) + '">' + escapeHtml(abandonedText) + '</td>' +
+                '<td class="' + escapeHtml(connectRateClass) + '" title="' + escapeHtml(connectRateTitle) + '">' + escapeHtml(connectRateText) + '</td>' +
                 '<td>' + escapeHtml(contactsText) + '</td>' +
                 '<td class="' + escapeHtml(runway.tone) + '">' + escapeHtml(runway.label) + '</td>' +
                 '<td><span class="ct-health-pill is-' + escapeHtml(c.__health || 'good') + '">' + escapeHtml(healthLabel) + '</span></td>' +
@@ -4942,6 +5025,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const needle = state.query.trim().toLowerCase();
 
         return campaigns.filter(function (campaign) {
+            if (state.stateFilter === "active" && !campaign.__active) return false;
+            if (state.stateFilter === "inactive" && campaign.__active) return false;
+
             if (state.filter === "critical" && campaign.__health !== "critical") {
                 return false;
             }
@@ -5439,7 +5525,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         updateInboundKpi("notAnsweredToday", totals.notAnswered !== null ? formatNumber(totals.notAnswered) : "—", totals.notAnswered !== null ? (totals.today ? missRate.toFixed(1) + "% of active-queue calls today" : "no calls today") : "unexposed in queue table");
         updateInboundKpi("answerRate", totals.today ? answerRate.toFixed(1) + "%" : "—", totals.notAnswered !== null ? (consistency ? "answered ÷ calls today" : "DATA CHECK") : "answered ÷ calls today");
         updateInboundKpi("onQueue", formatNumber(totals.onCall), "agents currently on live queue calls");
-        updateInboundKpi("loggedMemberships", formatNumber(totals.loggedMemberships), "sum of queue-level Logged In · not unique agents");
+        updateInboundKpi("loggedMemberships", formatNumber(totals.loggedMemberships), "sum of queue logged-in · not unique agents");
         updateInboundKpi("goalsToday", formatNumber(totals.goals), "queue outcomes · today");
 
         if (refs.inboundStaffing) refs.inboundStaffing.innerHTML = '';
@@ -5459,9 +5545,27 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             saturatedQueues.forEach(function(r) {
                 findings.push('<div class="ct-finding-pill is-warning"><b>QUEUE SATURATED</b><span>' + escapeHtml(r.name) + ': all ' + formatNumber(r.loggedIn) + ' agents on calls · ' + formatNumber(r.waiting) + ' waiting</span></div>');
             });
+            // CRITICAL: Any queue with callers waiting that wasn't already caught above MUST be reported!
+            // Never allow a queue with callers waiting to be omitted, which previously caused the banner to
+            // falsely claim "No callers waiting" when callers were holding!
+            rows.filter(function(r) {
+                return r.waiting > 0 && r.maxWait < 30 && r.loggedIn > 0 && (r.loggedIn > r.onCall);
+            }).forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-warning"><b>CALLERS WAITING</b><span>' + escapeHtml(r.name) + ': ' + formatNumber(r.waiting) + (r.waiting === 1 ? ' caller' : ' callers') + ' holding (' + formatNumber(r.maxWait) + 's wait) · ' + formatNumber(r.loggedIn) + ' logged in</span></div>');
+            });
+
             const demandTone = totals.waiting > 0 ? (totals.maxWait >= 60 || noCapacityQueues.length > 0 ? 'is-critical' : 'is-warning') : 'is-good';
             const badgeLabel = totals.waiting > 0 ? formatNumber(totals.waiting) + ' WAITING' : 'COVERED';
-            const findingsHtml = findings.length ? findings.join('') : '<div class="ct-finding-pill is-good"><b>NORMAL OPERATIONS</b><span>All active queues covered · No callers waiting</span></div>';
+            let findingsHtml = '';
+            if (findings.length > 0) {
+                findingsHtml = findings.join('');
+            } else if (totals.waiting > 0) {
+                findingsHtml = '<div class="ct-finding-pill is-warning"><b>CALLERS WAITING</b><span>' + formatNumber(totals.waiting) + ' callers waiting across queues</span></div>';
+            } else if (state.queueFeedStatus === 'WAITING' || !rows.length) {
+                findingsHtml = '<div class="ct-finding-pill"><b>AWAITING FEED</b><span>Inbound queue feed initializing…</span></div>';
+            } else {
+                findingsHtml = '<div class="ct-finding-pill is-good"><b>NORMAL OPERATIONS</b><span>All active queues covered · No callers waiting</span></div>';
+            }
 
             refs.inboundFocus.className = 'ct-inbound-findings ' + demandTone;
             refs.inboundFocus.innerHTML =
@@ -5599,9 +5703,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setText(item.note, String(note || ""));
     }
 
-    function updateKpi(key, value, note) {
+    function updateKpi(key, value, note, title) {
+        if (!refs.kpis || !refs.kpis[key]) return;
         setText(refs.kpis[key].value, String(value));
         setText(refs.kpis[key].note, note);
+        if (title !== undefined && refs.kpis[key].card) {
+            refs.kpis[key].card.title = title;
+        }
     }
 
     function updateStatus(key, value) {
@@ -5763,8 +5871,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const node = root.querySelector(`[data-kpi="${key}"]`);
 
         return {
-            value: node.querySelector(".ct-kpi-value"),
-            note: node.querySelector(".ct-kpi-note")
+            card: node,
+            value: node ? node.querySelector(".ct-kpi-value") : null,
+            note: node ? node.querySelector(".ct-kpi-note") : null
         };
     }
 
@@ -5908,11 +6017,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     }
 
     function defaultLayout() {
-        const width = Math.min(DEFAULT_LAYOUT.width, Math.max(360, window.innerWidth - 36));
-        const height = Math.min(DEFAULT_LAYOUT.height, Math.max(360, window.innerHeight - 36));
+        const maxWidth = Math.max(760, window.innerWidth - 36);
+        const targetWidth = window.innerWidth >= 1680 ? 1520 : window.innerWidth >= 1440 ? 1380 : window.innerWidth >= 1200 ? 1160 : Math.min(DEFAULT_LAYOUT.width, maxWidth);
+        const width = Math.min(targetWidth, maxWidth);
+        const height = Math.min(DEFAULT_LAYOUT.height, Math.max(480, window.innerHeight - 36));
 
         return {
-            left: Math.max(10, window.innerWidth - width - DEFAULT_LAYOUT.left),
+            left: Math.max(10, Math.floor((window.innerWidth - width) / 2)),
             top: DEFAULT_LAYOUT.top,
             width: width,
             height: height,
@@ -5921,15 +6032,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     }
 
     function normalizeLayout(layout) {
-        const source = Object.assign(defaultLayout(), layout || {});
+        const def = defaultLayout();
+        const source = Object.assign(def, layout || {});
         const maxWidth = Math.max(760, window.innerWidth - 10);
         const maxHeight = Math.max(480, window.innerHeight - 10);
-        const width = clamp(numberValue(source.width) || DEFAULT_LAYOUT.width, 760, maxWidth);
-        const height = clamp(numberValue(source.height) || DEFAULT_LAYOUT.height, 480, maxHeight);
+        const width = clamp(numberValue(source.width) || def.width, 760, maxWidth);
+        const height = clamp(numberValue(source.height) || def.height, 480, maxHeight);
         // IMPORTANT: the saved left/top coordinates must be bounded using the
-        // saved panel dimensions. The old code bounded left against viewport-80,
-        // which allowed a previously valid position to move almost entirely
-        // off-screen after a viewport/DevTools/browser resize.
+        // saved panel dimensions.
         const maxLeft = Math.max(0, window.innerWidth - width - 10);
         const maxTop = Math.max(0, window.innerHeight - height - 10);
 

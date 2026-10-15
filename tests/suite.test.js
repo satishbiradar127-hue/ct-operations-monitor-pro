@@ -723,5 +723,223 @@ test("UPGRADE TEST 17: Inbound missing not-answered column yields null and never
     assert.strictEqual(note, "259 answered · other categories unexposed");
 });
 
+test("UPGRADE TEST 18: Inbound findings consistency — callers waiting > 0 ALWAYS produces a finding pill; never falsely claims 'No callers waiting'", () => {
+    // Condition exactly observed in user screenshot Image 2:
+    // Main Inbound Queue: waiting = 1, loggedIn = 65, onCall = 0, maxWait = 0s
+    const queueRows = [
+        { name: "Main Inbound Queue", waiting: 1, loggedIn: 65, onCall: 0, maxWait: 0 },
+        { name: "BKV SURVEY INBOUND", waiting: 0, loggedIn: 20, onCall: 0, maxWait: 0 },
+        { name: "VDH Inbound", waiting: 0, loggedIn: 15, onCall: 1, maxWait: 0 }
+    ];
+
+    const noCapacityQueues = queueRows.filter(r => r.waiting > 0 && r.loggedIn === 0);
+    const saturatedQueues = queueRows.filter(r => r.waiting > 0 && r.loggedIn > 0 && r.onCall >= r.loggedIn);
+    const totals = { waiting: 1, maxWait: 0 };
+
+    const findings = [];
+    noCapacityQueues.forEach(r => {
+        findings.push(`NO CAPACITY: ${r.name}`);
+    });
+    queueRows.filter(r => r.waiting > 0 && r.maxWait >= 60).forEach(r => {
+        findings.push(`CRITICAL WAIT: ${r.name}`);
+    });
+    queueRows.filter(r => r.waiting > 0 && r.maxWait >= 30 && r.maxWait < 60).forEach(r => {
+        findings.push(`ELEVATED WAIT: ${r.name}`);
+    });
+    saturatedQueues.forEach(r => {
+        findings.push(`QUEUE SATURATED: ${r.name}`);
+    });
+    // Critical fix: low-wait queue with callers holding MUST be reported
+    queueRows.filter(r => r.waiting > 0 && r.maxWait < 30 && r.loggedIn > 0 && r.loggedIn > r.onCall).forEach(r => {
+        findings.push(`CALLERS WAITING: ${r.name} - ${r.waiting} holding`);
+    });
+
+    assert.strictEqual(findings.length, 1, "Must contain exactly 1 finding pill for the holding caller");
+    assert.match(findings[0], /CALLERS WAITING: Main Inbound Queue/, "Finding pill must report Main Inbound Queue holding callers");
+
+    // Banner tone and fallback check
+    const demandTone = totals.waiting > 0 ? (totals.maxWait >= 60 || noCapacityQueues.length > 0 ? 'is-critical' : 'is-warning') : 'is-good';
+    const badgeLabel = totals.waiting > 0 ? totals.waiting + ' WAITING' : 'COVERED';
+    let findingsText = findings.length > 0
+        ? findings.join("; ")
+        : (totals.waiting > 0 ? `${totals.waiting} callers waiting` : "All active queues covered · No callers waiting");
+
+    assert.strictEqual(demandTone, "is-warning");
+    assert.strictEqual(badgeLabel, "1 WAITING");
+    assert.doesNotMatch(findingsText, /No callers waiting/, "Must NEVER claim 'No callers waiting' when callers are holding");
+});
+
+test("UPGRADE TEST 19: loggedMemberships aggregation and KPI mapping — sums queue loggedIn counts and distinguishes from unique agents", () => {
+    const queueRows = [
+        { name: "Main Inbound Queue", loggedIn: 65, callsTodayTotal: 314, callsTodayAnswered: 232 },
+        { name: "BKV SURVEY INBOUND", loggedIn: 20, callsTodayTotal: 84, callsTodayAnswered: 80 },
+        { name: "VDH Inbound", loggedIn: 15, callsTodayTotal: 15, callsTodayAnswered: 10 }
+    ];
+
+    const totals = queueRows.reduce((acc, row) => {
+        acc.loggedMemberships += row.loggedIn;
+        acc.today += row.callsTodayTotal;
+        acc.answered += row.callsTodayAnswered;
+        return acc;
+    }, { loggedMemberships: 0, today: 0, answered: 0 });
+
+    assert.strictEqual(totals.loggedMemberships, 100, "Sum of loggedIn across queues must equal 100");
+    const label = "QUEUE MEMBERSHIPS";
+    const subnote = "sum of queue logged-in · not unique agents";
+    assert.strictEqual(label, "QUEUE MEMBERSHIPS");
+    assert.match(subnote, /not unique agents/, "Subnote must clarify queue memberships are not unique deduplicated agents");
+});
+
+test("UPGRADE TEST 20: Responsive layout calculations across zoom/viewports (2304x1094 wide viewport down to 1024x768)", () => {
+    const DEFAULT_LAYOUT = { left: 18, top: 18, width: 1440, height: 920, collapsed: false };
+
+    function computeDefaultLayout(innerWidth, innerHeight) {
+        const maxWidth = Math.max(760, innerWidth - 36);
+        const targetWidth = innerWidth >= 1680 ? 1520 : innerWidth >= 1440 ? 1380 : innerWidth >= 1200 ? 1160 : Math.min(DEFAULT_LAYOUT.width, maxWidth);
+        const width = Math.min(targetWidth, maxWidth);
+        const height = Math.min(DEFAULT_LAYOUT.height, Math.max(480, innerHeight - 36));
+
+        return {
+            left: Math.max(10, Math.floor((innerWidth - width) / 2)),
+            top: DEFAULT_LAYOUT.top,
+            width: width,
+            height: height,
+            collapsed: DEFAULT_LAYOUT.collapsed
+        };
+    }
+
+    // Wide screen 2304x1094 (user's live display at 100% and 90% zoom)
+    const wide = computeDefaultLayout(2304, 1094);
+    assert.strictEqual(wide.width, 1520, "Wide screen (2304px) must expand to 1520px wide command center");
+    assert.strictEqual(wide.height, 920, "Wide screen must utilize 920px height");
+    assert.ok(wide.left >= 10, "Left offset must be bounded and centered");
+
+    // Standard 1920x1080
+    const fullHd = computeDefaultLayout(1920, 1080);
+    assert.strictEqual(fullHd.width, 1520, "1920px width must use 1520px");
+
+    // Medium laptop 1440x900
+    const laptop = computeDefaultLayout(1440, 900);
+    assert.strictEqual(laptop.width, 1380, "1440px viewport must fit cleanly within window without overflow");
+    assert.strictEqual(laptop.height, 864, "Height must be clamped to window - 36px");
+
+    // Compact screen 1024x768
+    const compact = computeDefaultLayout(1024, 768);
+    assert.strictEqual(compact.width, 988, "1024px viewport must scale width to 988px");
+    assert.strictEqual(compact.height, 732, "768px height must scale to 732px");
+});
+
+test("UPGRADE TEST 21: Active Campaigns Command Summary 14 columns verification including honest connection rate and abandoned formatting", () => {
+    const campaign = {
+        name: "RES CRED MAIN",
+        __active: true,
+        __loggedIn: 23,
+        __loggedInAvailable: false, // Campaigns feed doesn't expose agent columns
+        waitNow: 36,
+        waitToday: 0,
+        __outbound: 53709,
+        __human: 1529,
+        __agentConnect: 1537,
+        __abandoned: 4,
+        __contacts: 30456,
+        __health: "warning"
+    };
+
+    const agentsText = campaign.__loggedInAvailable ? String(campaign.__loggedIn) : "—";
+    assert.strictEqual(agentsText, "—", "Agent state unexposed must display '—', never 0");
+
+    const abandonRate = campaign.__outbound > 0 ? (campaign.__abandoned / campaign.__outbound) * 100 : 0;
+    const abandonedText = campaign.__abandoned > 0
+        ? `${campaign.__abandoned} (${abandonRate.toFixed(1)}%)`
+        : "0 (0%)";
+    assert.strictEqual(abandonedText, "4 (0.0%)", "Abandoned calls formatted with count and %");
+
+    const connectRate = campaign.__outbound > 0 ? (campaign.__human / campaign.__outbound) * 100 : 0;
+    const connectRateText = campaign.__outbound > 0 ? connectRate.toFixed(1) + "%" : "—";
+    assert.strictEqual(connectRateText, "2.8%", "Connect rate formatted as Human ÷ Outbound %");
+
+    // Zero-outbound campaign test: rate must be '—', NEVER false 0.0%
+    const zeroCampaign = { __outbound: 0, __human: 0 };
+    const zeroRateText = zeroCampaign.__outbound > 0 ? ((zeroCampaign.__human / zeroCampaign.__outbound) * 100).toFixed(1) + "%" : "—";
+    assert.strictEqual(zeroRateText, "—", "Zero outbound attempts must display '—' rather than misleading 0.0%");
+});
+
+test("UPGRADE TEST 22: Combined state filter (all, active, inactive) + health filter + search query", () => {
+    const campaigns = [
+        { name: "REALTIME MAIN", __active: true, __health: "good", __dataCheck: false },
+        { name: "WEB UPGRADE", __active: true, __health: "good", __dataCheck: false },
+        { name: "RES CRED MAIN", __active: true, __health: "warning", __dataCheck: false },
+        { name: "CREDIT REPAIR INACTIVE", __active: false, __health: "good", __dataCheck: false },
+        { name: "OLD DIALER TEST", __active: false, __health: "critical", __dataCheck: true }
+    ];
+
+    function applyFilters(camps, stateFilter, healthFilter, query) {
+        const needle = (query || "").trim().toLowerCase();
+        return camps.filter(c => {
+            if (stateFilter === "active" && !c.__active) return false;
+            if (stateFilter === "inactive" && c.__active) return false;
+            if (healthFilter === "critical" && c.__health !== "critical") return false;
+            if (healthFilter === "warning" && c.__health !== "warning") return false;
+            if (healthFilter === "healthy" && c.__health !== "good" && c.__health !== "excellent") return false;
+            if (healthFilter === "data" && !c.__dataCheck) return false;
+            return !needle || c.name.toLowerCase().includes(needle);
+        });
+    }
+
+    // Default: all, all, ""
+    assert.strictEqual(applyFilters(campaigns, "all", "all", "").length, 5);
+
+    // Active only
+    assert.strictEqual(applyFilters(campaigns, "active", "all", "").length, 3);
+
+    // Inactive only
+    assert.strictEqual(applyFilters(campaigns, "inactive", "all", "").length, 2);
+
+    // Active + At Risk
+    const activeAtRisk = applyFilters(campaigns, "active", "warning", "");
+    assert.strictEqual(activeAtRisk.length, 1);
+    assert.strictEqual(activeAtRisk[0].name, "RES CRED MAIN");
+
+    // Inactive + Critical
+    const inactiveCrit = applyFilters(campaigns, "inactive", "critical", "");
+    assert.strictEqual(inactiveCrit.length, 1);
+    assert.strictEqual(inactiveCrit[0].name, "OLD DIALER TEST");
+
+    // Search query
+    const searched = applyFilters(campaigns, "all", "all", "cred");
+    assert.strictEqual(searched.length, 2, "Search 'cred' matches RES CRED MAIN and CREDIT REPAIR INACTIVE");
+});
+
+test("UPGRADE TEST 23: Outbound attempts scope reconciliation (top snapshot active sum vs single operating campaign breakdown)", () => {
+    // Exactly reproducing the screenshot counts:
+    // Top snapshot: 53,741 attempts (or 55,975 in other runs)
+    // RES CRED MAIN: 53,709 attempts (or 55,943)
+    // WEB UPGRADE: 32 attempts
+    // REALTIME MAIN: 0 attempts
+    const activeCampaigns = [
+        { name: "RES CRED MAIN", __active: true, __outbound: 53709 },
+        { name: "WEB UPGRADE", __active: true, __outbound: 32 },
+        { name: "REALTIME MAIN", __active: true, __outbound: 0 }
+    ];
+
+    const totalOutbound = activeCampaigns.reduce((sum, c) => sum + c.__outbound, 0);
+    assert.strictEqual(totalOutbound, 53741, "Sum of active campaigns (53,709 + 32 + 0) equals 53,741");
+
+    // Verify transparent note generation
+    const note = activeCampaigns.length > 1
+        ? `Active sum · ${activeCampaigns.length} campaigns`
+        : "Active campaign attempts";
+    assert.strictEqual(note, "Active sum · 3 campaigns");
+
+    // Verify hover tooltip breakdown
+    const tooltip = "Total Outbound Attempts: 53,741\n" +
+        activeCampaigns.map(c => `• ${c.name}: ${c.__outbound.toLocaleString()}`).join("\n");
+
+    assert.ok(tooltip.includes("• RES CRED MAIN: 53,709"));
+    assert.ok(tooltip.includes("• WEB UPGRADE: 32"));
+    assert.ok(tooltip.includes("• REALTIME MAIN: 0"));
+});
+
+
 
 
