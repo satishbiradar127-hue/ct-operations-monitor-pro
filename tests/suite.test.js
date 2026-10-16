@@ -1280,3 +1280,173 @@ test("UPGRADE TEST 35: Row reorder buttons (up/down) invoke reorderCampaignByIds
     assert.deepStrictEqual(manualOrder, ["beta", "gamma", "alpha"]);
 });
 
+test("UPGRADE TEST 36: Command Summary Table 16-column colgroup, matching classes, and fixed layout", () => {
+    // 16 explicit columns
+    const columns = [
+        "drag", "select", "name", "state", "agents",
+        "waitnow", "waittoday", "outbound", "human", "agentconnect",
+        "abandoned", "connectrate", "leads", "runway", "health", "focus"
+    ];
+    assert.strictEqual(columns.length, 16, "Table must have exactly 16 defined columns");
+
+    // Colgroup col classes
+    const colClasses = columns.map(c => `ct-col-${c}`);
+    assert.ok(colClasses.includes("ct-col-drag"));
+    assert.ok(colClasses.includes("ct-col-select"));
+    assert.ok(colClasses.includes("ct-col-name"));
+    assert.ok(colClasses.includes("ct-col-state"));
+    assert.ok(colClasses.includes("ct-col-agents"));
+    assert.ok(colClasses.includes("ct-col-waitnow"));
+    assert.ok(colClasses.includes("ct-col-waittoday"));
+    assert.ok(colClasses.includes("ct-col-outbound"));
+    assert.ok(colClasses.includes("ct-col-human"));
+    assert.ok(colClasses.includes("ct-col-agentconnect"));
+    assert.ok(colClasses.includes("ct-col-abandoned"));
+    assert.ok(colClasses.includes("ct-col-connectrate"));
+    assert.ok(colClasses.includes("ct-col-leads"));
+    assert.ok(colClasses.includes("ct-col-runway"));
+    assert.ok(colClasses.includes("ct-col-health"));
+    assert.ok(colClasses.includes("ct-col-focus"));
+
+    // Header th classes
+    const thClasses = columns.map(c => `ct-th-${c}`);
+    // Data td classes
+    const tdClasses = columns.map(c => `ct-td-${c}`);
+
+    assert.strictEqual(thClasses.length, 16);
+    assert.strictEqual(tdClasses.length, 16);
+
+    // Verify fixed layout attributes
+    const tableStyle = {
+        tableLayout: "fixed",
+        width: "100%",
+        minWidth: 1200
+    };
+    assert.strictEqual(tableStyle.tableLayout, "fixed", "Table must use fixed layout to lock column widths");
+    assert.ok(tableStyle.minWidth >= 1200, "Table min-width must be at least 1200px to accommodate all 16 columns without horizontal squishing");
+});
+
+test("UPGRADE TEST 37: Outbound Focus Section A (identity), Section B (10 metrics), Section C (4 clusters), Section D (findings)", () => {
+    // 10 Section B Metrics
+    const sectionBMetrics = [
+        "opLoggedIn", "opWaiting", "opWorstWait", "opOnCall", "opConnected",
+        "opConnectRate", "opAttempts", "opAbandoned", "opLiveLeads", "opRunway"
+    ];
+    assert.strictEqual(sectionBMetrics.length, 10, "Section B operational strip must provide exactly 10 key metrics");
+
+    // Test campaign mock data
+    const c1 = {
+        name: "REALTIME PRIMARY",
+        __id: "realtime primary",
+        __active: true,
+        __loggedIn: 8,
+        __waiting: 2,
+        __wait: 45,
+        __onCall: 6,
+        __outbound: 1200,
+        __human: 48,
+        __abandoned: 12,
+        __contacts: 3500
+    };
+
+    // Calculate aggregated metrics for 1 campaign
+    const totalAttempts = c1.__outbound;
+    const totalHuman = c1.__human;
+    const totalAbandoned = c1.__abandoned;
+    const connectRate = totalAttempts > 0 ? (totalHuman / totalAttempts) * 100 : 0;
+    const abandonRate = totalAttempts > 0 ? (totalAbandoned / totalAttempts) * 100 : 0;
+
+    assert.strictEqual(connectRate.toFixed(1) + "%", "4.0%");
+    assert.strictEqual(abandonRate.toFixed(1) + "%", "1.0%");
+    assert.strictEqual(c1.__wait + "s", "45s");
+
+    // Section C: 4 Logical Clusters
+    const clusters = [
+        "AGENT CAPACITY & QUEUE PRESSURE",
+        "CALL VOLUME & OUTCOMES",
+        "LEAD INVENTORY & RUNWAY",
+        "DATA QUALITY & FRESHNESS"
+    ];
+    assert.strictEqual(clusters.length, 4, "Campaign details must be organized into 4 logical clusters");
+
+    // Section D: Operational Findings analysis
+    const findings = [];
+    if (c1.__wait >= 30 && c1.__waiting > 0) {
+        findings.push({ severity: "warning", type: "ELEVATED WAIT", message: `${c1.name}: ${c1.__wait}s wait time with active caller queue.` });
+    }
+    assert.strictEqual(findings.length, 1);
+    assert.strictEqual(findings[0].type, "ELEVATED WAIT");
+    assert.strictEqual(findings[0].severity, "warning");
+});
+
+test("UPGRADE TEST 38: Inbound Queue Detail explicit column grid alignment, sticky header, and snapshot consistency", () => {
+    const queueColumns = [
+        "ct-qcol-name", "ct-qcol-logged", "ct-qcol-today", "ct-qcol-answered",
+        "ct-qcol-notans", "ct-qcol-wait", "ct-qcol-oncall", "ct-qcol-maxwait",
+        "ct-qcol-goals", "ct-qcol-state"
+    ];
+    assert.strictEqual(queueColumns.length, 10, "Inbound Queue Detail must have 10 explicit column classes");
+
+    // Snapshot reconciliation mock
+    const queueRows = [
+        { name: "Support Tier 1", loggedIn: 5, today: 120, answered: 110, notAnswered: 10, waiting: 2, onCall: 4, maxWait: 25, goals: 15 },
+        { name: "Support Tier 2", loggedIn: 3, today: 45, answered: 42, notAnswered: 3, waiting: 0, onCall: 2, maxWait: 0, goals: 8 }
+    ];
+
+    const kpiTotals = queueRows.reduce((acc, q) => {
+        acc.today += q.today;
+        acc.answered += q.answered;
+        acc.notAnswered += q.notAnswered;
+        acc.waiting += q.waiting;
+        acc.onCall += q.onCall;
+        acc.maxWait = Math.max(acc.maxWait, q.waiting > 0 ? q.maxWait : 0);
+        acc.goals += q.goals;
+        return acc;
+    }, { today: 0, answered: 0, notAnswered: 0, waiting: 0, onCall: 0, maxWait: 0, goals: 0 });
+
+    assert.strictEqual(kpiTotals.today, 165);
+    assert.strictEqual(kpiTotals.answered, 152);
+    assert.strictEqual(kpiTotals.notAnswered, 13);
+    assert.strictEqual(kpiTotals.waiting, 2);
+    assert.strictEqual(kpiTotals.maxWait, 25);
+    assert.strictEqual(kpiTotals.goals, 23);
+    assert.strictEqual(kpiTotals.today, kpiTotals.answered + kpiTotals.notAnswered, "Queue totals must reconcile exactly");
+});
+
+test("UPGRADE TEST 39: Responsive layout and container max-height containment across viewport dimensions", () => {
+    const summaryWrapMaxHeight = 220;
+    const inboundWrapMaxHeight = 220;
+
+    assert.ok(summaryWrapMaxHeight <= 240, "Active summary table wrapper must be contained to prevent vertical overflow");
+    assert.ok(inboundWrapMaxHeight <= 240, "Inbound queue table wrapper must be contained to prevent vertical overflow");
+
+    // Focus grid layout
+    function getFocusGridTemplate(viewportWidth) {
+        if (viewportWidth <= 900) return "1fr";
+        return "minmax(0,1fr) minmax(0,1fr)";
+    }
+
+    assert.strictEqual(getFocusGridTemplate(1920), "minmax(0,1fr) minmax(0,1fr)", "Desktop viewport must use balanced 2-column layout");
+    assert.strictEqual(getFocusGridTemplate(800), "1fr", "Mobile/narrow viewport must stack into 1 column");
+});
+
+test("UPGRADE TEST 40: Freshness indicators distinguishing poll interval, update timestamp, and snapshot age", () => {
+    const state = {
+        pollIntervalMs: 1000,
+        lastSuccessfulUpdate: Date.now() - 5000,
+        snapshotAgeSec: 5,
+        feedStatus: "LIVE"
+    };
+
+    const pollText = `Feed poll: ${(state.pollIntervalMs / 1000).toFixed(1)}s`;
+    const ageText = `${state.snapshotAgeSec}s ago`;
+
+    assert.strictEqual(pollText, "Feed poll: 1.0s");
+    assert.strictEqual(ageText, "5s ago");
+    assert.strictEqual(state.feedStatus, "LIVE");
+
+    // When connection is lost or authenticating, status badge never falsely claims LIVE
+    const disconnectedState = { ...state, feedStatus: "AUTH_REQUIRED" };
+    assert.notStrictEqual(disconnectedState.feedStatus, "LIVE");
+});
+

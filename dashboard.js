@@ -2549,14 +2549,35 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-active-summary-badge.is-inactive { border-color:rgba(148,163,184,.3); background:rgba(148,163,184,.1); color:#94a3b8; }
             #${DASHBOARD_ID} .ct-clear-selection-btn { padding:2px 8px; border-radius:4px; font-size:9.5px; font-weight:850; background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); cursor:pointer; }
             #${DASHBOARD_ID} .ct-clear-selection-btn:hover { background:rgba(239,68,68,.28); color:#fff; }
-            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:200px; overflow-x:auto; overflow-y:auto; }
-            #${DASHBOARD_ID} .ct-active-summary-table { width:100%; min-width:980px; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:220px; overflow-x:auto; overflow-y:auto; border-radius:8px; border:1px solid rgba(139,182,255,.3); }
+            #${DASHBOARD_ID} .ct-active-summary-table { table-layout:fixed; width:100%; min-width:1200px; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
             #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:9.5px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; padding:6px 8px; text-align:left; border-bottom:1px solid rgba(148,163,184,.2); }
+            #${DASHBOARD_ID} .ct-col-drag { width:38px; }
+            #${DASHBOARD_ID} .ct-col-select { width:32px; }
+            #${DASHBOARD_ID} .ct-col-name { width:180px; }
+            #${DASHBOARD_ID} .ct-col-state { width:72px; }
+            #${DASHBOARD_ID} .ct-col-agents { width:64px; }
+            #${DASHBOARD_ID} .ct-col-waitnow { width:70px; }
+            #${DASHBOARD_ID} .ct-col-waittoday { width:74px; }
+            #${DASHBOARD_ID} .ct-col-outbound { width:95px; }
+            #${DASHBOARD_ID} .ct-col-human { width:90px; }
+            #${DASHBOARD_ID} .ct-col-agentconnect { width:90px; }
+            #${DASHBOARD_ID} .ct-col-abandoned { width:92px; }
+            #${DASHBOARD_ID} .ct-col-connectrate { width:84px; }
+            #${DASHBOARD_ID} .ct-col-leads { width:80px; }
+            #${DASHBOARD_ID} .ct-col-runway { width:92px; }
+            #${DASHBOARD_ID} .ct-col-health { width:80px; }
+            #${DASHBOARD_ID} .ct-col-focus { width:65px; }
+            #${DASHBOARD_ID} .ct-th-drag, #${DASHBOARD_ID} .ct-td-drag,
+            #${DASHBOARD_ID} .ct-th-select, #${DASHBOARD_ID} .ct-td-select,
+            #${DASHBOARD_ID} .ct-th-state, #${DASHBOARD_ID} .ct-td-state,
+            #${DASHBOARD_ID} .ct-th-runway, #${DASHBOARD_ID} .ct-td-runway,
+            #${DASHBOARD_ID} .ct-th-health, #${DASHBOARD_ID} .ct-td-health,
+            #${DASHBOARD_ID} .ct-th-focus, #${DASHBOARD_ID} .ct-td-focus { text-align:center; }
+            #${DASHBOARD_ID} .ct-th-name, #${DASHBOARD_ID} .ct-td-name { text-align:left; }
             #${DASHBOARD_ID} .ct-active-summary-table th.ct-th-num, #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-num { text-align:right; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-active-summary-table th.ct-th-center, #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-center { text-align:center; }
             #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border-bottom:1px solid rgba(148,163,184,.1); color:#e2e8f0; font-size:11.5px; }
             #${DASHBOARD_ID} .ct-active-summary-table tr:hover { background:rgba(59,130,246,.08); }
-            #${DASHBOARD_ID} .ct-th-drag, #${DASHBOARD_ID} .ct-td-drag { width:46px; min-width:46px; text-align:center; user-select:none; }
             #${DASHBOARD_ID} .ct-drag-cell-inner { display:inline-flex; align-items:center; justify-content:center; gap:2px; }
             #${DASHBOARD_ID} .ct-table-drag-handle { display:inline-block; padding:1px 2px; border-radius:3px; cursor:grab; color:#64748b; font-size:12px; font-weight:900; letter-spacing:-1px; }
             #${DASHBOARD_ID} .ct-table-drag-handle:hover { color:#93c5fd; background:rgba(59,130,246,.2); }
@@ -2565,10 +2586,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-row-order-btn { border:none; background:none; color:#64748b; font-size:8px; line-height:8px; padding:1px 2px; cursor:pointer; border-radius:2px; }
             #${DASHBOARD_ID} .ct-row-order-btn:hover { color:#38bdf8; background:rgba(59,130,246,.25); }
             #${DASHBOARD_ID} .ct-row-order-btn:disabled { opacity:.2; cursor:not-allowed; }
-            #${DASHBOARD_ID} .ct-th-select, #${DASHBOARD_ID} .ct-td-select { width:28px; text-align:center; }
             #${DASHBOARD_ID} .ct-table-select-cb { cursor:pointer; accent-color:#3b82f6; width:13px; height:13px; margin:0; vertical-align:middle; }
 
-            #${DASHBOARD_ID} .ct-active-name { color:#f8fafc; font-weight:700; }
+            #${DASHBOARD_ID} .ct-active-name { color:#f8fafc; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; }
             #${DASHBOARD_ID} .ct-active-status-tag { display:inline-block; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
             #${DASHBOARD_ID} .ct-active-status-tag.is-inactive { background:rgba(148,163,184,.15); color:#94a3b8; border-color:rgba(148,163,184,.3); }
             #${DASHBOARD_ID} .ct-health-pill { display:inline-block; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; text-transform:uppercase; }
@@ -2581,14 +2601,35 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-reconciled-footer { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; margin-top:6px; border:1px solid rgba(148,163,184,.15); border-radius:6px; background:rgba(15,23,42,.6); font-size:10.5px; color:#94a3b8; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-reconciled-footer b { color:#f1f5f9; }
             #${DASHBOARD_ID} .ct-kpi-value, #${DASHBOARD_ID} .ct-command-value, #${DASHBOARD_ID} .ct-row-cell { font-variant-numeric:tabular-nums; }
+
+            /* Outbound Focus upgraded layout */
+            #${DASHBOARD_ID} .ct-operating-summary-bar { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; padding:8px 10px; border-radius:7px; background:rgba(15,23,42,.65); border:1px solid rgba(148,163,184,.15); margin-bottom:8px; }
+            #${DASHBOARD_ID} .ct-operating-summary-item { display:flex; flex-direction:column; gap:2px; }
+            #${DASHBOARD_ID} .ct-operating-summary-item b { color:#94a3b8; font-size:9px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-operating-summary-item strong { color:#f8fafc; font-size:13px; font-weight:900; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-operating-cluster-label { display:flex; align-items:center; gap:6px; margin:8px 0 4px; font-size:9px; font-weight:850; letter-spacing:.08em; color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-operating-cluster-label::after { content:''; flex:1; height:1px; background:rgba(148,163,184,.15); }
+            #${DASHBOARD_ID} .ct-operating-data-grid-half { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+            #${DASHBOARD_ID} .ct-operating-findings { margin-top:8px; border:1px solid rgba(148,163,184,.18); border-radius:7px; background:rgba(15,23,42,.45); padding:7px 10px; }
+            #${DASHBOARD_ID} .ct-operating-findings.is-critical { border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.06); }
+            #${DASHBOARD_ID} .ct-operating-findings.is-warning { border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.06); }
+            #${DASHBOARD_ID} .ct-operating-findings.is-good { border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.04); }
+            #${DASHBOARD_ID} .ct-operating-findings-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+            #${DASHBOARD_ID} .ct-operating-findings-head strong { font-size:10px; font-weight:900; letter-spacing:.06em; color:#f8fafc; }
+            #${DASHBOARD_ID} .ct-operating-findings-badge { font-size:9px; font-weight:900; padding:2px 7px; border-radius:999px; text-transform:uppercase; border:1px solid rgba(148,163,184,.25); background:rgba(148,163,184,.1); color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-operating-findings-badge.is-critical { border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.15); color:#f87171; }
+            #${DASHBOARD_ID} .ct-operating-findings-badge.is-warning { border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.15); color:#fbbf24; }
+            #${DASHBOARD_ID} .ct-operating-findings-badge.is-good { border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.15); color:#4ade80; }
+            #${DASHBOARD_ID} .ct-operating-findings-list { display:flex; flex-direction:column; gap:4px; }
+
+            /* Inbound Queue Table explicit grid columns and sticky header */
             #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { display:grid; grid-template-columns:minmax(140px,2fr) 56px 52px 64px 60px 50px 56px 64px 50px 88px; gap:0; align-items:center; min-width:680px; }
             #${DASHBOARD_ID} .ct-inbound-table-head { position:sticky; top:0; z-index:5; padding:7px 10px; background:var(--ct-surface-2); border-bottom:1px solid var(--ct-border); color:var(--ct-muted); font-size:10px; font-weight:850; letter-spacing:.05em; }
-            #${DASHBOARD_ID} .ct-inbound-table-head span:not(:first-child):not(:last-child) { text-align:right; padding-right:6px; }
-            #${DASHBOARD_ID} .ct-inbound-table-head span:last-child { text-align:center; }
+            #${DASHBOARD_ID} .ct-qcol-name { text-align:left; min-width:0; }
+            #${DASHBOARD_ID} .ct-qcol-logged, #${DASHBOARD_ID} .ct-qcol-today, #${DASHBOARD_ID} .ct-qcol-answered, #${DASHBOARD_ID} .ct-qcol-notans, #${DASHBOARD_ID} .ct-qcol-wait, #${DASHBOARD_ID} .ct-qcol-oncall, #${DASHBOARD_ID} .ct-qcol-maxwait, #${DASHBOARD_ID} .ct-qcol-goals { text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; font-weight:600; }
+            #${DASHBOARD_ID} .ct-qcol-state { text-align:center; }
             #${DASHBOARD_ID} .ct-inbound-row { padding:6px 10px; border-bottom:1px solid rgba(148,163,184,.08); font-size:11px; }
-            #${DASHBOARD_ID} .ct-inbound-row span:not(:first-child):not(:last-child) { text-align:right; padding-right:6px; font-variant-numeric:tabular-nums; font-weight:600; }
-            #${DASHBOARD_ID} .ct-inbound-row span:last-child { text-align:center; }
-            #${DASHBOARD_ID} .ct-inbound-table-wrap { max-height:200px; overflow-y:auto; overflow-x:auto; border-radius:6px; border:1px solid rgba(148,163,184,.15); }
+            #${DASHBOARD_ID} .ct-inbound-table-wrap { max-height:220px; overflow-y:auto; overflow-x:auto; border-radius:6px; border:1px solid rgba(148,163,184,.15); }
             @media (max-width:900px) { #${DASHBOARD_ID} .ct-focus-grid { grid-template-columns:1fr !important; } }
             @media (max-width:700px) { #${DASHBOARD_ID} .ct-order-editor-head { align-items:flex-start; flex-direction:column; } #${DASHBOARD_ID} .ct-order-editor-row { grid-template-columns:26px 22px minmax(0,1fr) 52px 50px; } }
         `;
@@ -2656,24 +2697,42 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                         </div>
                         <div class="ct-active-summary-table-wrap">
                             <table class="ct-active-summary-table">
+                                <colgroup>
+                                    <col class="ct-col-drag">
+                                    <col class="ct-col-select">
+                                    <col class="ct-col-name">
+                                    <col class="ct-col-state">
+                                    <col class="ct-col-agents">
+                                    <col class="ct-col-waitnow">
+                                    <col class="ct-col-waittoday">
+                                    <col class="ct-col-outbound">
+                                    <col class="ct-col-human">
+                                    <col class="ct-col-agentconnect">
+                                    <col class="ct-col-abandoned">
+                                    <col class="ct-col-connectrate">
+                                    <col class="ct-col-leads">
+                                    <col class="ct-col-runway">
+                                    <col class="ct-col-health">
+                                    <col class="ct-col-focus">
+                                </colgroup>
                                 <thead>
                                     <tr>
-                                        <th class="ct-th-drag" style="width:28px" title="Drag to reorder rows">↕</th>
-                                        <th class="ct-th-select" style="width:28px" title="Select visible rows"><input type="checkbox" data-campaign-action="toggle-select-all" title="Select all visible campaigns"></th>
-                                        <th class="ct-th-name" style="min-width:130px">CAMPAIGN</th>
-                                        <th class="ct-th-state" style="width:68px;text-align:center">STATE</th>
-                                        <th class="ct-th-num" style="width:54px;text-align:right" title="Logged in agents (if exposed)">AGENTS</th>
-                                        <th class="ct-th-num" style="width:58px;text-align:right" title="Current caller wait time">WAIT NOW</th>
-                                        <th class="ct-th-num" style="width:62px;text-align:right" title="Maximum caller wait time today">WAIT TODAY</th>
-                                        <th class="ct-th-num" style="width:90px;text-align:right" title="Total outbound call attempts today">OUTBOUND ATTEMPTS</th>
-                                        <th class="ct-th-num" style="width:84px;text-align:right" title="Total human answered connects">HUMAN CONNECTS</th>
-                                        <th class="ct-th-num" style="width:84px;text-align:right" title="Total agent connected calls">AGENT CONNECTS</th>
-                                        <th class="ct-th-num" style="width:88px;text-align:right" title="Abandoned calls and abandonment rate">ABANDONED</th>
-                                        <th class="ct-th-num" style="width:78px;text-align:right" title="Verified Human Connects ÷ Outbound Attempts %">CONNECT RATE</th>
-                                        <th class="ct-th-num" style="width:78px;text-align:right" title="Current live contacts in campaign">LIVE LEADS</th>
-                                        <th class="ct-th-center" style="width:90px;text-align:center" title="Estimated contact runway">LEAD RUNWAY</th>
-                                        <th class="ct-th-center" style="width:76px;text-align:center" title="Campaign operational health rating">HEALTH</th>
-                                        <th class="ct-th-center" style="width:56px;text-align:center" title="Focus Outbound monitor on this campaign">FOCUS</th>
+                                        <th class="ct-th-drag" title="Drag to reorder rows">↕</th>
+                                        <th class="ct-th-select" title="Select visible rows"><input type="checkbox" data-campaign-action="toggle-select-all" title="Select all visible campaigns"></th>
+                                        <th class="ct-th-name">CAMPAIGN</th>
+                                        <th class="ct-th-state">STATE</th>
+                                        <th class="ct-th-agents ct-th-num" title="Logged in agents (if exposed)">AGENTS</th>
+                                        <th class="ct-th-waitnow ct-th-num" title="Current caller wait time">WAIT NOW</th>
+                                        <th class="ct-th-waittoday ct-th-num" title="Maximum caller wait time today">WAIT TODAY</th>
+                                        <th class="ct-th-outbound ct-th-num" title="Total outbound call attempts today">OUTBOUND ATTEMPTS</th>
+                                        <th class="ct-th-human ct-th-num" title="Total human answered connects">HUMAN CONNECTS</th>
+                                        <th class="ct-th-agentconnect ct-th-num" title="Total agent connected calls">AGENT CONNECTS</th>
+                                        <th class="ct-th-abandoned ct-th-num" title="Abandoned calls and abandonment rate">ABANDONED</th>
+                                        <th class="ct-th-connectrate ct-th-num" title="Verified Human Connects ÷ Outbound Attempts %">CONNECT RATE</th>
+                                        <th class="ct-th-leads ct-th-num" title="Current live contacts in campaign">LIVE LEADS</th>
+                                        <th class="ct-th-runway ct-th-center" title="Estimated contact runway">LEAD RUNWAY</th>
+                                        <th class="ct-th-health ct-th-center" title="Campaign operational health rating">HEALTH</th>
+                                        <th class="ct-th-focus ct-th-center" title="Focus Outbound monitor on this campaign">FOCUS</th>
                                     </tr>
                                 </thead>
                                 <tbody data-ref="activeSummaryRows">
@@ -2746,9 +2805,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                 <div class="ct-operating-summary-item"><b>HIGHEST WAIT</b><strong data-ref="opWorstWait">—</strong></div>
                                 <div class="ct-operating-summary-item"><b>ON CALL</b><strong data-ref="opOnCall">—</strong></div>
                                 <div class="ct-operating-summary-item"><b>CONNECTED</b><strong data-ref="opConnected">—</strong></div>
+                                <div class="ct-operating-summary-item"><b>CONNECT RATE</b><strong data-ref="opConnectRate">—</strong></div>
+                                <div class="ct-operating-summary-item"><b>CALL ATTEMPTS</b><strong data-ref="opAttempts">—</strong></div>
+                                <div class="ct-operating-summary-item"><b>ABANDONED</b><strong data-ref="opAbandoned">—</strong></div>
+                                <div class="ct-operating-summary-item"><b>LIVE LEADS</b><strong data-ref="opLiveLeads">—</strong></div>
                                 <div class="ct-operating-summary-item"><b>LEAD RUNWAY</b><strong data-ref="opRunway">Measuring…</strong></div>
                             </div>
                             <div class="ct-operating-campaign-grid" data-ref="operatingCampaignCards" aria-label="Selected operating campaign metrics"></div>
+                        </div>
+                        <div class="ct-operating-findings" data-ref="operatingFindings" aria-label="Outbound Operational Findings">
+                            <div class="ct-operating-findings-head">
+                                <strong>OUTBOUND OPERATIONAL FINDINGS</strong>
+                                <span class="ct-operating-findings-badge" data-ref="operatingFindingsBadge">—</span>
+                            </div>
+                            <div class="ct-operating-findings-list" data-ref="operatingFindingsList"></div>
                         </div>
                     </section>
                     <section class="ct-insights-panel" aria-label="Live Operations Insights">
@@ -2795,7 +2865,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
                         <div class="ct-inbound-table-title"><strong>QUEUE DETAIL</strong><span>Every row uses the same verified snapshot as the totals above.</span></div>
                         <div class="ct-inbound-table-wrap">
-                            <div class="ct-inbound-table-head"><span style="text-align:left">QUEUE</span><span style="text-align:right" title="Logged in queue members">LOGGED</span><span style="text-align:right" title="Total calls today">TODAY</span><span style="text-align:right" title="Answered calls today">ANSWERED</span><span style="text-align:right" title="Not answered calls today">NOT ANS</span><span style="text-align:right" title="Current callers waiting">WAIT</span><span style="text-align:right" title="Agents on queue calls">ON CALL</span><span style="text-align:right" title="Maximum wait time">MAX WAIT</span><span style="text-align:right" title="Goals achieved today">GOALS</span><span style="text-align:center" title="Queue operational state">STATE</span></div>
+                            <div class="ct-inbound-table-head"><span class="ct-qcol-name" style="text-align:left">QUEUE</span><span class="ct-qcol-logged" style="text-align:right" title="Logged in queue members">LOGGED</span><span class="ct-qcol-today" style="text-align:right" title="Total calls today">TODAY</span><span class="ct-qcol-answered" style="text-align:right" title="Answered calls today">ANSWERED</span><span class="ct-qcol-notans" style="text-align:right" title="Not answered calls today">NOT ANS</span><span class="ct-qcol-wait" style="text-align:right" title="Current callers waiting">WAIT</span><span class="ct-qcol-oncall" style="text-align:right" title="Agents on queue calls">ON CALL</span><span class="ct-qcol-maxwait" style="text-align:right" title="Maximum wait time">MAX WAIT</span><span class="ct-qcol-goals" style="text-align:right" title="Goals achieved today">GOALS</span><span class="ct-qcol-state" style="text-align:center" title="Queue operational state">STATE</span></div>
                             <div class="ct-inbound-table" data-ref="inboundTable"></div>
                         </div>
                         <div class="ct-inbound-note" data-ref="inboundNote">Inbound source: native CallTools Queues DOM. Queue Logged In is a queue-level membership metric, not a unique-agent count.</div>
@@ -2897,6 +2967,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             operatingCampaignName: root.querySelector('[data-ref="operatingCampaignName"]'),
             operatingSelectedList: root.querySelector('[data-ref="operatingSelectedList"]'),
             operatingCampaignCards: root.querySelector('[data-ref="operatingCampaignCards"]'),
+            operatingFindings: root.querySelector('[data-ref="operatingFindings"]'),
+            operatingFindingsBadge: root.querySelector('[data-ref="operatingFindingsBadge"]'),
+            operatingFindingsList: root.querySelector('[data-ref="operatingFindingsList"]'),
             operatingStatus: root.querySelector('[data-ref="operatingStatus"]'),
             operatingStatusText: root.querySelector('[data-ref="operatingStatusText"]'),
             operatingActiveSince: root.querySelector('[data-ref="operatingActiveSince"]'),
@@ -2910,6 +2983,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             opAbandoned: root.querySelector('[data-ref="opAbandoned"]'),
             opAttempts: root.querySelector('[data-ref="opAttempts"]'),
             opConnected: root.querySelector('[data-ref="opConnected"]'),
+            opConnectRate: root.querySelector('[data-ref="opConnectRate"]'),
             opRunway: root.querySelector('[data-ref="opRunway"]'),
             opAlignment: root.querySelector('[data-ref="opAlignment"]'),
             topWait: root.querySelector('[data-ref="topWait"]'),
@@ -4064,20 +4138,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 '</div>' +
                 '</div></td>' +
                 '<td class="ct-td-select"><input type="checkbox" class="ct-table-select-cb" data-campaign-id="' + escapeHtml(c.__id) + '" ' + (isSelected ? 'checked' : '') + ' aria-label="Select ' + escapeHtml(c.name) + '"></td>' +
-                '<td class="ct-active-name" style="text-align:left"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
-                '<td style="text-align:center"><span class="ct-active-status-tag ' + (c.__active ? 'is-live' : 'is-inactive') + '">' + (c.__active ? 'ACTIVE' : 'INACTIVE') + '</span></td>' +
-                '<td class="ct-td-num" title="' + escapeHtml(agentsTitle) + '">' + escapeHtml(agentsText) + '</td>' +
-                '<td class="ct-td-num ' + (c.__wait >= 60 ? 'is-critical' : c.__wait >= 30 ? 'is-warning' : '') + '">' + escapeHtml(waitNowText) + '</td>' +
-                '<td class="ct-td-num">' + escapeHtml(waitTodayText) + '</td>' +
-                '<td class="ct-td-num">' + escapeHtml(outboundText) + '</td>' +
-                '<td class="ct-td-num is-highlight">' + escapeHtml(humanText) + '</td>' +
-                '<td class="ct-td-num">' + escapeHtml(agentConnectText) + '</td>' +
-                '<td class="ct-td-num ' + (c.__abandoned >= 500 || abandonRate >= 5 ? 'is-critical' : abandonRate >= 2 ? 'is-warning' : '') + '" title="' + escapeHtml(abandonedTitle) + '">' + escapeHtml(abandonedText) + '</td>' +
-                '<td class="ct-td-num ' + escapeHtml(connectRateClass) + '" title="' + escapeHtml(connectRateTitle) + '">' + escapeHtml(connectRateText) + '</td>' +
-                '<td class="ct-td-num">' + escapeHtml(contactsText) + '</td>' +
-                '<td class="ct-td-center ' + escapeHtml(runway.tone) + '">' + escapeHtml(runway.label) + '</td>' +
-                '<td class="ct-td-center"><span class="ct-health-pill is-' + escapeHtml(c.__health || 'good') + '">' + escapeHtml(healthLabel) + '</span></td>' +
-                '<td class="ct-td-center"><button type="button" class="ct-active-focus-btn" data-campaign-focus="' + escapeHtml(c.__id) + '" title="Focus Outbound Monitor on ' + escapeHtml(c.name) + '">Focus</button></td>';
+                '<td class="ct-td-name ct-active-name" title="' + escapeHtml(safeValue(c.name)) + '"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
+                '<td class="ct-td-state"><span class="ct-active-status-tag ' + (c.__active ? 'is-live' : 'is-inactive') + '">' + (c.__active ? 'ACTIVE' : 'INACTIVE') + '</span></td>' +
+                '<td class="ct-td-agents ct-td-num" title="' + escapeHtml(agentsTitle) + '">' + escapeHtml(agentsText) + '</td>' +
+                '<td class="ct-td-waitnow ct-td-num ' + (c.__wait >= 60 ? 'is-critical' : c.__wait >= 30 ? 'is-warning' : '') + '">' + escapeHtml(waitNowText) + '</td>' +
+                '<td class="ct-td-waittoday ct-td-num">' + escapeHtml(waitTodayText) + '</td>' +
+                '<td class="ct-td-outbound ct-td-num">' + escapeHtml(outboundText) + '</td>' +
+                '<td class="ct-td-human ct-td-num is-highlight">' + escapeHtml(humanText) + '</td>' +
+                '<td class="ct-td-agentconnect ct-td-num">' + escapeHtml(agentConnectText) + '</td>' +
+                '<td class="ct-td-abandoned ct-td-num ' + (c.__abandoned >= 500 || abandonRate >= 5 ? 'is-critical' : abandonRate >= 2 ? 'is-warning' : '') + '" title="' + escapeHtml(abandonedTitle) + '">' + escapeHtml(abandonedText) + '</td>' +
+                '<td class="ct-td-connectrate ct-td-num ' + escapeHtml(connectRateClass) + '" title="' + escapeHtml(connectRateTitle) + '">' + escapeHtml(connectRateText) + '</td>' +
+                '<td class="ct-td-leads ct-td-num">' + escapeHtml(contactsText) + '</td>' +
+                '<td class="ct-td-runway ct-td-center ' + escapeHtml(runway.tone) + '">' + escapeHtml(runway.label) + '</td>' +
+                '<td class="ct-td-health ct-td-center"><span class="ct-health-pill is-' + escapeHtml(c.__health || 'good') + '">' + escapeHtml(healthLabel) + '</span></td>' +
+                '<td class="ct-td-focus ct-td-center"><button type="button" class="ct-active-focus-btn" data-campaign-focus="' + escapeHtml(c.__id) + '" title="Focus Outbound Monitor on ' + escapeHtml(c.name) + '">Focus</button></td>';
             fragment.appendChild(tr);
         });
         refs.activeSummaryRows.replaceChildren(fragment);
@@ -4157,17 +4231,41 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             refs.operatingSelectedList.innerHTML = present.length || missing.length ? present.concat(missing).join('') : '<span class="ct-operating-empty">Choose one or more campaigns from the selector above.</span>';
         }
 
-        setText(refs.opLoggedIn, count ? formatNumber(sum("__loggedIn")) : "—");
-        setText(refs.opWaiting, count ? formatNumber(sum("__waiting")) : "—");
-        setText(refs.opWorstWait, count ? formatNumber(max("__wait")) + "s" : "—");
-        if (refs.opWorstWait) {
-            const worstWait = count ? max("__wait") : 0;
-            setClass(refs.opWorstWait, "ct-operating-metric-value " + (worstWait >= 60 ? "is-critical" : worstWait >= 30 ? "is-warning" : "is-good"));
-        }
-        setText(refs.opOnCall, count ? formatNumber(sum("__onCall")) : "—");
-        setText(refs.opConnected, count ? formatNumber(sum("__human")) : "—");
+        const totalAttempts = sum("__outbound");
+        const totalHuman = sum("__human");
+        const totalAbandoned = sum("__abandoned");
+        const totalLoggedIn = sum("__loggedIn");
+        const totalWaiting = sum("__waiting");
+        const totalOnCall = sum("__onCall");
+        const worstWait = count ? max("__wait") : 0;
+        const connectRate = totalAttempts > 0 ? (totalHuman / totalAttempts) * 100 : 0;
+        const connectRateText = count && totalAttempts > 0 ? connectRate.toFixed(1) + "%" : "—";
+        const connectRateClass = totalAttempts > 0 ? (connectRate >= 3 ? "is-good" : connectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
+        const abandonRate = totalAttempts > 0 ? (totalAbandoned / totalAttempts) * 100 : 0;
+        const abandonedText = count ? (totalAttempts > 0 ? formatNumber(totalAbandoned) + " (" + abandonRate.toFixed(1) + "%)" : formatNumber(totalAbandoned)) : "—";
 
-        let runwayText = "Select campaign";
+        // Section B: 10-metric operational strip (always visible)
+        setText(refs.opLoggedIn, count ? formatNumber(totalLoggedIn) : "—");
+        setText(refs.opWaiting, count ? formatNumber(totalWaiting) : "—");
+        setText(refs.opWorstWait, count ? formatNumber(worstWait) + "s" : "—");
+        if (refs.opWorstWait) {
+            setClass(refs.opWorstWait, "ct-operating-metric-value " + (count ? (worstWait >= 60 ? "is-critical" : worstWait >= 30 ? "is-warning" : "is-good") : "is-neutral"));
+        }
+        setText(refs.opOnCall, count ? formatNumber(totalOnCall) : "—");
+        setText(refs.opConnected, count ? formatNumber(totalHuman) : "—");
+        if (refs.opConnectRate) {
+            setText(refs.opConnectRate, connectRateText);
+            setClass(refs.opConnectRate, "ct-operating-metric-value " + (count ? connectRateClass : "is-neutral"));
+        }
+        if (refs.opAttempts) setText(refs.opAttempts, count ? formatNumber(totalAttempts) : "—");
+        if (refs.opAbandoned) {
+            setText(refs.opAbandoned, abandonedText);
+            const abandonTone = totalAbandoned >= 500 || abandonRate >= 5 ? "is-critical" : abandonRate >= 2 ? "is-warning" : "is-good";
+            setClass(refs.opAbandoned, "ct-operating-metric-value " + (count ? abandonTone : "is-neutral"));
+        }
+        if (refs.opLiveLeads) setText(refs.opLiveLeads, count ? formatNumber(operatingLeadTotal(selected)) : "—");
+
+        let runwayText = count === 0 ? "—" : "Measuring…";
         let runwayTone = "is-neutral";
         if (count === 1) {
             const runway = runwayLabels[0];
@@ -4186,11 +4284,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         setClass(refs.opRunway, "ct-operating-metric-value " + runwayTone);
 
         const summaryBar = root ? root.querySelector(".ct-operating-summary-bar") : null;
-        if (summaryBar) summaryBar.style.display = count > 1 ? "grid" : "none";
+        if (summaryBar) summaryBar.style.display = "grid";
 
-        // Per-campaign cards are authoritative source views. Agent state is always
-        // presented first, followed by CallTools campaign data, so multi-selection
-        // never collapses two campaigns into one opaque aggregate.
+        // Section C: Campaign Details (Logical clusters)
         if (refs.operatingCampaignCards) {
             if (!selected.length) {
                 refs.operatingCampaignCards.innerHTML = '<div class="ct-operating-campaign-empty">Select one or more campaigns to see each campaign’s live agent state and source-backed metrics separately.</div>';
@@ -4200,40 +4296,104 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                     const stateLabel = active ? "LIVE" : c.__active === false ? "INACTIVE" : "CHECK";
                     const runway = estimateCampaignRunway(c);
                     const waitTone = waitHealth(c.__wait, c.__waiting) === "critical" ? "is-critical" : waitHealth(c.__wait, c.__waiting) === "warning" ? "is-warning" : "is-good";
-                    const abandonRate = c.__outbound > 0 ? (c.__abandoned / c.__outbound) * 100 : 0;
-                    const abandonTone = c.__abandoned >= 500 || abandonRate >= 5 ? "is-critical" : abandonRate >= 2 ? "is-warning" : "is-good";
+                    const cAbandonRate = c.__outbound > 0 ? (c.__abandoned / c.__outbound) * 100 : 0;
+                    const abandonTone = c.__abandoned >= 500 || cAbandonRate >= 5 ? "is-critical" : cAbandonRate >= 2 ? "is-warning" : "is-good";
                     const leadTone = c.__active === true && c.__contacts <= state.contactThreshold ? "is-warning" : "is-good";
-                    const connectRate = c.__outbound > 0 ? (c.__human / c.__outbound) * 100 : 0;
-                    const connectRateText = c.__outbound > 0 ? connectRate.toFixed(1) + "%" : "—";
-                    const connectRateClass = c.__outbound > 0 ? (connectRate >= 3 ? "is-good" : connectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
+                    const cConnectRate = c.__outbound > 0 ? (c.__human / c.__outbound) * 100 : 0;
+                    const cConnectRateText = c.__outbound > 0 ? cConnectRate.toFixed(1) + "%" : "—";
+                    const cConnectRateClass = c.__outbound > 0 ? (cConnectRate >= 3 ? "is-good" : cConnectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
                     return '<article class="ct-operating-campaign-card" data-operating-campaign="' + escapeHtml(c.__id) + '">' +
                         '<div class="ct-operating-campaign-head"><b>' + escapeHtml(safeValue(c.name, "Unnamed Campaign")) + '</b><span class="ct-operating-campaign-state ' + (active ? 'is-live' : '') + '">' + stateLabel + '</span></div>' +
+                        '<div class="ct-operating-cluster-label"><span>AGENT CAPACITY & QUEUE PRESSURE</span></div>' +
                         '<div class="ct-operating-agent-band">' +
                             '<div class="ct-operating-card-metric"><b>Total Agents</b><strong>' + formatNumber(c.__loggedIn) + '</strong><small>Native campaign count</small></div>' +
                             '<div class="ct-operating-card-metric"><b>Waiting</b><strong>' + formatNumber(c.__waiting) + '</strong><small>Current queue load</small></div>' +
                             '<div class="ct-operating-card-metric ' + waitTone + '"><b>Worst Wait</b><strong>' + formatNumber(c.__wait) + 's</strong><small>Current maximum wait</small></div>' +
                             '<div class="ct-operating-card-metric"><b>On Call</b><strong>' + formatNumber(c.__onCall) + '</strong><small>Active agents</small></div>' +
                         '</div>' +
+                        '<div class="ct-operating-cluster-label"><span>CALL VOLUME & OUTCOMES</span></div>' +
                         '<div class="ct-operating-data-grid">' +
-                            '<div class="ct-operating-card-metric ' + leadTone + '"><b>Live Leads</b><strong>' + formatNumber(c.__contacts) + '</strong><small>CallTools Leads</small></div>' +
                             '<div class="ct-operating-card-metric"><b>Connected</b><strong>' + formatNumber(c.__human) + '</strong><small>Native Human</small></div>' +
-                            '<div class="ct-operating-card-metric ' + connectRateClass + '" title="Verified Human Connects ÷ Outbound Attempts"><b>Connect Rate</b><strong>' + escapeHtml(connectRateText) + '</strong><small>Human ÷ Outbound</small></div>' +
+                            '<div class="ct-operating-card-metric ' + cConnectRateClass + '" title="Verified Human Connects ÷ Outbound Attempts"><b>Connect Rate</b><strong>' + escapeHtml(cConnectRateText) + '</strong><small>Human ÷ Outbound</small></div>' +
                             '<div class="ct-operating-card-metric"><b>Call Attempts</b><strong>' + formatNumber(c.__outbound) + '</strong><small>Native Outbound</small></div>' +
                             '<div class="ct-operating-card-metric ' + abandonTone + '"><b>Abandoned</b><strong>' + formatNumber(c.__abandoned) + '</strong><small>Native reported</small></div>' +
+                        '</div>' +
+                        '<div class="ct-operating-cluster-label"><span>LEAD INVENTORY & RUNWAY</span></div>' +
+                        '<div class="ct-operating-data-grid ct-operating-data-grid-half">' +
+                            '<div class="ct-operating-card-metric ' + leadTone + '"><b>Live Leads</b><strong>' + formatNumber(c.__contacts) + '</strong><small>CallTools Leads</small></div>' +
                             '<div class="ct-operating-card-metric ' + runway.tone + '"><b>Lead Runway</b><strong>' + escapeHtml(runway.label) + '</strong><small>Observed depletion</small></div>' +
+                        '</div>' +
+                        '<div class="ct-operating-cluster-label"><span>DATA QUALITY & FRESHNESS</span></div>' +
+                        '<div class="ct-operating-data-grid ct-operating-data-grid-half">' +
+                            '<div class="ct-operating-card-metric"><b>Campaign State</b><strong>' + (active ? 'ACTIVE' : 'INACTIVE') + '</strong><small>Feed Verified</small></div>' +
+                            '<div class="ct-operating-card-metric ' + alignment.tone + '"><b>Staffing Alignment</b><strong>' + escapeHtml(alignment.label) + '</strong><small>Baseline check</small></div>' +
                         '</div>' +
                     '</article>';
                 }).join("");
             }
         }
 
-        // Legacy refs may be absent in the compact multi-campaign layout. Only
-        // update them when present so the dashboard remains safe after UI changes.
-        if (refs.opLiveLeads) setText(refs.opLiveLeads, count ? formatNumber(operatingLeadTotal(selected)) : "—");
-        // opWorstWait is updated in the aggregate summary above from the selected set's native maximum wait.
+        // Section D: Operational Findings
+        if (refs.operatingFindingsList) {
+            const findings = [];
+            if (!count) {
+                refs.operatingFindingsList.innerHTML = '<div class="ct-finding-pill"><b>NO SELECTION</b><span>Select one or more operating campaigns above to view operational findings.</span></div>';
+                if (refs.operatingFindingsBadge) {
+                    setText(refs.operatingFindingsBadge, "NO SELECTION");
+                    refs.operatingFindingsBadge.className = "ct-operating-findings-badge is-neutral";
+                }
+            } else {
+                selected.forEach(function (c) {
+                    const cAbandonRate = c.__outbound > 0 ? (c.__abandoned / c.__outbound) * 100 : 0;
+                    const runway = estimateCampaignRunway(c);
+                    if (c.__wait >= 60 && c.__waiting > 0) {
+                        findings.push('<div class="ct-finding-pill is-critical"><b>CRITICAL WAIT</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__wait) + 's maximum caller wait with ' + formatNumber(c.__waiting) + ' waiting.</span></div>');
+                    } else if (c.__wait >= 30 && c.__waiting > 0) {
+                        findings.push('<div class="ct-finding-pill is-warning"><b>ELEVATED WAIT</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__wait) + 's wait time with active caller queue.</span></div>');
+                    }
+                    if (c.__waiting > 0 && c.__loggedIn === 0) {
+                        findings.push('<div class="ct-finding-pill is-critical"><b>NO CAPACITY</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__waiting) + ' callers waiting with 0 logged-in agents.</span></div>');
+                    }
+                    if (c.__abandoned >= 500 || (c.__outbound >= 50 && cAbandonRate >= 5)) {
+                        findings.push('<div class="ct-finding-pill is-critical"><b>HIGH ABANDONMENT</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__abandoned) + ' abandoned calls (' + cAbandonRate.toFixed(1) + '% rate).</span></div>');
+                    } else if (c.__outbound >= 50 && cAbandonRate >= 2) {
+                        findings.push('<div class="ct-finding-pill is-warning"><b>ELEVATED ABANDONMENT</b><span>' + escapeHtml(c.name) + ': ' + cAbandonRate.toFixed(1) + '% abandon rate.</span></div>');
+                    }
+                    if (c.__active === true && c.__contacts <= state.contactThreshold) {
+                        findings.push('<div class="ct-finding-pill is-warning"><b>LOW CONTACT POOL</b><span>' + escapeHtml(c.name) + ': only ' + formatNumber(c.__contacts) + ' live leads remaining in pool.</span></div>');
+                    }
+                    if (runway.measured && runway.minutes <= 120) {
+                        findings.push('<div class="ct-finding-pill ' + (runway.minutes <= 60 ? 'is-critical' : 'is-warning') + '"><b>SHORT RUNWAY</b><span>' + escapeHtml(c.name) + ': estimated lead depletion in ' + escapeHtml(runway.label) + '.</span></div>');
+                    }
+                });
+
+                if (alignment.label === "Shift detected") {
+                    findings.push('<div class="ct-finding-pill is-warning"><b>STAFFING SHIFT</b><span>Agent allocation has shifted away from selected operating campaigns since baseline.</span></div>');
+                }
+
+                const hasCritical = findings.some(function (f) { return f.includes("is-critical"); });
+                const hasWarning = findings.some(function (f) { return f.includes("is-warning"); });
+                const findingsTone = hasCritical ? "is-critical" : hasWarning ? "is-warning" : "is-good";
+                const findingsBadgeText = hasCritical ? "CRITICAL ALERTS" : hasWarning ? "AT RISK" : "NORMAL OPERATIONS";
+
+                if (!findings.length) {
+                    refs.operatingFindingsList.innerHTML = '<div class="ct-finding-pill is-good"><b>NORMAL OPERATIONS</b><span>All selected operating campaigns within healthy parameters · No wait or inventory alerts.</span></div>';
+                } else {
+                    refs.operatingFindingsList.innerHTML = findings.join("");
+                }
+
+                if (refs.operatingFindingsBadge) {
+                    setText(refs.operatingFindingsBadge, findingsBadgeText);
+                    refs.operatingFindingsBadge.className = "ct-operating-findings-badge " + findingsTone;
+                }
+                if (refs.operatingFindings) {
+                    refs.operatingFindings.className = "ct-operating-findings " + findingsTone;
+                }
+            }
+        }
+
+        // Legacy refs update
         if (refs.opQueue) setText(refs.opQueue, count ? formatNumber(sum("__waiting")) : "—");
-        if (refs.opAbandoned) setText(refs.opAbandoned, count ? formatNumber(sum("__abandoned")) : "—");
-        if (refs.opAttempts) setText(refs.opAttempts, count ? formatNumber(sum("__outbound")) : "—");
         if (refs.opAlignment) {
             setText(refs.opAlignment, selectedStoredCount ? alignment.label : "—");
             setClass(refs.opAlignment, "ct-operating-metric-value " + (selectedStoredCount ? alignment.tone : "is-neutral"));
@@ -5978,8 +6138,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 const qRate = qToday > 0 ? (qAnswered / qToday * 100).toFixed(1) + "%" : "—";
                 const stateLabel = archivedRow ? "ARCHIVED" : qWaiting > 0 && qLoggedIn === 0 ? "NO CAPACITY" : qWait >= 60 && qWaiting > 0 ? "CRITICAL WAIT" : qWait >= 30 && qWaiting > 0 ? "HIGH WAIT" : qWaiting > 0 ? "CALLERS WAITING" : "READY";
                 const stateClass = archivedRow ? "is-neutral" : /CRITICAL|NO CAPACITY/.test(stateLabel) ? "is-critical" : /HIGH|WAITING/.test(stateLabel) ? "is-warning" : "is-good";
-                const loginNote = archivedRow ? "excluded from active totals" : qLoggedIn + " queue members logged in · " + qRate + " answer rate";
-                return '<div class="ct-inbound-row ' + stateClass + '" data-queue-id="' + escapeHtml(row.id || row.name) + '" data-queue-name="' + escapeHtml(row.name) + '"><span class="ct-inbound-name"><b>' + escapeHtml(row.name) + '</b><small>' + loginNote + '</small></span><span>' + formatNumber(qLoggedIn) + '</span><span>' + formatNumber(qToday) + '</span><span>' + formatNumber(qAnswered) + '</span><span>' + formatNumber(qNotAnswered) + '</span><span>' + formatNumber(qWaiting) + '</span><span>' + formatNumber(row.onCall) + '</span><span>' + formatNumber(qWait) + 's</span><span>' + formatNumber(row.goals) + '</span><span><em>' + stateLabel + '</em></span></div>';
+                return '<div class="ct-inbound-row ' + stateClass + '" data-queue-id="' + escapeHtml(row.id || row.name) + '" data-queue-name="' + escapeHtml(row.name) + '">' +
+                    '<span class="ct-qcol-name ct-inbound-name"><b>' + escapeHtml(row.name) + '</b><small>' + loginNote + '</small></span>' +
+                    '<span class="ct-qcol-logged">' + formatNumber(qLoggedIn) + '</span>' +
+                    '<span class="ct-qcol-today">' + formatNumber(qToday) + '</span>' +
+                    '<span class="ct-qcol-answered">' + formatNumber(qAnswered) + '</span>' +
+                    '<span class="ct-qcol-notans">' + formatNumber(qNotAnswered) + '</span>' +
+                    '<span class="ct-qcol-wait ' + (qWaiting >= 5 ? 'is-critical' : qWaiting > 0 ? 'is-warning' : '') + '">' + formatNumber(qWaiting) + '</span>' +
+                    '<span class="ct-qcol-oncall">' + formatNumber(row.onCall) + '</span>' +
+                    '<span class="ct-qcol-maxwait ' + (qWait >= 60 && qWaiting > 0 ? 'is-critical' : qWait >= 30 && qWaiting > 0 ? 'is-warning' : '') + '">' + formatNumber(qWait) + 's</span>' +
+                    '<span class="ct-qcol-goals">' + formatNumber(row.goals) + '</span>' +
+                    '<span class="ct-qcol-state"><em>' + stateLabel + '</em></span>' +
+                    '</div>';
             }).join('');
         }
 
