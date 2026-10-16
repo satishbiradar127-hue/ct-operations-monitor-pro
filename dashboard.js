@@ -2183,36 +2183,48 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-operating-option-main small { color:#9fb0c7; font-size:8px; white-space:nowrap; }
             #${DASHBOARD_ID} .ct-operating-menu-foot { margin-top:7px; padding:7px 3px 1px; border-top:1px solid rgba(148,163,184,.18); color:#94a3b8; font-size:8px; line-height:1.35; }
             #${DASHBOARD_ID} .ct-operating-selected-list { display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
-            #${DASHBOARD_ID} .ct-operating-chip { display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:4px 7px; border:1px solid #cbd5e1; border-radius:999px; background:#f8fafc; color:#111827; }
-            #${DASHBOARD_ID} .ct-operating-chip.is-live { border-color:#9bd6b5; background:#effbf4; }
-            #${DASHBOARD_ID} .ct-operating-chip b { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
-            #${DASHBOARD_ID} .ct-operating-chip small { color:#667085; font-size:8px; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-operating-empty { color:#667085; font-size:9px; }
+            #${DASHBOARD_ID} .ct-operating-chip { display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:3px 7px; border:1px solid rgba(148,163,184,.3); border-radius:999px; background:rgba(30,41,59,.7); color:#f8fafc; }
+            #${DASHBOARD_ID} .ct-operating-chip.is-live { border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.12); color:#4ade80; }
+            #${DASHBOARD_ID} .ct-operating-chip b { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; color:#f8fafc; }
+            #${DASHBOARD_ID} .ct-operating-chip small { color:#94a3b8; font-size:8px; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-operating-empty { color:#94a3b8; font-size:9px; }
             #${DASHBOARD_ID} .ct-operating-right { min-width:0; display:grid; gap:9px; }
-            #${DASHBOARD_ID} .ct-operating-summary-bar { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); border:1px solid #cbd5e1; border-radius:8px; background:#fff; overflow:hidden; }
-            #${DASHBOARD_ID} .ct-operating-summary-item { min-width:0; padding:8px 10px; border-right:1px solid #d8e0ea; }
-            #${DASHBOARD_ID} .ct-operating-summary-item:last-child { border-right:0; }
-            #${DASHBOARD_ID} .ct-operating-summary-item b { display:block; color:#667085; font-size:8px; font-weight:950; text-transform:uppercase; }
-            #${DASHBOARD_ID} .ct-operating-summary-item strong { display:block; margin-top:3px; color:#111827; font-size:17px; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-operating-summary-bar { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; border:none; border-radius:8px; background:transparent; overflow:hidden; }
+            #${DASHBOARD_ID} .ct-operating-summary-item { min-width:0; padding:6px 9px; border:1px solid rgba(148,163,184,.22); border-radius:6px; background:linear-gradient(180deg,rgba(30,41,59,.78) 0%,rgba(15,23,42,.92) 100%); }
+            #${DASHBOARD_ID} .ct-operating-summary-item b { display:block; color:#94a3b8; font-size:8.5px; font-weight:850; text-transform:uppercase; letter-spacing:.05em; }
+            #${DASHBOARD_ID} .ct-operating-summary-item strong { display:block; margin-top:2px; color:#f8fafc; font-size:16px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-operating-campaign-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(330px,1fr)); gap:9px; }
-            #${DASHBOARD_ID} .ct-operating-campaign-card { border:1px solid #cbd5e1; border-radius:9px; background:#fff; overflow:hidden; box-shadow:0 3px 12px rgba(15,23,42,.06); }
-            #${DASHBOARD_ID} .ct-operating-campaign-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 11px; border-bottom:1px solid #d8e0ea; background:linear-gradient(90deg,#f8fafc,#eefbf4); }
-            #${DASHBOARD_ID} .ct-operating-campaign-head b { color:#172033; font-size:13px; font-weight:950; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-operating-campaign-state { flex:0 0 auto; padding:3px 7px; border-radius:999px; border:1px solid #cbd5e1; color:#667085; background:#f8fafc; font-size:8px; font-weight:950; }
-            #${DASHBOARD_ID} .ct-operating-campaign-state.is-live { color:#087f4d; border-color:#9bd6b5; background:#effbf4; }
-            #${DASHBOARD_ID} .ct-operating-agent-band { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-bottom:1px solid #d8e0ea; background:#f9fbfd; }
-            #${DASHBOARD_ID} .ct-operating-data-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); }
-            #${DASHBOARD_ID} .ct-operating-card-metric { min-width:0; padding:8px 9px; border-right:1px solid #e1e7ef; }
-            #${DASHBOARD_ID} .ct-operating-agent-band .ct-operating-card-metric:last-child, #${DASHBOARD_ID} .ct-operating-data-grid .ct-operating-card-metric:last-child { border-right:0; }
-            #${DASHBOARD_ID} .ct-operating-card-metric b { display:block; color:#667085; font-size:7px; font-weight:950; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-operating-card-metric strong { display:block; margin-top:3px; color:#111827; font-size:15px; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-operating-card-metric small { display:block; margin-top:2px; color:#98a2b3; font-size:7px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical strong { color:#dc2626; }
-            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning strong { color:#b45309; }
-            #${DASHBOARD_ID} .ct-operating-card-metric.is-good strong { color:#087f4d; }
-            #${DASHBOARD_ID} .ct-operating-campaign-empty { grid-column:1/-1; padding:18px; border:1px dashed #cbd5e1; border-radius:9px; color:#667085; background:#fff; font-size:11px; font-weight:800; text-align:center; }
+            #${DASHBOARD_ID} .ct-operating-campaign-card { border:1px solid rgba(148,163,184,.24); border-radius:8px; background:linear-gradient(180deg,rgba(20,29,46,.95) 0%,rgba(13,20,34,.98) 100%); overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.25); padding:8px 10px 10px; }
+            #${DASHBOARD_ID} .ct-operating-campaign-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 9px; margin-bottom:8px; border:1px solid rgba(148,163,184,.22); border-radius:6px; background:linear-gradient(180deg,rgba(30,41,59,.85) 0%,rgba(15,23,42,.95) 100%); }
+            #${DASHBOARD_ID} .ct-operating-campaign-head b { color:#f8fafc; font-size:12px; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-operating-campaign-state { flex:0 0 auto; padding:2px 7px; border-radius:999px; border:1px solid rgba(148,163,184,.35); color:#cbd5e1; background:rgba(148,163,184,.15); font-size:8.5px; font-weight:900; letter-spacing:.04em; }
+            #${DASHBOARD_ID} .ct-operating-campaign-state.is-live { color:#4ade80; border-color:rgba(34,197,94,.45); background:rgba(34,197,94,.16); }
+            #${DASHBOARD_ID} .ct-operating-agent-band, #${DASHBOARD_ID} .ct-operating-data-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+            #${DASHBOARD_ID} .ct-operating-data-grid-half { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric { display:flex; flex-direction:column; justify-content:space-between; min-height:56px; padding:7px 9px; border-radius:6px; background:linear-gradient(180deg,rgba(30,41,59,.72) 0%,rgba(15,23,42,.88) 100%) !important; border:1px solid rgba(148,163,184,.22) !important; box-shadow:0 2px 6px rgba(0,0,0,.15); transition:border-color .15s ease, background .15s ease; }
+            #${DASHBOARD_ID} .ct-operating-card-metric:hover { border-color:rgba(148,163,184,.45) !important; background:linear-gradient(180deg,rgba(30,41,59,.88) 0%,rgba(20,29,46,.96) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric b { display:block; color:#94a3b8 !important; font-size:9px !important; font-weight:800 !important; text-transform:uppercase !important; letter-spacing:.05em !important; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-operating-card-metric strong { display:block; margin-top:2px; margin-bottom:2px; color:#f8fafc !important; font-size:16px !important; font-weight:900 !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums !important; line-height:1.15; }
+            #${DASHBOARD_ID} .ct-operating-card-metric small { display:block; color:#cbd5e1 !important; font-size:8px !important; font-weight:600 !important; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.82; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical { border-color:rgba(239,68,68,.6) !important; background:linear-gradient(180deg,rgba(239,68,68,.22) 0%,rgba(35,15,18,.9) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical b { color:#fca5a5 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical strong { color:#f87171 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical small { color:#fca5a5 !important; opacity:.95 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning { border-color:rgba(245,158,11,.55) !important; background:linear-gradient(180deg,rgba(245,158,11,.2) 0%,rgba(30,25,15,.9) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning b { color:#fde68a !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning strong { color:#fbbf24 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning small { color:#fcd34d !important; opacity:.95 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-good { border-color:rgba(34,197,94,.45) !important; background:linear-gradient(180deg,rgba(34,197,94,.16) 0%,rgba(15,30,24,.9) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-good b { color:#a7f3d0 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-good strong { color:#4ade80 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-good small { color:#86efac !important; opacity:.95 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight { border-color:rgba(56,189,248,.45) !important; background:linear-gradient(180deg,rgba(56,189,248,.16) 0%,rgba(15,25,40,.9) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight b { color:#bae6fd !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight strong { color:#38bdf8 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight small { color:#7dd3fc !important; opacity:.95 !important; }
+            #${DASHBOARD_ID} .ct-operating-campaign-empty { grid-column:1/-1; padding:18px; border:1px dashed rgba(148,163,184,.3); border-radius:8px; color:#94a3b8; background:rgba(15,23,42,.6); font-size:11px; font-weight:800; text-align:center; }
             @media (max-width:980px) { #${DASHBOARD_ID} .ct-operating-summary-bar { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-            @media (max-width:700px) { #${DASHBOARD_ID} .ct-operating-summary-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } #${DASHBOARD_ID} .ct-operating-data-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } #${DASHBOARD_ID} .ct-operating-data-grid .ct-operating-card-metric:nth-child(3) { border-right:0; } }
+            @media (max-width:700px) { #${DASHBOARD_ID} .ct-operating-summary-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } #${DASHBOARD_ID} .ct-operating-data-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
             @media (max-width:900px) { #${DASHBOARD_ID} .ct-operating-menu { width:min(330px,70vw); } }
 
             /* v11.1.25 final layout authority — prevent control overlap and make multi-campaign/insight scanning readable. */
@@ -2616,33 +2628,44 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-kpi-value, #${DASHBOARD_ID} .ct-command-value, #${DASHBOARD_ID} .ct-row-cell { font-variant-numeric:tabular-nums; }
 
             /* Outbound Focus upgraded layout */
-            #${DASHBOARD_ID} .ct-focus-outbound .ct-operating-panel { display:flex !important; flex-direction:column !important; gap:10px !important; background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(13,21,36,.98)) !important; border:1px solid rgba(148,163,184,.28) !important; border-top:0 !important; border-radius:0 0 10px 10px !important; padding:10px !important; box-shadow:0 8px 22px rgba(0,0,0,.16) !important; color:#f8fafc !important; }
+            #${DASHBOARD_ID} .ct-focus-outbound .ct-operating-panel { display:flex !important; flex-direction:column !important; gap:8px !important; background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(13,21,36,.98)) !important; border:1px solid rgba(148,163,184,.28) !important; border-top:0 !important; border-radius:0 0 10px 10px !important; padding:10px !important; box-shadow:0 8px 22px rgba(0,0,0,.16) !important; color:#f8fafc !important; }
             #${DASHBOARD_ID} .ct-operating-summary-bar { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; margin-bottom:4px; background:transparent; border:none; padding:0; }
             #${DASHBOARD_ID} .ct-operating-summary-bar[hidden] { display:none !important; }
             #${DASHBOARD_ID} .ct-operating-summary-item:hover { border-color:rgba(148,163,184,.42); background:linear-gradient(180deg,rgba(30,41,59,.9) 0%,rgba(15,23,42,.98) 100%); }
             #${DASHBOARD_ID} .ct-operating-summary-item b { color:#94a3b8; font-size:9px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; line-height:1.2; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
             #${DASHBOARD_ID} .ct-operating-summary-item strong { color:#f8fafc; font-size:15px; font-weight:900; line-height:1.1; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-operating-cluster-label { display:flex; align-items:center; gap:8px; margin:10px 0 5px; font-size:9.5px; font-weight:950; letter-spacing:.08em; color:#60a5fa !important; text-transform:uppercase; }
-            #${DASHBOARD_ID} .ct-operating-cluster-label::after { content:''; flex:1; height:1px; background:rgba(148,163,184,.22); }
+            #${DASHBOARD_ID} .ct-operating-campaign-card { border:1px solid rgba(148,163,184,.24) !important; border-radius:8px !important; background:linear-gradient(180deg,rgba(20,29,46,.95) 0%,rgba(13,20,34,.98) 100%) !important; overflow:hidden !important; box-shadow:0 4px 16px rgba(0,0,0,.25) !important; padding:8px 10px 10px !important; }
+            #${DASHBOARD_ID} .ct-operating-campaign-card.is-single-campaign > .ct-operating-campaign-head { display:none !important; }
+            #${DASHBOARD_ID} .ct-operating-cluster-label { display:flex; align-items:center; gap:8px; margin:9px 0 5px; font-size:9.5px; font-weight:900; letter-spacing:.08em; color:#38bdf8 !important; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-operating-campaign-card > .ct-operating-cluster-label:first-of-type, #${DASHBOARD_ID} .ct-operating-cluster-label:first-child { margin-top:2px !important; }
+            #${DASHBOARD_ID} .ct-operating-cluster-label::after { content:''; flex:1; height:1px; background:linear-gradient(90deg,rgba(56,189,248,.35),rgba(148,163,184,.1)); }
             #${DASHBOARD_ID} .ct-operating-agent-band, #${DASHBOARD_ID} .ct-operating-data-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
             #${DASHBOARD_ID} .ct-operating-data-grid-half { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
-            #${DASHBOARD_ID} .ct-operating-card-metric { display:flex; flex-direction:column; justify-content:space-between; min-height:56px; padding:7px 10px; border-radius:7px; background:linear-gradient(180deg,rgba(30,41,59,.78) 0%,rgba(18,26,42,.92) 100%) !important; border:1px solid rgba(148,163,184,.22) !important; box-shadow:0 1px 4px rgba(0,0,0,.15); transition:border-color .15s ease, background .15s ease; }
-            #${DASHBOARD_ID} .ct-operating-card-metric:hover { border-color:rgba(148,163,184,.42) !important; background:linear-gradient(180deg,rgba(30,41,59,.92) 0%,rgba(20,29,46,.98) 100%) !important; }
-            #${DASHBOARD_ID} .ct-operating-card-metric b { color:#94a3b8 !important; font-size:9px !important; font-weight:850 !important; text-transform:uppercase !important; letter-spacing:.05em !important; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-operating-card-metric strong { color:#f8fafc !important; font-size:15px !important; font-weight:900 !important; font-variant-numeric:tabular-nums !important; line-height:1.1; margin:2px 0 1px; }
-            #${DASHBOARD_ID} .ct-operating-card-metric small { color:#94a3b8 !important; font-size:8.5px !important; font-weight:600 !important; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical { border-color:rgba(239,68,68,.55) !important; background:rgba(239,68,68,.14) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric { display:flex; flex-direction:column; justify-content:space-between; min-height:56px; padding:7px 9px; border-radius:6px; background:linear-gradient(180deg,rgba(30,41,59,.72) 0%,rgba(15,23,42,.88) 100%) !important; border:1px solid rgba(148,163,184,.22) !important; box-shadow:0 2px 6px rgba(0,0,0,.15); transition:border-color .15s ease, background .15s ease; }
+            #${DASHBOARD_ID} .ct-operating-card-metric:hover { border-color:rgba(148,163,184,.45) !important; background:linear-gradient(180deg,rgba(30,41,59,.88) 0%,rgba(20,29,46,.96) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric b { color:#94a3b8 !important; font-size:9px !important; font-weight:800 !important; text-transform:uppercase !important; letter-spacing:.05em !important; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-operating-card-metric strong { color:#f8fafc !important; font-size:16px !important; font-weight:900 !important; font-variant-numeric:tabular-nums !important; line-height:1.15; margin:2px 0 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-operating-card-metric small { color:#cbd5e1 !important; font-size:8px !important; font-weight:600 !important; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.82; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical { border-color:rgba(239,68,68,.6) !important; background:linear-gradient(180deg,rgba(239,68,68,.22) 0%,rgba(35,15,18,.9) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical b { color:#fca5a5 !important; }
             #${DASHBOARD_ID} .ct-operating-card-metric.is-critical strong { color:#f87171 !important; }
-            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning { border-color:rgba(245,158,11,.55) !important; background:rgba(245,158,11,.14) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical small { color:#fca5a5 !important; opacity:.95 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning { border-color:rgba(245,158,11,.55) !important; background:linear-gradient(180deg,rgba(245,158,11,.2) 0%,rgba(30,25,15,.9) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning b { color:#fde68a !important; }
             #${DASHBOARD_ID} .ct-operating-card-metric.is-warning strong { color:#fbbf24 !important; }
-            #${DASHBOARD_ID} .ct-operating-card-metric.is-good { border-color:rgba(34,197,94,.35) !important; background:rgba(34,197,94,.1) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning small { color:#fcd34d !important; opacity:.95 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-good { border-color:rgba(34,197,94,.45) !important; background:linear-gradient(180deg,rgba(34,197,94,.16) 0%,rgba(15,30,24,.9) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-good b { color:#a7f3d0 !important; }
             #${DASHBOARD_ID} .ct-operating-card-metric.is-good strong { color:#4ade80 !important; }
-            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight { border-color:rgba(56,189,248,.35) !important; background:rgba(56,189,248,.1) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-good small { color:#86efac !important; opacity:.95 !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight { border-color:rgba(56,189,248,.45) !important; background:linear-gradient(180deg,rgba(56,189,248,.16) 0%,rgba(15,25,40,.9) 100%) !important; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight b { color:#bae6fd !important; }
             #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight strong { color:#38bdf8 !important; }
-            #${DASHBOARD_ID} .ct-operating-findings { width:100%; margin-top:8px; border:1px solid rgba(148,163,184,.28); border-radius:8px; background:rgba(15,23,42,.75); padding:9px 11px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
-            #${DASHBOARD_ID} .ct-operating-findings.is-critical { border-color:rgba(239,68,68,.6); background:rgba(239,68,68,.12); }
-            #${DASHBOARD_ID} .ct-operating-findings.is-warning { border-color:rgba(245,158,11,.6); background:rgba(245,158,11,.12); }
-            #${DASHBOARD_ID} .ct-operating-findings.is-good { border-color:rgba(34,197,94,.45); background:rgba(34,197,94,.08); }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight small { color:#7dd3fc !important; opacity:.95 !important; }
+            #${DASHBOARD_ID} .ct-operating-findings { width:100%; margin-top:8px; border:1px solid rgba(148,163,184,.28); border-radius:8px; background:rgba(15,23,42,.85); padding:9px 11px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+            #${DASHBOARD_ID} .ct-operating-findings.is-critical { border-color:rgba(239,68,68,.5); background:linear-gradient(180deg,rgba(239,68,68,.1) 0%,rgba(15,23,42,.9) 100%); }
+            #${DASHBOARD_ID} .ct-operating-findings.is-warning { border-color:rgba(245,158,11,.5); background:linear-gradient(180deg,rgba(245,158,11,.1) 0%,rgba(15,23,42,.9) 100%); }
+            #${DASHBOARD_ID} .ct-operating-findings.is-good { border-color:rgba(34,197,94,.4); background:linear-gradient(180deg,rgba(34,197,94,.08) 0%,rgba(15,23,42,.9) 100%); }
             #${DASHBOARD_ID} .ct-operating-findings-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; padding-bottom:5px; border-bottom:1px solid rgba(148,163,184,.18); }
             #${DASHBOARD_ID} .ct-operating-findings-head strong { font-size:10.5px; font-weight:900; letter-spacing:.06em; color:#f8fafc; }
             #${DASHBOARD_ID} .ct-operating-findings-badge { font-size:9.5px; font-weight:900; padding:2px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; border:1px solid rgba(148,163,184,.35); background:rgba(148,163,184,.15); color:#cbd5e1; }
@@ -2650,17 +2673,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-operating-findings-badge.is-warning { border-color:#f59e0b; background:rgba(245,158,11,.25); color:#fde047; }
             #${DASHBOARD_ID} .ct-operating-findings-badge.is-good { border-color:#22c55e; background:rgba(34,197,94,.25); color:#86efac; }
             #${DASHBOARD_ID} .ct-operating-findings-list { display:flex; flex-direction:column; gap:5px; }
-            #${DASHBOARD_ID} .ct-finding-pill { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; font-size:11px; line-height:1.35; background:rgba(30,41,59,.85); border:1px solid rgba(148,163,184,.25); color:#e2e8f0; }
-            #${DASHBOARD_ID} .ct-finding-pill b { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8.5px; font-weight:900; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; background:rgba(148,163,184,.2); color:#94a3b8; }
-            #${DASHBOARD_ID} .ct-finding-pill span { color:#f1f5f9; font-weight:500; }
-            #${DASHBOARD_ID} .ct-finding-pill.is-critical { border-color:rgba(239,68,68,.5); background:rgba(239,68,68,.15); }
+            #${DASHBOARD_ID} .ct-finding-pill { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; font-size:11px; line-height:1.35; background:rgba(30,41,59,.85); border:1px solid rgba(148,163,184,.25); color:#f8fafc; }
+            #${DASHBOARD_ID} .ct-finding-pill b { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8.5px; font-weight:950; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; background:rgba(148,163,184,.2); color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-finding-pill span { color:#f8fafc; font-weight:600; font-size:11px; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-critical { border-color:rgba(239,68,68,.5); background:rgba(239,68,68,.18); }
             #${DASHBOARD_ID} .ct-finding-pill.is-critical b { background:#ef4444; color:#ffffff; }
-            #${DASHBOARD_ID} .ct-finding-pill.is-critical span { color:#fecaca; font-weight:600; }
-            #${DASHBOARD_ID} .ct-finding-pill.is-warning { border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.15); }
-            #${DASHBOARD_ID} .ct-finding-pill.is-warning b { background:#f59e0b; color:#1e293b; }
-            #${DASHBOARD_ID} .ct-finding-pill.is-warning span { color:#fef08a; font-weight:600; }
-            #${DASHBOARD_ID} .ct-finding-pill.is-good { border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.12); }
+            #${DASHBOARD_ID} .ct-finding-pill.is-critical span { color:#fee2e2; font-weight:650; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-warning { border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.18); }
+            #${DASHBOARD_ID} .ct-finding-pill.is-warning b { background:#f59e0b; color:#0f172a; font-weight:950; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-warning span { color:#fef08a; font-weight:650; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-good { border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.14); }
             #${DASHBOARD_ID} .ct-finding-pill.is-good b { background:#22c55e; color:#ffffff; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-good span { color:#bbf7d0; font-weight:600; }
             #${DASHBOARD_ID} .ct-finding-pill.is-good span { color:#bbf7d0; }
 
             /* Inbound Queue Table explicit grid columns and sticky header */
@@ -4359,8 +4383,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                     const cConnectRate = c.__outbound > 0 ? (c.__human / c.__outbound) * 100 : 0;
                     const cConnectRateText = c.__outbound > 0 ? cConnectRate.toFixed(1) + "%" : "—";
                     const cConnectRateClass = c.__outbound > 0 ? (cConnectRate >= 3 ? "is-good" : cConnectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
-                    return '<article class="ct-operating-campaign-card" data-operating-campaign="' + escapeHtml(c.__id) + '">' +
-                        '<div class="ct-operating-campaign-head"><b>' + escapeHtml(safeValue(c.name, "Unnamed Campaign")) + '</b><span class="ct-operating-campaign-state ' + (active ? 'is-live' : '') + '">' + stateLabel + '</span></div>' +
+                    const isSingle = selected.length === 1;
+                    return '<article class="ct-operating-campaign-card' + (isSingle ? ' is-single-campaign' : '') + '" data-operating-campaign="' + escapeHtml(c.__id) + '">' +
+                        (isSingle ? '' : '<div class="ct-operating-campaign-head"><b>' + escapeHtml(safeValue(c.name, "Unnamed Campaign")) + '</b><span class="ct-operating-campaign-state ' + (active ? 'is-live' : '') + '">' + stateLabel + '</span></div>') +
                         '<div class="ct-operating-cluster-label"><span>AGENT CAPACITY & QUEUE PRESSURE</span></div>' +
                         '<div class="ct-operating-agent-band">' +
                             '<div class="ct-operating-card-metric"><b>Total Agents</b><strong>' + formatNumber(c.__loggedIn) + '</strong><small>Native campaign count</small></div>' +
