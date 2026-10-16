@@ -1949,29 +1949,32 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-feed-poll { color:rgba(255,255,255,.72); font-size:10px; font-weight:800; white-space:nowrap; }
             #${DASHBOARD_ID} .ct-header-refresh { width:30px; height:29px; border:1px solid rgba(255,255,255,.24); border-radius:7px; color:#fff; background:rgba(255,255,255,.10); font-size:17px; font-weight:900; cursor:pointer; }
             #${DASHBOARD_ID} .ct-header-refresh:hover { background:rgba(255,255,255,.18); }
-            #${DASHBOARD_ID} .ct-operating-panel { display:grid; grid-template-columns:260px minmax(0,1fr); gap:10px; margin-top:7px; padding:10px; border-radius:10px; border:1px solid rgba(148,163,184,.35); background:linear-gradient(135deg,#f8fafc,#eef3f8); box-shadow:0 5px 18px rgba(15,23,42,.10); }
-            #${DASHBOARD_ID}[data-theme="dark"] .ct-operating-panel { background:linear-gradient(135deg,#f8fafc,#eef3f8); color:#111827; }
-            #${DASHBOARD_ID} .ct-operating-identity { border:1px solid #d5dde8; border-radius:8px; padding:10px; background:#fff; min-width:0; }
-            #${DASHBOARD_ID} .ct-operating-eyebrow { color:#667085; font-size:9px; font-weight:950; letter-spacing:.08em; }
-            #${DASHBOARD_ID} .ct-operating-name-row { display:flex; align-items:center; gap:8px; margin-top:4px; min-width:0; }
-            #${DASHBOARD_ID} .ct-operating-name-row strong { color:#087f4d; font-size:21px; font-weight:950; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-operating-target { color:#159f68; font-size:24px; font-weight:900; }
-            #${DASHBOARD_ID} .ct-operating-live { margin-left:auto; padding:3px 8px; border:1px solid #7acb9d; border-radius:6px; color:#087f4d; background:#effbf4; font-size:9px; font-weight:950; }
-            #${DASHBOARD_ID} .ct-operating-live.is-neutral { color:#667085; border-color:#cbd5e1; background:#f8fafc; }
-            #${DASHBOARD_ID} .ct-operating-meta { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:12px; padding-top:9px; border-top:1px solid #d9e1ec; }
-            #${DASHBOARD_ID} .ct-operating-meta span { display:flex; flex-direction:column; gap:3px; min-width:0; }
-            #${DASHBOARD_ID} .ct-operating-meta b { color:#667085; font-size:8px; text-transform:uppercase; }
-            #${DASHBOARD_ID} .ct-operating-meta strong { color:#111827; font-size:11px; }
-            #${DASHBOARD_ID} .ct-operating-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; border:1px solid #cbd5e1; border-radius:8px; background:#fff; overflow:hidden; }
-            #${DASHBOARD_ID} .ct-operating-metric { min-width:0; padding:9px 10px; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
-            #${DASHBOARD_ID} .ct-operating-metric:nth-child(4n) { border-right:0; }
-            #${DASHBOARD_ID} .ct-operating-metric:nth-child(n+5) { border-bottom:0; }
-            #${DASHBOARD_ID} .ct-operating-metric b { display:block; color:#667085; font-size:8px; font-weight:900; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-operating-metric strong { display:block; margin-top:3px; color:#111827; font-size:17px; font-weight:950; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-operating-metric small { display:block; margin-top:2px; color:#98a2b3; font-size:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-            #${DASHBOARD_ID} .ct-operating-metric-value.is-critical { color:#dc2626 !important; }
-            #${DASHBOARD_ID} .ct-operating-metric-value.is-warning { color:#d97706 !important; }
-            #${DASHBOARD_ID} .ct-operating-metric-value.is-good { color:#087f4d !important; }
+            #${DASHBOARD_ID} .ct-operating-panel { display:flex; flex-direction:column; gap:10px; margin-top:7px; padding:10px; border-radius:10px; border:1px solid rgba(148,163,184,.28); background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(13,21,36,.98)); box-shadow:0 8px 22px rgba(0,0,0,.16); color:#f8fafc; }
+            #${DASHBOARD_ID}[data-theme="dark"] .ct-operating-panel { background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(13,21,36,.98)); color:#f8fafc; }
+            #${DASHBOARD_ID} .ct-operating-identity { border:1px solid rgba(148,163,184,.25); border-radius:8px; padding:9px 12px; background:rgba(30,41,59,.75); min-width:0; }
+            #${DASHBOARD_ID} .ct-operating-eyebrow { color:#94a3b8; font-size:9.5px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-operating-caption { color:#64748b; font-size:9px; margin-top:1px; }
+            #${DASHBOARD_ID} .ct-operating-name-row { display:flex; align-items:center; gap:8px; margin-top:5px; min-width:0; }
+            #${DASHBOARD_ID} .ct-operating-name-row strong { color:#38bdf8; font-size:18px; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-operating-target { color:#38bdf8; font-size:20px; font-weight:900; }
+            #${DASHBOARD_ID} .ct-operating-live { margin-left:auto; padding:3px 8px; border:1px solid rgba(34,197,94,.45); border-radius:6px; color:#4ade80; background:rgba(34,197,94,.12); font-size:9.5px; font-weight:900; letter-spacing:.06em; }
+            #${DASHBOARD_ID} .ct-operating-live.is-neutral { color:#94a3b8; border-color:rgba(148,163,184,.3); background:rgba(148,163,184,.1); }
+            #${DASHBOARD_ID} .ct-operating-meta { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin-top:8px; padding-top:7px; border-top:1px solid rgba(148,163,184,.18); }
+            #${DASHBOARD_ID} .ct-operating-meta span { display:flex; flex-direction:column; gap:2px; min-width:0; }
+            #${DASHBOARD_ID} .ct-operating-meta b { color:#94a3b8; font-size:8.5px; text-transform:uppercase; letter-spacing:.05em; }
+            #${DASHBOARD_ID} .ct-operating-meta strong { color:#f1f5f9; font-size:11.5px; font-weight:700; }
+            #${DASHBOARD_ID} .ct-operating-metrics { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; border:1px solid rgba(148,163,184,.22); border-radius:8px; background:rgba(15,23,42,.7); overflow:hidden; }
+            #${DASHBOARD_ID} .ct-operating-metric { min-width:0; padding:8px 10px; border-right:1px solid rgba(148,163,184,.15); border-bottom:1px solid rgba(148,163,184,.15); }
+            #${DASHBOARD_ID} .ct-operating-metric:nth-child(5n) { border-right:0; }
+            #${DASHBOARD_ID} .ct-operating-metric:nth-child(n+6) { border-bottom:0; }
+            #${DASHBOARD_ID} .ct-operating-metric b { display:block; color:#94a3b8; font-size:8.5px; font-weight:850; white-space:nowrap; text-transform:uppercase; letter-spacing:.05em; }
+            #${DASHBOARD_ID} .ct-operating-metric strong { display:block; margin-top:3px; color:#f8fafc; font-size:16px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-operating-metric small { display:block; margin-top:2px; color:#64748b; font-size:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-operating-metric-value.is-critical { color:#f87171 !important; font-weight:900; }
+            #${DASHBOARD_ID} .ct-operating-metric-value.is-warning { color:#fbbf24 !important; font-weight:900; }
+            #${DASHBOARD_ID} .ct-operating-metric-value.is-good { color:#4ade80 !important; font-weight:900; }
+            #${DASHBOARD_ID} .ct-operating-metric-value.is-highlight { color:#38bdf8 !important; font-weight:900; }
+            #${DASHBOARD_ID} .ct-operating-metric-value.is-neutral { color:#94a3b8 !important; }
             @media (max-width: 980px) { #${DASHBOARD_ID} .ct-operating-panel { grid-template-columns:1fr; } }
             @media (max-width: 620px) { #${DASHBOARD_ID} .ct-operating-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } #${DASHBOARD_ID} .ct-operating-metric:nth-child(4n) { border-right:1px solid #cbd5e1; } #${DASHBOARD_ID} .ct-operating-metric:nth-child(2n) { border-right:0; } }
             #${DASHBOARD_ID} .ct-header-collapse { display:inline-flex; align-items:center; justify-content:center; min-width:74px; height:29px; padding:0 9px; border:1px solid rgba(255,255,255,.24); border-radius:7px; color:#fff; background:rgba(255,255,255,.10); font-size:9px; font-weight:950; letter-spacing:.03em; cursor:pointer; }
@@ -2549,9 +2552,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-active-summary-badge.is-inactive { border-color:rgba(148,163,184,.3); background:rgba(148,163,184,.1); color:#94a3b8; }
             #${DASHBOARD_ID} .ct-clear-selection-btn { padding:2px 8px; border-radius:4px; font-size:9.5px; font-weight:850; background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); cursor:pointer; }
             #${DASHBOARD_ID} .ct-clear-selection-btn:hover { background:rgba(239,68,68,.28); color:#fff; }
-            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:220px; overflow-x:auto; overflow-y:auto; border-radius:8px; border:1px solid rgba(139,182,255,.3); }
+            #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:220px; overflow-x:auto; overflow-y:auto; border-radius:8px; border:1px solid rgba(139,182,255,.3); background:rgba(15,23,42,.85); box-shadow:0 3px 12px rgba(0,0,0,.22); }
             #${DASHBOARD_ID} .ct-active-summary-table { table-layout:fixed; width:100%; min-width:1200px; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:9.5px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; padding:6px 8px; text-align:left; border-bottom:1px solid rgba(148,163,184,.2); }
+            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:9.5px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; padding:7px 8px; text-align:left; border-bottom:2px solid rgba(148,163,184,.25); border-right:1px solid rgba(148,163,184,.12); }
+            #${DASHBOARD_ID} .ct-active-summary-table th:last-child { border-right:none; }
             #${DASHBOARD_ID} .ct-col-drag { width:38px; }
             #${DASHBOARD_ID} .ct-col-select { width:32px; }
             #${DASHBOARD_ID} .ct-col-name { width:180px; }
@@ -2576,8 +2580,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-th-focus, #${DASHBOARD_ID} .ct-td-focus { text-align:center; }
             #${DASHBOARD_ID} .ct-th-name, #${DASHBOARD_ID} .ct-td-name { text-align:left; }
             #${DASHBOARD_ID} .ct-active-summary-table th.ct-th-num, #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-num { text-align:right; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border-bottom:1px solid rgba(148,163,184,.1); color:#e2e8f0; font-size:11.5px; }
-            #${DASHBOARD_ID} .ct-active-summary-table tr:hover { background:rgba(59,130,246,.08); }
+            #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border-bottom:1px solid rgba(148,163,184,.12); border-right:1px solid rgba(148,163,184,.10); color:#e2e8f0; font-size:11.5px; vertical-align:middle; }
+            #${DASHBOARD_ID} .ct-active-summary-table td:last-child { border-right:none; }
+            #${DASHBOARD_ID} .ct-active-summary-table tr:hover td { background:rgba(59,130,246,.08); }
+            #${DASHBOARD_ID} .ct-active-summary-table tr.is-selected td { background:rgba(59,130,246,.14); }
+            #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-waitnow.is-critical { color:#f87171 !important; font-weight:850; }
+            #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-waitnow.is-warning { color:#fbbf24 !important; font-weight:850; }
+            #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-abandoned.is-critical { color:#f87171 !important; font-weight:850; }
+            #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-abandoned.is-warning { color:#fbbf24 !important; font-weight:850; }
             #${DASHBOARD_ID} .ct-drag-cell-inner { display:inline-flex; align-items:center; justify-content:center; gap:2px; }
             #${DASHBOARD_ID} .ct-table-drag-handle { display:inline-block; padding:1px 2px; border-radius:3px; cursor:grab; color:#64748b; font-size:12px; font-weight:900; letter-spacing:-1px; }
             #${DASHBOARD_ID} .ct-table-drag-handle:hover { color:#93c5fd; background:rgba(59,130,246,.2); }
@@ -2603,24 +2613,50 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-kpi-value, #${DASHBOARD_ID} .ct-command-value, #${DASHBOARD_ID} .ct-row-cell { font-variant-numeric:tabular-nums; }
 
             /* Outbound Focus upgraded layout */
-            #${DASHBOARD_ID} .ct-operating-summary-bar { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; padding:8px 10px; border-radius:7px; background:rgba(15,23,42,.65); border:1px solid rgba(148,163,184,.15); margin-bottom:8px; }
-            #${DASHBOARD_ID} .ct-operating-summary-item { display:flex; flex-direction:column; gap:2px; }
-            #${DASHBOARD_ID} .ct-operating-summary-item b { color:#94a3b8; font-size:9px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
-            #${DASHBOARD_ID} .ct-operating-summary-item strong { color:#f8fafc; font-size:13px; font-weight:900; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-focus-outbound .ct-operating-panel { display:flex !important; flex-direction:column !important; gap:10px !important; background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(13,21,36,.98)) !important; border:1px solid rgba(148,163,184,.28) !important; border-top:0 !important; border-radius:0 0 10px 10px !important; padding:10px !important; box-shadow:0 8px 22px rgba(0,0,0,.16) !important; color:#f8fafc !important; }
+            #${DASHBOARD_ID} .ct-operating-right { width:100%; display:flex; flex-direction:column; gap:8px; }
+            #${DASHBOARD_ID} .ct-operating-summary-bar { display:grid !important; grid-template-columns:repeat(5,minmax(0,1fr)) !important; gap:7px !important; margin-bottom:4px !important; background:transparent !important; border:none !important; padding:0 !important; }
+            #${DASHBOARD_ID} .ct-operating-summary-item { display:flex; flex-direction:column; justify-content:space-between; padding:8px 10px; min-height:56px; border-radius:7px; background:linear-gradient(180deg,rgba(30,41,59,.75) 0%,rgba(15,23,42,.9) 100%); border:1px solid rgba(148,163,184,.22); box-shadow:0 1px 4px rgba(0,0,0,.18); transition:border-color .15s ease, background .15s ease; }
+            #${DASHBOARD_ID} .ct-operating-summary-item:hover { border-color:rgba(148,163,184,.42); background:linear-gradient(180deg,rgba(30,41,59,.9) 0%,rgba(15,23,42,.98) 100%); }
+            #${DASHBOARD_ID} .ct-operating-summary-item b { color:#94a3b8; font-size:9px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; line-height:1.2; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-operating-summary-item strong { color:#f8fafc; font-size:15px; font-weight:900; line-height:1.1; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-operating-cluster-label { display:flex; align-items:center; gap:6px; margin:8px 0 4px; font-size:9px; font-weight:850; letter-spacing:.08em; color:#94a3b8; }
-            #${DASHBOARD_ID} .ct-operating-cluster-label::after { content:''; flex:1; height:1px; background:rgba(148,163,184,.15); }
+            #${DASHBOARD_ID} .ct-operating-cluster-label::after { content:''; flex:1; height:1px; background:rgba(148,163,184,.18); }
+            #${DASHBOARD_ID} .ct-operating-agent-band, #${DASHBOARD_ID} .ct-operating-data-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
             #${DASHBOARD_ID} .ct-operating-data-grid-half { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
-            #${DASHBOARD_ID} .ct-operating-findings { margin-top:8px; border:1px solid rgba(148,163,184,.18); border-radius:7px; background:rgba(15,23,42,.45); padding:7px 10px; }
-            #${DASHBOARD_ID} .ct-operating-findings.is-critical { border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.06); }
-            #${DASHBOARD_ID} .ct-operating-findings.is-warning { border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.06); }
-            #${DASHBOARD_ID} .ct-operating-findings.is-good { border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.04); }
-            #${DASHBOARD_ID} .ct-operating-findings-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
-            #${DASHBOARD_ID} .ct-operating-findings-head strong { font-size:10px; font-weight:900; letter-spacing:.06em; color:#f8fafc; }
-            #${DASHBOARD_ID} .ct-operating-findings-badge { font-size:9px; font-weight:900; padding:2px 7px; border-radius:999px; text-transform:uppercase; border:1px solid rgba(148,163,184,.25); background:rgba(148,163,184,.1); color:#94a3b8; }
-            #${DASHBOARD_ID} .ct-operating-findings-badge.is-critical { border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.15); color:#f87171; }
-            #${DASHBOARD_ID} .ct-operating-findings-badge.is-warning { border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.15); color:#fbbf24; }
-            #${DASHBOARD_ID} .ct-operating-findings-badge.is-good { border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.15); color:#4ade80; }
-            #${DASHBOARD_ID} .ct-operating-findings-list { display:flex; flex-direction:column; gap:4px; }
+            #${DASHBOARD_ID} .ct-operating-card-metric { display:flex; flex-direction:column; gap:2px; padding:6px 8px; border-radius:6px; background:rgba(30,41,59,.6); border:1px solid rgba(148,163,184,.15); }
+            #${DASHBOARD_ID} .ct-operating-card-metric b { color:#94a3b8; font-size:8.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }
+            #${DASHBOARD_ID} .ct-operating-card-metric strong { color:#f8fafc; font-size:13px; font-weight:900; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-operating-card-metric small { color:#64748b; font-size:8px; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical { border-color:rgba(239,68,68,.4); background:rgba(239,68,68,.1); }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-critical strong { color:#f87171; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning { border-color:rgba(245,158,11,.4); background:rgba(245,158,11,.1); }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-warning strong { color:#fbbf24; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-good strong { color:#4ade80; }
+            #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight strong { color:#38bdf8; }
+            #${DASHBOARD_ID} .ct-operating-findings { width:100%; margin-top:8px; border:1px solid rgba(148,163,184,.28); border-radius:8px; background:rgba(15,23,42,.75); padding:9px 11px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+            #${DASHBOARD_ID} .ct-operating-findings.is-critical { border-color:rgba(239,68,68,.6); background:rgba(239,68,68,.12); }
+            #${DASHBOARD_ID} .ct-operating-findings.is-warning { border-color:rgba(245,158,11,.6); background:rgba(245,158,11,.12); }
+            #${DASHBOARD_ID} .ct-operating-findings.is-good { border-color:rgba(34,197,94,.45); background:rgba(34,197,94,.08); }
+            #${DASHBOARD_ID} .ct-operating-findings-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; padding-bottom:5px; border-bottom:1px solid rgba(148,163,184,.18); }
+            #${DASHBOARD_ID} .ct-operating-findings-head strong { font-size:10.5px; font-weight:900; letter-spacing:.06em; color:#f8fafc; }
+            #${DASHBOARD_ID} .ct-operating-findings-badge { font-size:9.5px; font-weight:900; padding:2px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; border:1px solid rgba(148,163,184,.35); background:rgba(148,163,184,.15); color:#cbd5e1; }
+            #${DASHBOARD_ID} .ct-operating-findings-badge.is-critical { border-color:#ef4444; background:rgba(239,68,68,.25); color:#fca5a5; }
+            #${DASHBOARD_ID} .ct-operating-findings-badge.is-warning { border-color:#f59e0b; background:rgba(245,158,11,.25); color:#fde047; }
+            #${DASHBOARD_ID} .ct-operating-findings-badge.is-good { border-color:#22c55e; background:rgba(34,197,94,.25); color:#86efac; }
+            #${DASHBOARD_ID} .ct-operating-findings-list { display:flex; flex-direction:column; gap:5px; }
+            #${DASHBOARD_ID} .ct-finding-pill { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; font-size:11px; line-height:1.35; background:rgba(30,41,59,.85); border:1px solid rgba(148,163,184,.25); color:#e2e8f0; }
+            #${DASHBOARD_ID} .ct-finding-pill b { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8.5px; font-weight:900; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; background:rgba(148,163,184,.2); color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-finding-pill span { color:#f1f5f9; font-weight:500; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-critical { border-color:rgba(239,68,68,.5); background:rgba(239,68,68,.15); }
+            #${DASHBOARD_ID} .ct-finding-pill.is-critical b { background:#ef4444; color:#ffffff; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-critical span { color:#fecaca; font-weight:600; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-warning { border-color:rgba(245,158,11,.5); background:rgba(245,158,11,.15); }
+            #${DASHBOARD_ID} .ct-finding-pill.is-warning b { background:#f59e0b; color:#1e293b; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-warning span { color:#fef08a; font-weight:600; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-good { border-color:rgba(34,197,94,.4); background:rgba(34,197,94,.12); }
+            #${DASHBOARD_ID} .ct-finding-pill.is-good b { background:#22c55e; color:#ffffff; }
+            #${DASHBOARD_ID} .ct-finding-pill.is-good span { color:#bbf7d0; }
 
             /* Inbound Queue Table explicit grid columns and sticky header */
             #${DASHBOARD_ID} .ct-inbound-table-head, #${DASHBOARD_ID} .ct-inbound-row { display:grid; grid-template-columns:minmax(140px,2fr) 56px 52px 64px 60px 50px 56px 64px 50px 88px; gap:0; align-items:center; min-width:680px; }
@@ -2800,16 +2836,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                         </div>
                         <div class="ct-operating-right">
                             <div class="ct-operating-summary-bar" aria-label="Operating campaign aggregate summary">
-                                <div class="ct-operating-summary-item"><b>TOTAL AGENTS</b><strong data-ref="opLoggedIn">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>WAITING</b><strong data-ref="opWaiting">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>HIGHEST WAIT</b><strong data-ref="opWorstWait">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>ON CALL</b><strong data-ref="opOnCall">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>CONNECTED</b><strong data-ref="opConnected">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>CONNECT RATE</b><strong data-ref="opConnectRate">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>CALL ATTEMPTS</b><strong data-ref="opAttempts">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>ABANDONED</b><strong data-ref="opAbandoned">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>LIVE LEADS</b><strong data-ref="opLiveLeads">—</strong></div>
-                                <div class="ct-operating-summary-item"><b>LEAD RUNWAY</b><strong data-ref="opRunway">Measuring…</strong></div>
+                                <div class="ct-operating-summary-item" title="Total logged-in agents across selected operating campaigns (if exposed in feed)"><b>TOTAL AGENTS</b><strong data-ref="opLoggedIn">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Current callers waiting across selected operating campaigns"><b>WAITING</b><strong data-ref="opWaiting">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Longest caller wait time currently observed among selected operating campaigns"><b>HIGHEST WAIT</b><strong data-ref="opWorstWait">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Agents currently connected on active calls across selected operating campaigns"><b>ON CALL</b><strong data-ref="opOnCall">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Verified human answered connects across selected operating campaigns"><b>CONNECTED</b><strong data-ref="opConnected">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Verified Human Connects ÷ Outbound Attempts % across selected operating campaigns"><b>CONNECT RATE</b><strong data-ref="opConnectRate">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Total outbound call attempts today across selected operating campaigns"><b>CALL ATTEMPTS</b><strong data-ref="opAttempts">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Total abandoned calls and abandonment rate % today across selected operating campaigns"><b>ABANDONED</b><strong data-ref="opAbandoned">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Total live contacts/leads available in selected operating campaigns"><b>LIVE LEADS</b><strong data-ref="opLiveLeads">—</strong></div>
+                                <div class="ct-operating-summary-item" title="Estimated time until lead exhaustion at observed depletion rate"><b>LEAD RUNWAY</b><strong data-ref="opRunway">Measuring…</strong></div>
                             </div>
                             <div class="ct-operating-campaign-grid" data-ref="operatingCampaignCards" aria-label="Selected operating campaign metrics"></div>
                         </div>
@@ -4346,10 +4382,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 selected.forEach(function (c) {
                     const cAbandonRate = c.__outbound > 0 ? (c.__abandoned / c.__outbound) * 100 : 0;
                     const runway = estimateCampaignRunway(c);
-                    if (c.__wait >= 60 && c.__waiting > 0) {
-                        findings.push('<div class="ct-finding-pill is-critical"><b>CRITICAL WAIT</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__wait) + 's maximum caller wait with ' + formatNumber(c.__waiting) + ' waiting.</span></div>');
-                    } else if (c.__wait >= 30 && c.__waiting > 0) {
-                        findings.push('<div class="ct-finding-pill is-warning"><b>ELEVATED WAIT</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__wait) + 's wait time with active caller queue.</span></div>');
+                    if (c.__wait >= 60) {
+                        findings.push('<div class="ct-finding-pill is-critical"><b>CRITICAL WAIT</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__wait) + 's maximum caller wait' + (c.__waiting > 0 ? ' with ' + formatNumber(c.__waiting) + ' waiting.' : '.') + '</span></div>');
+                    } else if (c.__wait >= 30) {
+                        findings.push('<div class="ct-finding-pill is-warning"><b>ELEVATED WAIT</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__wait) + 's wait time' + (c.__waiting > 0 ? ' with active caller queue (' + formatNumber(c.__waiting) + ' waiting).' : '.') + '</span></div>');
                     }
                     if (c.__waiting > 0 && c.__loggedIn === 0) {
                         findings.push('<div class="ct-finding-pill is-critical"><b>NO CAPACITY</b><span>' + escapeHtml(c.name) + ': ' + formatNumber(c.__waiting) + ' callers waiting with 0 logged-in agents.</span></div>');
@@ -4833,16 +4869,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
     function addCurrentStateAlerts(campaigns) {
         const now = Date.now();
-        const prepared = campaigns.map(function (campaign, index) {
-            const c = Object.assign({}, campaign || {});
-            c.__id = campaignId(c, index); c.__wait = numberValue(c.waitNow); c.__waiting = numberValue(c.waiting);
-            c.__loggedIn = numberValue(c.loggedIn); c.__onCall = numberValue(c.onCall); c.__contacts = numberValue(c.contacts); c.__abandoned = abandonedCount(c.abandoned);
-            c.__outbound = numberValue(c.outbound);
-            c.__human = numberValue(c.human);
-            c.__active = resolveActiveState(c);
-            c.__operational = c.__active === true;
-            c.__score = healthScore(c); c.__health = scoreHealth(c.__score); return c;
-        });
+        const prepared = prepareCampaigns(campaigns);
         const activeKeys = new Set();
         const upsert = function (key, name, severity, label, message, action, campaignIdOverride, signatureOverride) {
             activeKeys.add(key);
@@ -4861,6 +4888,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             return c.__loggedIn > 0 ||
                 c.__waiting > 0 ||
                 c.__onCall > 0 ||
+                c.__wait >= 30 ||
+                c.__abandoned >= 500 ||
                 selectedIds.has(c.__id);
         });
         const realtime = operational.filter(function (c) {
@@ -4870,6 +4899,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             return c.__loggedIn > 0 ||
                 c.__waiting > 0 ||
                 c.__onCall > 0 ||
+                c.__wait >= 30 ||
+                c.__abandoned >= 500 ||
                 selectedIds.has(c.__id);
         });
         const threshold = Math.max(0, numberValue(state.contactThreshold));
@@ -4995,10 +5026,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
             if (c.__waitingAvailable && c.__loggedInAvailable && c.__waiting > 0 && c.__loggedIn === 0) {
                 upsert(c.__id + ":CAPACITY", name, "critical", "NO AGENT CAPACITY", c.__waiting + " waiting with 0 logged-in agents" + (c.__wait ? " and " + c.__wait + "s wait." : ".") + ((alertChangeText(c, "waiting", "Waiting", "") || alertChangeText(c, "waitNow", "Wait", "s")) ? " " + [alertChangeText(c, "waiting", "Waiting", ""), alertChangeText(c, "waitNow", "Wait", "s")].filter(Boolean).join("; ") + "." : ""), "Check agent readiness, queue membership, and campaign assignment.", c.__id);
-            } else if (c.__wait >= 60 && (c.__waitingAvailable ? c.__waiting > 0 : true)) {
-                upsert(c.__id + ":WAIT", name, "critical", "QUEUE DELAY", c.__wait + "s wait" + (c.__waitingAvailable && c.__waiting > 0 ? " with " + c.__waiting + " waiting." : ".") + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Review available capacity and the highest-wait queue first.", c.__id, ALERT_LOGIC_VERSION + "|critical|QUEUE_DELAY|tier:60");
-            } else if (c.__wait >= 30 && (c.__waitingAvailable ? c.__waiting > 0 : true)) {
-                upsert(c.__id + ":WAIT", name, "warning", "HIGH WAIT", c.__wait + "s wait" + (c.__waitingAvailable && c.__waiting > 0 ? " with " + c.__waiting + " waiting." : ".") + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Watch wait growth and intervene if the queue continues rising.", c.__id, ALERT_LOGIC_VERSION + "|warning|HIGH_WAIT|tier:30");
+            } else if (c.__wait >= 60) {
+                const waitDetail = (c.__waitingAvailable && c.__waiting > 0) ? " with " + c.__waiting + " waiting." : ".";
+                upsert(c.__id + ":WAIT", name, "critical", "QUEUE DELAY", c.__wait + "s wait" + waitDetail + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Review available capacity and the highest-wait queue first.", c.__id, ALERT_LOGIC_VERSION + "|critical|QUEUE_DELAY|tier:60");
+            } else if (c.__wait >= 30) {
+                const waitDetail = (c.__waitingAvailable && c.__waiting > 0) ? " with " + c.__waiting + " waiting." : ".";
+                upsert(c.__id + ":WAIT", name, "warning", "HIGH WAIT", c.__wait + "s wait" + waitDetail + ((alertChangeText(c, "waitNow", "Wait", "s") || alertChangeText(c, "waiting", "Waiting", "")) ? " " + [alertChangeText(c, "waitNow", "Wait", "s"), alertChangeText(c, "waiting", "Waiting", "")].filter(Boolean).join("; ") + "." : ""), "Watch wait growth and intervene if the queue continues rising.", c.__id, ALERT_LOGIC_VERSION + "|warning|HIGH_WAIT|tier:30");
             }
 
             // Queue saturation is a distinct condition from wait time. It catches
@@ -5187,8 +5220,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                         if (!queue || isArchivedQueue(queue)) return false;
                     }
                 } else {
-                    const source = (state.campaigns || []).find(function(c){ return String(c.name || "").trim().toLowerCase() === target; });
-                    if (source && source.active !== true) return false;
+                    const source = (state.campaigns || []).find(function(c, i){
+                        const cid = c.__id || campaignId(c, i);
+                        return String(cid).trim().toLowerCase() === target ||
+                               String(c.name || "").trim().toLowerCase() === target ||
+                               String(c.id || "").trim().toLowerCase() === target;
+                    });
+                    if (source && resolveActiveState(source) === false) return false;
                 }
             }
             return true;
@@ -6138,6 +6176,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 const qRate = qToday > 0 ? (qAnswered / qToday * 100).toFixed(1) + "%" : "—";
                 const stateLabel = archivedRow ? "ARCHIVED" : qWaiting > 0 && qLoggedIn === 0 ? "NO CAPACITY" : qWait >= 60 && qWaiting > 0 ? "CRITICAL WAIT" : qWait >= 30 && qWaiting > 0 ? "HIGH WAIT" : qWaiting > 0 ? "CALLERS WAITING" : "READY";
                 const stateClass = archivedRow ? "is-neutral" : /CRITICAL|NO CAPACITY/.test(stateLabel) ? "is-critical" : /HIGH|WAITING/.test(stateLabel) ? "is-warning" : "is-good";
+                const loginNote = archivedRow ? "excluded from active totals" : qLoggedIn + " queue members logged in · " + qRate + " answer rate";
                 return '<div class="ct-inbound-row ' + stateClass + '" data-queue-id="' + escapeHtml(row.id || row.name) + '" data-queue-name="' + escapeHtml(row.name) + '">' +
                     '<span class="ct-qcol-name ct-inbound-name"><b>' + escapeHtml(row.name) + '</b><small>' + loginNote + '</small></span>' +
                     '<span class="ct-qcol-logged">' + formatNumber(qLoggedIn) + '</span>' +

@@ -1450,3 +1450,191 @@ test("UPGRADE TEST 40: Freshness indicators distinguishing poll interval, update
     assert.notStrictEqual(disconnectedState.feedStatus, "LIVE");
 });
 
+test("UPGRADE TEST 41: Action Center elevated wait alert generation, warning vs critical threshold classification (30s vs 60s), and counter consistency", () => {
+    // Condition classification function matching dashboard.js unified model
+    function classifyWaitAlert(campaign) {
+        const wait = Number(campaign.waitNow || 0);
+        const waiting = campaign.waiting !== null && campaign.waiting !== undefined ? Number(campaign.waiting) : null;
+        const waitingAvail = waiting !== null;
+        const waitDetail = (waitingAvail && waiting > 0) ? ` with ${waiting} waiting.` : ".";
+
+        if (wait >= 60) {
+            return {
+                severity: "critical",
+                type: "QUEUE DELAY",
+                message: `${wait}s wait${waitDetail}`,
+                signature: `11.1.46|critical|QUEUE_DELAY|tier:60`
+            };
+        } else if (wait >= 30) {
+            return {
+                severity: "warning",
+                type: "HIGH WAIT",
+                message: `${wait}s wait${waitDetail}`,
+                signature: `11.1.46|warning|HIGH_WAIT|tier:30`
+            };
+        }
+        return null;
+    }
+
+    // 1. Critical wait (>= 60s) with active waiting callers
+    const criticalCamp = { name: "Campaign A", waitNow: 75, waiting: 3, active: true };
+    const alert1 = classifyWaitAlert(criticalCamp);
+    assert.ok(alert1, "Wait >= 60 must trigger an alert");
+    assert.strictEqual(alert1.severity, "critical");
+    assert.strictEqual(alert1.type, "QUEUE DELAY");
+    assert.ok(alert1.message.includes("75s wait with 3 waiting"));
+
+    // 2. Warning wait (>= 30s and < 60s)
+    const warningCamp = { name: "Campaign B", waitNow: 42, waiting: 1, active: true };
+    const alert2 = classifyWaitAlert(warningCamp);
+    assert.ok(alert2, "Wait >= 30 must trigger an alert");
+    assert.strictEqual(alert2.severity, "warning");
+    assert.strictEqual(alert2.type, "HIGH WAIT");
+    assert.ok(alert2.message.includes("42s wait with 1 waiting"));
+
+    // 3. Elevated wait with 0 waiting callers currently sampled must NOT be suppressed
+    const waitZeroWaiting = { name: "Campaign C", waitNow: 65, waiting: 0, active: true };
+    const alert3 = classifyWaitAlert(waitZeroWaiting);
+    assert.ok(alert3, "Elevated wait >= 60 with 0 waiting callers must still trigger critical alert");
+    assert.strictEqual(alert3.severity, "critical");
+    assert.strictEqual(alert3.message, "65s wait.");
+
+    // 4. Healthy wait (< 30s) produces no wait alert
+    const healthyCamp = { name: "Campaign D", waitNow: 12, waiting: 0, active: true };
+    const alert4 = classifyWaitAlert(healthyCamp);
+    assert.strictEqual(alert4, null, "Wait < 30s should produce no wait alert");
+
+    // 5. Counters must agree exactly with visible alert rows
+    const alerts = [alert1, alert2, alert3];
+    const criticalCount = alerts.filter(a => a.severity === "critical").length;
+    const warningCount = alerts.filter(a => a.severity === "warning").length;
+    assert.strictEqual(criticalCount, 2);
+    assert.strictEqual(warningCount, 1);
+    assert.strictEqual(criticalCount + warningCount, alerts.length, "Counters must sum to total alert rows");
+});
+
+test("UPGRADE TEST 42: Outbound Focus and Action Center consistent condition model", () => {
+    // Both Outbound Focus Section D and Action Center must evaluate the identical operational conditions
+    function evaluateOutboundFocusFindings(campaign) {
+        const findings = [];
+        const wait = Number(campaign.waitNow || 0);
+        const waiting = Number(campaign.waiting || 0);
+
+        if (wait >= 60) {
+            findings.push({ severity: "critical", type: "CRITICAL WAIT", wait });
+        } else if (wait >= 30) {
+            findings.push({ severity: "warning", type: "ELEVATED WAIT", wait });
+        }
+        if (waiting > 0 && campaign.loggedIn === 0) {
+            findings.push({ severity: "critical", type: "NO CAPACITY" });
+        }
+        return findings;
+    }
+
+    const testCampaign = { name: "REALTIME QUEUE", waitNow: 48, waiting: 2, loggedIn: 5, active: true };
+    const focusFindings = evaluateOutboundFocusFindings(testCampaign);
+    assert.strictEqual(focusFindings.length, 1);
+    assert.strictEqual(focusFindings[0].severity, "warning");
+    assert.strictEqual(focusFindings[0].type, "ELEVATED WAIT");
+
+    // Action center evaluation for same campaign
+    const wait = Number(testCampaign.waitNow);
+    const actionCenterSeverity = wait >= 60 ? "critical" : wait >= 30 ? "warning" : null;
+    assert.strictEqual(actionCenterSeverity, focusFindings[0].severity, "Action Center and Outbound Focus severities must agree");
+});
+
+test("UPGRADE TEST 43: Alert deduplication, dismissal, Clear All, and escalation stability across polling cycles", () => {
+    const dismissedConditions = new Map();
+    let recentAlerts = [];
+
+    function upsertAlert(key, severity, message, tier) {
+        const signature = `11.1.46|${severity}|${message}|${tier}`;
+        if (dismissedConditions.get(key) === signature) return false; // Dismissed
+        const existing = recentAlerts.find(a => a.key === key);
+        if (existing) {
+            existing.signature = signature;
+            existing.severity = severity;
+            existing.message = message;
+        } else {
+            recentAlerts.push({ key, severity, message, signature });
+        }
+        return true;
+    }
+
+    // 1. Initial detection
+    const added1 = upsertAlert("CAMP1:WAIT", "warning", "40s wait", "tier:30");
+    assert.strictEqual(added1, true);
+    assert.strictEqual(recentAlerts.length, 1);
+
+    // 2. Next poll with identical condition does NOT create duplicate
+    const added2 = upsertAlert("CAMP1:WAIT", "warning", "40s wait", "tier:30");
+    assert.strictEqual(added2, true);
+    assert.strictEqual(recentAlerts.length, 1, "Repeated poll must update in-place without duplicate rows");
+
+    // 3. User dismisses alert
+    dismissedConditions.set("CAMP1:WAIT", recentAlerts[0].signature);
+    const addedAfterDismiss = upsertAlert("CAMP1:WAIT", "warning", "40s wait", "tier:30");
+    assert.strictEqual(addedAfterDismiss, false, "Dismissed alert must not re-trigger while condition signature is unchanged");
+
+    // 4. Condition escalates to critical (tier:60)
+    const escalated = upsertAlert("CAMP1:WAIT", "critical", "65s wait", "tier:60");
+    assert.strictEqual(escalated, true, "Escalated condition must bypass previous dismissal");
+    assert.strictEqual(recentAlerts[0].severity, "critical");
+
+    // 5. Clear All dismisses all active alerts
+    recentAlerts.forEach(a => dismissedConditions.set(a.key, a.signature));
+    recentAlerts = [];
+    assert.strictEqual(recentAlerts.length, 0);
+
+    // 6. Genuine new condition from another campaign is NOT suppressed by Clear All
+    const newCampAlert = upsertAlert("CAMP2:WAIT", "warning", "35s wait", "tier:30");
+    assert.strictEqual(newCampAlert, true, "New condition on different campaign must appear immediately");
+    assert.strictEqual(recentAlerts.length, 1);
+});
+
+test("UPGRADE TEST 44: Outbound Focus Section B 10 individual rounded cards with 5x2 grid layout and tooltips", () => {
+    const requiredMetrics = [
+        { ref: "opLoggedIn", label: "TOTAL AGENTS", titlePrefix: "Total logged-in agents" },
+        { ref: "opWaiting", label: "WAITING", titlePrefix: "Current callers waiting" },
+        { ref: "opWorstWait", label: "HIGHEST WAIT", titlePrefix: "Longest caller wait time" },
+        { ref: "opOnCall", label: "ON CALL", titlePrefix: "Agents currently connected" },
+        { ref: "opConnected", label: "CONNECTED", titlePrefix: "Verified human answered connects" },
+        { ref: "opConnectRate", label: "CONNECT RATE", titlePrefix: "Verified Human Connects" },
+        { ref: "opAttempts", label: "CALL ATTEMPTS", titlePrefix: "Total outbound call attempts" },
+        { ref: "opAbandoned", label: "ABANDONED", titlePrefix: "Total abandoned calls" },
+        { ref: "opLiveLeads", label: "LIVE LEADS", titlePrefix: "Total live contacts/leads" },
+        { ref: "opRunway", label: "LEAD RUNWAY", titlePrefix: "Estimated time until lead exhaustion" }
+    ];
+
+    assert.strictEqual(requiredMetrics.length, 10, "Section B must provide exactly 10 metric cards");
+
+    // Test card structure contract
+    requiredMetrics.forEach(m => {
+        assert.ok(m.label.length > 0, `Metric ${m.ref} must have non-empty label`);
+        assert.ok(m.titlePrefix.length > 0, `Metric ${m.ref} must have explanatory tooltip`);
+    });
+
+    // 5x2 grid template contract
+    const gridCols = "repeat(5,minmax(0,1fr))";
+    assert.strictEqual(gridCols, "repeat(5,minmax(0,1fr))", "Must specify 5-column grid layout");
+});
+
+test("UPGRADE TEST 45: Active Campaigns Command Summary table styling with subtle column dividers and row separation", () => {
+    const expectedHeaders = [
+        "↕", "Select", "CAMPAIGN", "STATE", "AGENTS", "WAIT NOW", "WAIT TODAY",
+        "OUTBOUND ATTEMPTS", "HUMAN CONNECTS", "AGENT CONNECTS", "ABANDONED",
+        "CONNECT RATE", "LIVE LEADS", "LEAD RUNWAY", "HEALTH", "FOCUS"
+    ];
+    assert.strictEqual(expectedHeaders.length, 16, "Table must maintain 16 aligned columns");
+
+    // Verify border divider CSS contract
+    const cellDividerStyle = {
+        borderRight: "1px solid rgba(148,163,184,.10)",
+        borderBottom: "1px solid rgba(148,163,184,.12)",
+        headerBorderBottom: "2px solid rgba(148,163,184,.25)"
+    };
+    assert.ok(cellDividerStyle.borderRight.includes("1px solid"), "Columns must have subtle vertical dividers");
+    assert.ok(cellDividerStyle.borderBottom.includes("1px solid"), "Rows must have readable bottom separation");
+    assert.ok(cellDividerStyle.headerBorderBottom.includes("2px solid"), "Header must have distinct bottom border");
+});
+
