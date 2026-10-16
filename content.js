@@ -433,11 +433,18 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
             if (now - lastInboundCoordinationAt >= INBOUND_COORDINATION_MS) {
                 lastInboundCoordinationAt = now;
                 ensureInboundFeedMonitor();
+                requestInboundIframeRefresh();
             }
             if (now - lastInboundHeartbeatAt >= INBOUND_HEARTBEAT_MS) inspectInboundIframeAuth();
         }
         if (isQueuesPage()) {
             teardownInboundIframe();
+            // Automatically refresh queue feed if native button exists and interval elapsed
+            const qButton = findNativeRefreshButton();
+            if (qButton && !refreshButtonBusy(qButton) && now - lastRefreshClickAt >= NATIVE_REFRESH_MS) {
+                lastRefreshClickAt = now;
+                try { qButton.click(); } catch (error) {}
+            }
             readAndPublish("queue-poll");
             return;
         }
@@ -451,6 +458,14 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
             refreshWasBusy = false;
             lastSourceRefreshAt = Date.now();
             readAndPublish("native-refresh-complete", true);
+        } else if (isCampaignsPage() && now - lastRefreshClickAt >= NATIVE_REFRESH_MS) {
+            // Automatic periodic live refresh: trigger CallTools native table refresh every NATIVE_REFRESH_MS (5s)
+            const activeEl = document.activeElement;
+            const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA") && !activeEl.closest("#ct-operations-dashboard");
+            const isInteracting = Boolean(document.querySelector("#ct-operations-dashboard.is-dragging, #ct-operations-dashboard.is-resizing"));
+            if (!isTyping && !isInteracting) {
+                requestNativeRefresh("Automated periodic live feed refresh");
+            }
         }
 
         readAndPublish("poll");
@@ -576,7 +591,11 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
         chrome.runtime.onMessage.addListener(function (message) {
             if (!message || message.type !== "CT_REFRESH_INBOUND_FEED" || !isQueuesPage()) return;
             lastSourceRefreshAt = Date.now();
-            publishFeedStatus("VERIFYING", { reason: "Manual inbound feed re-check requested from Operations Monitor", route: "queues" });
+            const qBtn = findNativeRefreshButton();
+            if (qBtn && !refreshButtonBusy(qBtn)) {
+                try { qBtn.click(); } catch (error) {}
+            }
+            publishFeedStatus("VERIFYING", { reason: "Inbound feed re-check requested from Operations Monitor", route: "queues" });
             readAndPublish("manual-inbound-refresh-check", true);
         });
     }
@@ -585,7 +604,11 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
         if (!isInboundMonitorFrame() || event.origin !== window.location.origin) return;
         if (!event.data || event.data.type !== "CT_REFRESH_INBOUND_FEED") return;
         lastSourceRefreshAt = Date.now();
-        publishFeedStatus("VERIFYING", { reason: "Manual inbound feed re-check requested from Operations Monitor", route: "queues" });
+        const qBtn = findNativeRefreshButton();
+        if (qBtn && !refreshButtonBusy(qBtn)) {
+            try { qBtn.click(); } catch (error) {}
+        }
+        publishFeedStatus("VERIFYING", { reason: "Inbound feed re-check requested from Operations Monitor", route: "queues" });
         readAndPublish("manual-inbound-refresh-check", true);
     });
 

@@ -1280,14 +1280,14 @@ test("UPGRADE TEST 35: Row reorder buttons (up/down) invoke reorderCampaignByIds
     assert.deepStrictEqual(manualOrder, ["beta", "gamma", "alpha"]);
 });
 
-test("UPGRADE TEST 36: Command Summary Table 16-column colgroup, matching classes, and fixed layout", () => {
-    // 16 explicit columns
+test("UPGRADE TEST 36: Command Summary Table 18-column colgroup, matching classes, and fixed layout", () => {
+    // 18 explicit columns including Waiting queue load and Goals metric in middle order
     const columns = [
-        "drag", "select", "name", "state", "agents",
-        "waitnow", "waittoday", "outbound", "human", "agentconnect",
+        "drag", "select", "name", "state", "agents", "waiting",
+        "waitnow", "waittoday", "outbound", "human", "agentconnect", "goals",
         "abandoned", "connectrate", "leads", "runway", "health", "focus"
     ];
-    assert.strictEqual(columns.length, 16, "Table must have exactly 16 defined columns");
+    assert.strictEqual(columns.length, 18, "Table must have exactly 18 defined columns");
 
     // Colgroup col classes
     const colClasses = columns.map(c => `ct-col-${c}`);
@@ -1296,11 +1296,13 @@ test("UPGRADE TEST 36: Command Summary Table 16-column colgroup, matching classe
     assert.ok(colClasses.includes("ct-col-name"));
     assert.ok(colClasses.includes("ct-col-state"));
     assert.ok(colClasses.includes("ct-col-agents"));
+    assert.ok(colClasses.includes("ct-col-waiting"));
     assert.ok(colClasses.includes("ct-col-waitnow"));
     assert.ok(colClasses.includes("ct-col-waittoday"));
     assert.ok(colClasses.includes("ct-col-outbound"));
     assert.ok(colClasses.includes("ct-col-human"));
     assert.ok(colClasses.includes("ct-col-agentconnect"));
+    assert.ok(colClasses.includes("ct-col-goals"));
     assert.ok(colClasses.includes("ct-col-abandoned"));
     assert.ok(colClasses.includes("ct-col-connectrate"));
     assert.ok(colClasses.includes("ct-col-leads"));
@@ -1313,8 +1315,8 @@ test("UPGRADE TEST 36: Command Summary Table 16-column colgroup, matching classe
     // Data td classes
     const tdClasses = columns.map(c => `ct-td-${c}`);
 
-    assert.strictEqual(thClasses.length, 16);
-    assert.strictEqual(tdClasses.length, 16);
+    assert.strictEqual(thClasses.length, 18);
+    assert.strictEqual(tdClasses.length, 18);
 
     // Verify fixed layout attributes
     const tableStyle = {
@@ -1619,23 +1621,23 @@ test("UPGRADE TEST 44: Outbound Focus Section B 10 individual rounded cards with
     assert.strictEqual(gridCols, "repeat(5,minmax(0,1fr))", "Must specify 5-column grid layout");
 });
 
-test("UPGRADE TEST 45: Active Campaigns Command Summary table styling with subtle column dividers and row separation", () => {
+test("UPGRADE TEST 45: Active Campaigns Command Summary table styling with hard box borders and middle order GOALS", () => {
     const expectedHeaders = [
-        "↕", "Select", "CAMPAIGN", "STATE", "AGENTS", "WAIT NOW", "WAIT TODAY",
-        "OUTBOUND ATTEMPTS", "HUMAN CONNECTS", "AGENT CONNECTS", "ABANDONED",
+        "↕", "Select", "CAMPAIGN", "STATE", "AGENTS", "WAITING", "WAIT NOW", "WAIT TODAY",
+        "OUTBOUND ATTEMPTS", "HUMAN CONNECTS", "AGENT CONNECTS", "GOALS", "ABANDONED",
         "CONNECT RATE", "LIVE LEADS", "LEAD RUNWAY", "HEALTH", "FOCUS"
     ];
-    assert.strictEqual(expectedHeaders.length, 16, "Table must maintain 16 aligned columns");
+    assert.strictEqual(expectedHeaders.length, 18, "Table must maintain 18 aligned columns");
 
-    // Verify border divider CSS contract
+    // Verify hard border divider CSS contract
     const cellDividerStyle = {
-        borderRight: "1px solid rgba(148,163,184,.10)",
-        borderBottom: "1px solid rgba(148,163,184,.12)",
-        headerBorderBottom: "2px solid rgba(148,163,184,.25)"
+        borderRight: "1px solid rgba(148,163,184,.38)",
+        borderBottom: "1px solid rgba(148,163,184,.38)",
+        headerBorderBottom: "2px solid rgba(148,163,184,.65)"
     };
-    assert.ok(cellDividerStyle.borderRight.includes("1px solid"), "Columns must have subtle vertical dividers");
-    assert.ok(cellDividerStyle.borderBottom.includes("1px solid"), "Rows must have readable bottom separation");
-    assert.ok(cellDividerStyle.headerBorderBottom.includes("2px solid"), "Header must have distinct bottom border");
+    assert.ok(cellDividerStyle.borderRight.includes("1px solid"), "Columns must have distinct vertical dividers");
+    assert.ok(cellDividerStyle.borderBottom.includes("1px solid"), "Rows must have distinct hard bottom borders");
+    assert.ok(cellDividerStyle.headerBorderBottom.includes("2px solid"), "Header must have crisp hard bottom border");
 });
 
 test("UPGRADE TEST 46: Zoom-scaled resizing and drag expansion bounds (90% zoom allows expanding to bottom of viewport)", () => {

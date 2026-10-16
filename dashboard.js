@@ -406,6 +406,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         const signature = dataSignature(nextCampaigns);
         const changed = signature !== state.lastDataSignature;
 
+        state.lastEventAt = now;
+        state.lastFeedHeartbeatAt = now;
+        if (refs && refs.feedHeartbeat) setText(refs.feedHeartbeat, "0s");
+
         // A CT_UPDATE event is transport only. Data freshness advances only when
         // the actual source values change.
         if (changed) {
@@ -2568,19 +2572,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-clear-selection-btn { padding:2px 8px; border-radius:4px; font-size:9.5px; font-weight:850; background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); cursor:pointer; }
             #${DASHBOARD_ID} .ct-clear-selection-btn:hover { background:rgba(239,68,68,.28); color:#fff; }
             #${DASHBOARD_ID} .ct-active-summary-table-wrap { max-height:220px; overflow-x:auto; overflow-y:auto; border-radius:8px; border:1px solid rgba(139,182,255,.3); background:rgba(15,23,42,.85); box-shadow:0 3px 12px rgba(0,0,0,.22); }
-            #${DASHBOARD_ID} .ct-active-summary-table { table-layout:fixed; width:100%; min-width:1200px; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:9.5px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; padding:7px 8px; text-align:left; border-bottom:2px solid rgba(148,163,184,.25); border-right:1px solid rgba(148,163,184,.12); }
-            #${DASHBOARD_ID} .ct-active-summary-table th:last-child { border-right:none; }
+            #${DASHBOARD_ID} .ct-active-summary-table { table-layout:fixed; width:100%; min-width:1380px; border-collapse:collapse; font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-active-summary-table th { position:sticky; top:0; z-index:2; background:#172033; color:#94a3b8; font-size:9.5px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; padding:7px 8px; text-align:left; border:1px solid rgba(148,163,184,.45) !important; border-bottom:2px solid rgba(148,163,184,.65) !important; }
             #${DASHBOARD_ID} .ct-col-drag { width:38px; }
             #${DASHBOARD_ID} .ct-col-select { width:32px; }
             #${DASHBOARD_ID} .ct-col-name { width:180px; }
             #${DASHBOARD_ID} .ct-col-state { width:72px; }
             #${DASHBOARD_ID} .ct-col-agents { width:64px; }
+            #${DASHBOARD_ID} .ct-col-waiting { width:66px; }
             #${DASHBOARD_ID} .ct-col-waitnow { width:70px; }
             #${DASHBOARD_ID} .ct-col-waittoday { width:74px; }
             #${DASHBOARD_ID} .ct-col-outbound { width:95px; }
             #${DASHBOARD_ID} .ct-col-human { width:90px; }
             #${DASHBOARD_ID} .ct-col-agentconnect { width:90px; }
+            #${DASHBOARD_ID} .ct-col-goals { width:68px; }
             #${DASHBOARD_ID} .ct-col-abandoned { width:92px; }
             #${DASHBOARD_ID} .ct-col-connectrate { width:84px; }
             #${DASHBOARD_ID} .ct-col-leads { width:80px; }
@@ -2595,12 +2600,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-th-focus, #${DASHBOARD_ID} .ct-td-focus { text-align:center; }
             #${DASHBOARD_ID} .ct-th-name, #${DASHBOARD_ID} .ct-td-name { text-align:left; }
             #${DASHBOARD_ID} .ct-active-summary-table th.ct-th-num, #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-num { text-align:right; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border-bottom:1px solid rgba(148,163,184,.12); border-right:1px solid rgba(148,163,184,.10); color:#e2e8f0; font-size:11.5px; vertical-align:middle; }
-            #${DASHBOARD_ID} .ct-active-summary-table td:last-child { border-right:none; }
-            #${DASHBOARD_ID} .ct-active-summary-table tr:hover td { background:rgba(59,130,246,.08); }
-            #${DASHBOARD_ID} .ct-active-summary-table tr.is-selected td { background:rgba(59,130,246,.14); }
+            #${DASHBOARD_ID} .ct-active-summary-table td { padding:6px 8px; border:1px solid rgba(148,163,184,.38) !important; color:#e2e8f0; font-size:11.5px; vertical-align:middle; background:rgba(15,23,42,.65); }
+            #${DASHBOARD_ID} .ct-active-summary-table tr:hover td { background:rgba(59,130,246,.12); }
+            #${DASHBOARD_ID} .ct-active-summary-table tr.is-selected td { background:rgba(59,130,246,.20); }
             #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-waitnow.is-critical { color:#f87171 !important; font-weight:850; }
             #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-waitnow.is-warning { color:#fbbf24 !important; font-weight:850; }
+            #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-waiting.is-critical { color:#f87171 !important; font-weight:850; }
+            #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-waiting.is-warning { color:#fbbf24 !important; font-weight:850; }
+            #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-goals.is-good { color:#4ade80 !important; font-weight:850; }
             #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-abandoned.is-critical { color:#f87171 !important; font-weight:850; }
             #${DASHBOARD_ID} .ct-active-summary-table td.ct-td-abandoned.is-warning { color:#fbbf24 !important; font-weight:850; }
             #${DASHBOARD_ID} .ct-drag-cell-inner { display:inline-flex; align-items:center; justify-content:center; gap:2px; }
@@ -2768,11 +2775,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                     <col class="ct-col-name">
                                     <col class="ct-col-state">
                                     <col class="ct-col-agents">
+                                    <col class="ct-col-waiting">
                                     <col class="ct-col-waitnow">
                                     <col class="ct-col-waittoday">
                                     <col class="ct-col-outbound">
                                     <col class="ct-col-human">
                                     <col class="ct-col-agentconnect">
+                                    <col class="ct-col-goals">
                                     <col class="ct-col-abandoned">
                                     <col class="ct-col-connectrate">
                                     <col class="ct-col-leads">
@@ -2787,11 +2796,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                         <th class="ct-th-name">CAMPAIGN</th>
                                         <th class="ct-th-state">STATE</th>
                                         <th class="ct-th-agents ct-th-num" title="Logged in agents (if exposed)">AGENTS</th>
+                                        <th class="ct-th-waiting ct-th-num" title="Current queue load (callers waiting / waiting agents)">WAITING</th>
                                         <th class="ct-th-waitnow ct-th-num" title="Current caller wait time">WAIT NOW</th>
                                         <th class="ct-th-waittoday ct-th-num" title="Maximum caller wait time today">WAIT TODAY</th>
                                         <th class="ct-th-outbound ct-th-num" title="Total outbound call attempts today">OUTBOUND ATTEMPTS</th>
                                         <th class="ct-th-human ct-th-num" title="Total human answered connects">HUMAN CONNECTS</th>
                                         <th class="ct-th-agentconnect ct-th-num" title="Total agent connected calls">AGENT CONNECTS</th>
+                                        <th class="ct-th-goals ct-th-num" title="Total goals / conversions achieved today">GOALS</th>
                                         <th class="ct-th-abandoned ct-th-num" title="Abandoned calls and abandonment rate">ABANDONED</th>
                                         <th class="ct-th-connectrate ct-th-num" title="Verified Human Connects ÷ Outbound Attempts %">CONNECT RATE</th>
                                         <th class="ct-th-leads ct-th-num" title="Current live contacts in campaign">LIVE LEADS</th>
@@ -2801,7 +2812,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                     </tr>
                                 </thead>
                                 <tbody data-ref="activeSummaryRows">
-                                    <tr><td colspan="16" class="ct-active-empty">Waiting for active campaigns…</td></tr>
+                                    <tr><td colspan="18" class="ct-active-empty">Waiting for active campaigns…</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -4169,7 +4180,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         }
 
         if (!visible.length) {
-            refs.activeSummaryRows.innerHTML = '<tr><td colspan="16" class="ct-active-empty">No campaigns match current filters.</td></tr>';
+            refs.activeSummaryRows.innerHTML = '<tr><td colspan="18" class="ct-active-empty">No campaigns match current filters.</td></tr>';
             return;
         }
         const fragment = document.createDocumentFragment();
@@ -4183,11 +4194,17 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             const runway = estimateCampaignRunway(c);
             const agentsText = c.__loggedInAvailable ? formatNumber(c.__loggedIn) : "—";
             const agentsTitle = c.__loggedInAvailable ? c.__loggedIn + " logged in" : "Not exposed in Campaigns feed";
+            const waitingText = c.__waitingAvailable ? formatNumber(c.__waiting) : "—";
+            const waitingTitle = c.__waitingAvailable ? c.__waiting + " waiting · current queue load" : "Queue load not exposed in CallTools Campaigns table";
+            const waitingTone = c.__waitingAvailable && c.__waiting > 0 ? (c.__waiting >= 5 ? "is-critical" : "is-warning") : "";
             const waitNowText = c.waitNow ? safeValue(c.waitNow) + "s" : "0s";
             const waitTodayText = c.waitToday ? safeValue(c.waitToday) + "s" : "0s";
             const outboundText = formatNumber(c.__outbound);
             const humanText = formatNumber(c.__human);
             const agentConnectText = formatNumber(c.__agentConnect);
+            const goalsText = c.__goalsAvailable ? formatNumber(c.__goals) : "—";
+            const goalsTitle = c.__goalsAvailable ? c.__goals + " goals achieved today" : "Goals not exposed in CallTools Campaigns table";
+            const goalsTone = c.__goalsAvailable && c.__goals > 0 ? "is-good" : "";
             const contactsText = formatNumber(c.__contacts);
             const healthLabel = (HEALTH[c.__health] && HEALTH[c.__health].label) || "HEALTHY";
 
@@ -4216,11 +4233,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                 '<td class="ct-td-name ct-active-name" title="' + escapeHtml(safeValue(c.name)) + '"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
                 '<td class="ct-td-state"><span class="ct-active-status-tag ' + (c.__active ? 'is-live' : 'is-inactive') + '">' + (c.__active ? 'ACTIVE' : 'INACTIVE') + '</span></td>' +
                 '<td class="ct-td-agents ct-td-num" title="' + escapeHtml(agentsTitle) + '">' + escapeHtml(agentsText) + '</td>' +
+                '<td class="ct-td-waiting ct-td-num ' + escapeHtml(waitingTone) + '" title="' + escapeHtml(waitingTitle) + '">' + escapeHtml(waitingText) + '</td>' +
                 '<td class="ct-td-waitnow ct-td-num ' + (c.__wait >= 60 ? 'is-critical' : c.__wait >= 30 ? 'is-warning' : '') + '">' + escapeHtml(waitNowText) + '</td>' +
                 '<td class="ct-td-waittoday ct-td-num">' + escapeHtml(waitTodayText) + '</td>' +
                 '<td class="ct-td-outbound ct-td-num">' + escapeHtml(outboundText) + '</td>' +
                 '<td class="ct-td-human ct-td-num is-highlight">' + escapeHtml(humanText) + '</td>' +
                 '<td class="ct-td-agentconnect ct-td-num">' + escapeHtml(agentConnectText) + '</td>' +
+                '<td class="ct-td-goals ct-td-num ' + escapeHtml(goalsTone) + '" title="' + escapeHtml(goalsTitle) + '">' + escapeHtml(goalsText) + '</td>' +
                 '<td class="ct-td-abandoned ct-td-num ' + (c.__abandoned >= 500 || abandonRate >= 5 ? 'is-critical' : abandonRate >= 2 ? 'is-warning' : '') + '" title="' + escapeHtml(abandonedTitle) + '">' + escapeHtml(abandonedText) + '</td>' +
                 '<td class="ct-td-connectrate ct-td-num ' + escapeHtml(connectRateClass) + '" title="' + escapeHtml(connectRateTitle) + '">' + escapeHtml(connectRateText) + '</td>' +
                 '<td class="ct-td-leads ct-td-num">' + escapeHtml(contactsText) + '</td>' +
