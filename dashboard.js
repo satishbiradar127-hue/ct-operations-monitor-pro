@@ -3671,17 +3671,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
                 event.preventDefault();
 
-                const dx = event.clientX - interactionState.startX;
-                const dy = event.clientY - interactionState.startY;
+                const zoom = Number(interactionState.root && interactionState.root.style.zoom ? interactionState.root.style.zoom : (state && state.zoom ? state.zoom : 1)) || 1;
+                const dx = (event.clientX - interactionState.startX) / zoom;
+                const dy = (event.clientY - interactionState.startY) / zoom;
 
                 if (interactionState.mode === "drag") {
-                    const maxLeft = Math.max(0, window.innerWidth - interactionState.layout.width - 10);
-                    const maxTop = Math.max(0, window.innerHeight - interactionState.layout.height - 10);
+                    const maxLeft = Math.max(0, Math.floor((window.innerWidth - 10) / zoom - interactionState.layout.width));
+                    const maxTop = Math.max(0, Math.floor((window.innerHeight - 10) / zoom - interactionState.layout.height));
                     interactionState.layout.left = clamp(interactionState.startLeft + dx, 0, maxLeft);
                     interactionState.layout.top = clamp(interactionState.startTop + dy, 0, maxTop);
                 } else if (interactionState.mode === "resize") {
-                    interactionState.layout.width = clamp(interactionState.startWidth + dx, 980, Math.max(980, window.innerWidth - interactionState.layout.left - 10));
-                    interactionState.layout.height = clamp(interactionState.startHeight + dy, 540, Math.max(540, window.innerHeight - interactionState.layout.top - 10));
+                    const maxWidth = Math.max(980, Math.floor((window.innerWidth - 10) / zoom - interactionState.layout.left));
+                    const maxHeight = Math.max(540, Math.floor((window.innerHeight - 10) / zoom - interactionState.layout.top));
+                    interactionState.layout.width = clamp(interactionState.startWidth + dx, 980, maxWidth);
+                    interactionState.layout.height = clamp(interactionState.startHeight + dy, 540, maxHeight);
                 }
 
                 interactionState.applyLayout(interactionState.layout);
@@ -3999,6 +4002,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
 
     function applyLayout(layout) {
         const next = normalizeLayout(layout);
+        const zoom = (state && state.zoom) ? state.zoom : 1;
 
         layout.left = next.left;
         layout.top = next.top;
@@ -4010,8 +4014,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         root.style.right = "auto";
         root.style.width = next.width + "px";
         root.style.height = state.allCollapsed ? "auto" : next.height + "px";
-        root.style.maxWidth = "calc(100vw - 10px)";
-        root.style.maxHeight = "calc(100vh - 10px)";
+        root.style.maxWidth = "calc((100vw - 10px) / " + zoom + ")";
+        root.style.maxHeight = "calc((100vh - 10px) / " + zoom + ")";
     }
 
     function persistLayout() {
@@ -4655,12 +4659,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
         if (!root) return;
         root.style.zoom = state.zoom.toFixed(2);
         if (refs && refs.zoomReset) refs.zoomReset.textContent = Math.round(state.zoom * 100) + "%";
+        if (state && state.layout) {
+            applyLayout(state.layout);
+        }
     }
 
     function setZoom(value) {
         state.zoom = Math.min(1.2, Math.max(0.8, Math.round(value * 10) / 10));
         writeStorage(ZOOM_KEY, String(state.zoom));
         applyZoom();
+        persistLayout();
     }
 
     function updateSourceWatchdog() {
@@ -6673,14 +6681,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
     function normalizeLayout(layout) {
         const def = defaultLayout();
         const source = Object.assign(def, layout || {});
-        const maxWidth = Math.max(980, window.innerWidth - 10);
-        const maxHeight = Math.max(540, window.innerHeight - 10);
+        const zoom = (state && state.zoom) ? state.zoom : (Number(readStorage(ZOOM_KEY, "1")) || 1);
+        const maxWidth = Math.max(980, Math.floor((window.innerWidth - 10) / zoom));
+        const maxHeight = Math.max(540, Math.floor((window.innerHeight - 10) / zoom));
         const width = clamp(numberValue(source.width) || def.width, 980, maxWidth);
         const height = clamp(numberValue(source.height) || def.height, 540, maxHeight);
         // IMPORTANT: the saved left/top coordinates must be bounded using the
         // saved panel dimensions.
-        const maxLeft = Math.max(0, window.innerWidth - width - 10);
-        const maxTop = Math.max(0, window.innerHeight - height - 10);
+        const maxLeft = Math.max(0, Math.floor((window.innerWidth - 10) / zoom - width));
+        const maxTop = Math.max(0, Math.floor((window.innerHeight - 10) / zoom - height));
 
         return {
             left: clamp(numberValue(source.left), 0, maxLeft),

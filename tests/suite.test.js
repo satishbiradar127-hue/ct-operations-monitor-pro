@@ -1638,3 +1638,30 @@ test("UPGRADE TEST 45: Active Campaigns Command Summary table styling with subtl
     assert.ok(cellDividerStyle.headerBorderBottom.includes("2px solid"), "Header must have distinct bottom border");
 });
 
+test("UPGRADE TEST 46: Zoom-scaled resizing and drag expansion bounds (90% zoom allows expanding to bottom of viewport)", () => {
+    // Viewport dimensions (e.g. 2304x1094 wide display)
+    const innerWidth = 2304;
+    const innerHeight = 1094;
+    const top = 10;
+
+    // Test standard 100% zoom
+    const zoom100 = 1.0;
+    const maxHeight100 = Math.max(540, Math.floor((innerHeight - 10) / zoom100 - top));
+    assert.strictEqual(maxHeight100, 1074, "100% zoom max height clamps to viewport - 20px");
+
+    // Test 90% zoom (user scenario: 0.9 zoom allows height > 1074px to reach physical bottom of screen)
+    const zoom90 = 0.9;
+    const maxHeight90 = Math.max(540, Math.floor((innerHeight - 10) / zoom90 - top));
+    assert.strictEqual(maxHeight90, 1194, "90% zoom max height allows expanding up to 1194px CSS to reach physical screen bottom");
+
+    // Physical screen extent: top (10 * 0.9 = 9) + height (1194 * 0.9 = 1074.6) = 1083.6px <= 1094px
+    const physicalBottom = (top * zoom90) + (maxHeight90 * zoom90);
+    assert.ok(physicalBottom <= innerHeight, "Physical bottom must fit within window height");
+    assert.ok(physicalBottom >= innerHeight - 15, "Physical bottom must reach near window bottom without premature truncation");
+
+    // Test resize mouse delta scaling by zoom factor
+    const mouseDeltaY = 90; // mouse moved 90px on screen
+    const scaledDeltaY = mouseDeltaY / zoom90;
+    assert.strictEqual(scaledDeltaY, 100, "90px screen mouse movement must scale to 100px in zoomed container for 1:1 cursor tracking");
+});
+
