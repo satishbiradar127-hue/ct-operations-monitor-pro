@@ -1667,3 +1667,25 @@ test("UPGRADE TEST 46: Zoom-scaled resizing and drag expansion bounds (90% zoom 
     assert.strictEqual(scaledDeltaY, 100, "90px screen mouse movement must scale to 100px in zoomed container for 1:1 cursor tracking");
 });
 
+test("UPGRADE TEST 47: Outbound Operational Findings notification placed at top of operating panel for immediate operator visibility", () => {
+    const fs = require("fs");
+    const dashboardSrc = fs.readFileSync(require.resolve("../dashboard.js"), "utf8");
+
+    // Must appear in markup before ct-operating-right (summary strip & campaign cards)
+    const findingsIdx = dashboardSrc.indexOf('class="ct-operating-findings"');
+    const rightIdx = dashboardSrc.indexOf('class="ct-operating-right"');
+    const identityIdx = dashboardSrc.indexOf('class="ct-operating-identity"');
+
+    assert.ok(findingsIdx > -1, "Outbound Operational Findings element must exist in dashboard.js");
+    assert.ok(identityIdx > -1, "Operating Identity element must exist in dashboard.js");
+    assert.ok(rightIdx > -1, "Operating Right container must exist in dashboard.js");
+
+    assert.ok(identityIdx < findingsIdx, "Operating Identity must appear before findings");
+    assert.ok(findingsIdx < rightIdx, "Outbound Operational Findings notification must appear before ct-operating-right at the top of operating panel");
+
+    // CSS contracts for clean top fit and flex alignment
+    assert.ok(dashboardSrc.includes(".ct-operating-findings { width:100%; margin:0; box-sizing:border-box;"), "Findings box must use margin:0 and box-sizing:border-box for accurate fit");
+    assert.ok(dashboardSrc.includes(".ct-finding-pill b { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8.5px; font-weight:950; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; flex-shrink:0;"), "Finding badge must not shrink");
+    assert.ok(dashboardSrc.includes(".ct-finding-pill span { color:#f8fafc; font-weight:600; font-size:11px; min-width:0; word-break:break-word; }"), "Finding message span must handle word wrapping");
+});
+

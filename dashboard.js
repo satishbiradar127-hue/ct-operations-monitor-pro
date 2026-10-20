@@ -2669,7 +2669,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight b { color:#bae6fd !important; }
             #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight strong { color:#38bdf8 !important; }
             #${DASHBOARD_ID} .ct-operating-card-metric.is-highlight small { color:#7dd3fc !important; opacity:.95 !important; }
-            #${DASHBOARD_ID} .ct-operating-findings { width:100%; margin-top:8px; border:1px solid rgba(148,163,184,.28); border-radius:8px; background:rgba(15,23,42,.85); padding:9px 11px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+            #${DASHBOARD_ID} .ct-operating-findings { width:100%; margin:0; box-sizing:border-box; border:1px solid rgba(148,163,184,.28); border-radius:8px; background:rgba(15,23,42,.85); padding:9px 11px; box-shadow:0 2px 8px rgba(0,0,0,.15); }
             #${DASHBOARD_ID} .ct-operating-findings.is-critical { border-color:rgba(239,68,68,.5); background:linear-gradient(180deg,rgba(239,68,68,.1) 0%,rgba(15,23,42,.9) 100%); }
             #${DASHBOARD_ID} .ct-operating-findings.is-warning { border-color:rgba(245,158,11,.5); background:linear-gradient(180deg,rgba(245,158,11,.1) 0%,rgba(15,23,42,.9) 100%); }
             #${DASHBOARD_ID} .ct-operating-findings.is-good { border-color:rgba(34,197,94,.4); background:linear-gradient(180deg,rgba(34,197,94,.08) 0%,rgba(15,23,42,.9) 100%); }
@@ -2680,9 +2680,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
             #${DASHBOARD_ID} .ct-operating-findings-badge.is-warning { border-color:#f59e0b; background:rgba(245,158,11,.25); color:#fde047; }
             #${DASHBOARD_ID} .ct-operating-findings-badge.is-good { border-color:#22c55e; background:rgba(34,197,94,.25); color:#86efac; }
             #${DASHBOARD_ID} .ct-operating-findings-list { display:flex; flex-direction:column; gap:5px; }
-            #${DASHBOARD_ID} .ct-finding-pill { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; font-size:11px; line-height:1.35; background:rgba(30,41,59,.85); border:1px solid rgba(148,163,184,.25); color:#f8fafc; }
-            #${DASHBOARD_ID} .ct-finding-pill b { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8.5px; font-weight:950; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; background:rgba(148,163,184,.2); color:#94a3b8; }
-            #${DASHBOARD_ID} .ct-finding-pill span { color:#f8fafc; font-weight:600; font-size:11px; }
+            #${DASHBOARD_ID} .ct-finding-pill { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; font-size:11px; line-height:1.35; background:rgba(30,41,59,.85); border:1px solid rgba(148,163,184,.25); color:#f8fafc; min-width:0; }
+            #${DASHBOARD_ID} .ct-finding-pill b { display:inline-block; padding:2px 6px; border-radius:4px; font-size:8.5px; font-weight:950; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; flex-shrink:0; background:rgba(148,163,184,.2); color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-finding-pill span { color:#f8fafc; font-weight:600; font-size:11px; min-width:0; word-break:break-word; }
             #${DASHBOARD_ID} .ct-finding-pill.is-critical { border-color:rgba(239,68,68,.5); background:rgba(239,68,68,.18); }
             #${DASHBOARD_ID} .ct-finding-pill.is-critical b { background:#ef4444; color:#ffffff; }
             #${DASHBOARD_ID} .ct-finding-pill.is-critical span { color:#fee2e2; font-weight:650; }
@@ -2880,6 +2880,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                 <div class="ct-operating-selected-list" data-ref="operatingSelectedList" aria-label="Selected operating campaigns"></div>
                             </div>
                         </div>
+                        <div class="ct-operating-findings" data-ref="operatingFindings" aria-label="Outbound Operational Findings">
+                            <div class="ct-operating-findings-head">
+                                <strong>OUTBOUND OPERATIONAL FINDINGS</strong>
+                                <span class="ct-operating-findings-badge" data-ref="operatingFindingsBadge">—</span>
+                            </div>
+                            <div class="ct-operating-findings-list" data-ref="operatingFindingsList"></div>
+                        </div>
                         <div class="ct-operating-right">
                             <div class="ct-operating-summary-bar" aria-label="Operating campaign aggregate summary">
                                 <div class="ct-operating-summary-item" title="Total logged-in agents across selected operating campaigns (if exposed in feed)"><b>TOTAL AGENTS</b><strong data-ref="opLoggedIn">—</strong></div>
@@ -2894,13 +2901,6 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro v11.1.53");
                                 <div class="ct-operating-summary-item" title="Estimated time until lead exhaustion at observed depletion rate"><b>LEAD RUNWAY</b><strong data-ref="opRunway">Measuring…</strong></div>
                             </div>
                             <div class="ct-operating-campaign-grid" data-ref="operatingCampaignCards" aria-label="Selected operating campaign metrics"></div>
-                        </div>
-                        <div class="ct-operating-findings" data-ref="operatingFindings" aria-label="Outbound Operational Findings">
-                            <div class="ct-operating-findings-head">
-                                <strong>OUTBOUND OPERATIONAL FINDINGS</strong>
-                                <span class="ct-operating-findings-badge" data-ref="operatingFindingsBadge">—</span>
-                            </div>
-                            <div class="ct-operating-findings-list" data-ref="operatingFindingsList"></div>
                         </div>
                     </section>
                         </section>
