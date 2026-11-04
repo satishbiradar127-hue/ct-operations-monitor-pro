@@ -1,0 +1,2 @@
+b9ac72d378bf8a0ad2c6dc67d6000280ce44d68b6d3d5236fe9baa82d8c12e77  CT_Operations_Monitor_East2.zip
+d9ec86b971bfcd44aff84373747794cf314d24030907e3ea2e45ec91408fc4fe  CT_Operations_Monitor_East3.zip

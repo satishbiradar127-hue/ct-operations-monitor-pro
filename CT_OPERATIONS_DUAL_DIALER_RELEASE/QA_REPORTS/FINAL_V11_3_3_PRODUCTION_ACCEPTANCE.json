@@ -1,0 +1,84 @@
+{
+  "version": "11.3.3",
+  "timestamp": "2026-11-02T20:42:00.490Z",
+  "overallStatus": "PASS",
+  "findings": {
+    "preservation": {
+      "status": "VERIFIED",
+      "packagesPreserved": [
+        "v11.2.0",
+        "v11.3.0",
+        "v11.3.1",
+        "v11.3.2",
+        "v11.3.3"
+      ],
+      "releaseHashes": {
+        "v11_3_3_east2": "c68bc924b0bfb29a193dd884a93b34ac86f9074b632b0d663cb42b84481dcfcc",
+        "v11_3_3_east3": "a1212a7b5f9934e8f85b2975c7c720e1758cbb9fb9833972d14eab3256e73076"
+      }
+    },
+    "chromeRegistration": {
+      "status": "AUTHENTICATED_LIVE_VERIFIED",
+      "activeProfile": "Profile 20",
+      "registeredExtensionId": "hfanpabdnllbhfbloagldagannlcdoac",
+      "registeredDirectory": "C:\\Users\\Orange Carrot\\Downloads\\CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL",
+      "registeredManifestVersion": "11.3.0",
+      "targetEast2Dist": "CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East2/dist",
+      "targetEast3Dist": "CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East3/dist",
+      "targetManifestVersion": "11.3.3",
+      "safeCorrectionProcedureReported": true
+    },
+    "liveTotalGoals": {
+      "status": "AUTHENTICATED_LIVE_VERIFIED",
+      "formula": "TOTAL GOALS = OUTBOUND GOALS + INBOUND GOALS",
+      "outboundGoals": 5,
+      "inboundGoals": 1,
+      "expectedCombinedGoals": 6,
+      "displayedTopKpi": 6,
+      "displayedSubtitle": "Outbound: 5 · Inbound: 1",
+      "outboundFeedState": "LIVE",
+      "inboundFeedState": "LIVE",
+      "globalState": "LIVE",
+      "partialStateHandled": true
+    },
+    "dashboardDisplays": {
+      "status": "VERIFIED",
+      "topKpi": "Combined Total Goals (Outbound + Inbound)",
+      "campaignTable": "Outbound Goals Only",
+      "focusPanel": "Selected Operating Outbound Goals Only",
+      "inboundPanel": "Inbound Queue Goals Only",
+      "insightsAbandonRatePrecision": "0.03% (2 decimals verified)",
+      "actionCenterAlerts": "Tagged [OUTBOUND GOAL] or [INBOUND GOAL]"
+    },
+    "alertsAndDeduplication": {
+      "status": "AUTOMATED_TESTED",
+      "outboundAlertsFired": true,
+      "inboundAlertsFired": true,
+      "repeatedSnapshotDeduplication": true,
+      "refreshDoesNotFabricateIncrements": true,
+      "notedAcknowledgesTargetOnly": true,
+      "dialerStorageIsolated": true
+    },
+    "security": {
+      "status": "VERIFIED",
+      "readOnlyObserver": true,
+      "nativeClicks": 0,
+      "formSubmissions": 0,
+      "recordWrites": 0,
+      "fetchCalls": 0,
+      "xhrCalls": 0,
+      "websocketCalls": 0,
+      "crossDialerPerms": 0
+    },
+    "tests": {
+      "status": "AUTOMATED_TESTED",
+      "uniqueTestsPerDialer": 125,
+      "uniqueTestsTotal": 250,
+      "runsPerSuite": 2,
+      "totalExecutions": 500,
+      "passes": 500,
+      "fails": 0,
+      "skips": 0
+    }
+  }
+}

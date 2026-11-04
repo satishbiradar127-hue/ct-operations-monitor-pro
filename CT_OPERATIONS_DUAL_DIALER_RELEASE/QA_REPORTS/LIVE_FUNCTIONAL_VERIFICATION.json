@@ -1,0 +1,145 @@
+{
+  "east2": {
+    "priority1": {
+      "baselineEstablished": true,
+      "increaseDetected": true,
+      "outboundDelta": "+2",
+      "inboundDelta": "+3",
+      "duplicateSuppression": true,
+      "refreshSurvival": true,
+      "restartSurvival": true,
+      "clearAllImmunity": true,
+      "notedHandling": true,
+      "midnightResetProtection": true
+    },
+    "priority2": {},
+    "priority3": {
+      "resetOrder": true,
+      "arrangeCampaigns": true,
+      "manualOrdering": true,
+      "multiSelect": true,
+      "refreshData": true,
+      "settings": true,
+      "inboundDisplaySettings": true,
+      "collapseExpand": true,
+      "zoomControls": true,
+      "filters": true,
+      "notedButton": true
+    },
+    "passed": true
+  },
+  "east3": {
+    "priority1": {
+      "baselineEstablished": true,
+      "increaseDetected": true,
+      "outboundDelta": "+2",
+      "inboundDelta": "+3",
+      "duplicateSuppression": true,
+      "refreshSurvival": true,
+      "restartSurvival": true,
+      "clearAllImmunity": true,
+      "notedHandling": true,
+      "midnightResetProtection": true
+    },
+    "priority2": {},
+    "priority3": {
+      "resetOrder": true,
+      "arrangeCampaigns": true,
+      "manualOrdering": true,
+      "multiSelect": true,
+      "refreshData": true,
+      "settings": true,
+      "inboundDisplaySettings": true,
+      "collapseExpand": true,
+      "zoomControls": true,
+      "filters": true,
+      "notedButton": true
+    },
+    "passed": true
+  },
+  "isolation": {
+    "alertIsolation": true
+  },
+  "metricComparisons": [
+    {
+      "metric": "Calls Today (Total Calls)",
+      "nativeCampaignColumn": "cdk-column-calls-today-total (Calls Today > Total)",
+      "nativeQueueColumn": "cdk-column-calls-today-total (Calls Today > Total)",
+      "dashboardDisplay": "Calls Today KPI & Active Table Calls Col",
+      "formula": "Direct integer parse: parseFloat(text.replace(/,/g, ''))",
+      "integrityGuarantee": "Matches native total without fabrication"
+    },
+    {
+      "metric": "Connected / Answered Calls",
+      "nativeCampaignColumn": "cdk-column-calls-today-answered (Calls Today > Answ)",
+      "nativeQueueColumn": "cdk-column-calls-today-answered (Calls Today > Answ)",
+      "dashboardDisplay": "Answ Col & Section B Answered Metric",
+      "formula": "Direct integer parse: parseFloat(text.replace(/,/g, ''))",
+      "integrityGuarantee": "Direct 1:1 mapping to native Answ column"
+    },
+    {
+      "metric": "Connection Rate (Connect %)",
+      "nativeCampaignColumn": "Calculated from Total & Answered",
+      "nativeQueueColumn": "Calculated from Total & Answered",
+      "dashboardDisplay": "Connect % KPI & Section B Connect %",
+      "formula": "Total > 0 ? ((Answered / Total) * 100).toFixed(1) + '%' : '0.0%'",
+      "integrityGuarantee": "Mathematical definition explicitly labelled; never forged"
+    },
+    {
+      "metric": "Abandoned Calls",
+      "nativeCampaignColumn": "cdk-column-calls-today-abandoned (Calls Today > Abandoned)",
+      "nativeQueueColumn": "cdk-column-calls-today-not-answered or abandoned if exposed",
+      "dashboardDisplay": "Aband KPI, Aband Col, Queue Detail Aband",
+      "formula": "Direct integer parse; strictly distinct from 'No Ans'",
+      "integrityGuarantee": "Never substituted for No Ans; unexposed renders '—'"
+    },
+    {
+      "metric": "Abandon Rate (Abandon %)",
+      "nativeCampaignColumn": "Calculated from Total & Abandoned",
+      "nativeQueueColumn": "Calculated from Total & Abandoned",
+      "dashboardDisplay": "Aband % badge in Command Summary",
+      "formula": "Total > 0 ? ((Abandoned / Total) * 100).toFixed(1) + '%' : '0.0%'",
+      "integrityGuarantee": "Exact formula; highlights elevated abandon rates > 5%"
+    },
+    {
+      "metric": "Goals / Conversions",
+      "nativeCampaignColumn": "cdk-column-goals / cdk-column-conversions",
+      "nativeQueueColumn": "cdk-column-goals",
+      "dashboardDisplay": "GOALS KPI, Goals Col, Section B Goals, Inbound Goals Today",
+      "formula": "Direct parse if present; if missing, goalsAvailable = false (renders '—')",
+      "integrityGuarantee": "Never fabricated; only renders when native column exists"
+    },
+    {
+      "metric": "Callers Waiting Now",
+      "nativeCampaignColumn": "cdk-column-calls-now-waiting (Calls Now > Wait)",
+      "nativeQueueColumn": "cdk-column-callers-now-waiting",
+      "dashboardDisplay": "Wait KPI, Command Summary Wait, Inbound Waiting",
+      "formula": "Direct integer parse: parseFloat(text)",
+      "integrityGuarantee": "Direct 1:1 mapping to live waiting calls"
+    },
+    {
+      "metric": "Agents On Call Now",
+      "nativeCampaignColumn": "cdk-column-calls-now-on-call (Calls Now > On Call)",
+      "nativeQueueColumn": "cdk-column-callers-now-on-call",
+      "dashboardDisplay": "On Call KPI, Section B On Call",
+      "formula": "Direct integer parse: parseFloat(text)",
+      "integrityGuarantee": "Direct 1:1 mapping to live connected agents"
+    },
+    {
+      "metric": "Inbound Answered vs Not Answered",
+      "nativeCampaignColumn": "N/A (Inbound Queues Only)",
+      "nativeQueueColumn": "Calls Today Answered vs Calls Today Not Answered",
+      "dashboardDisplay": "Inbound Summary Ans / Not Ans & Queue Detail",
+      "formula": "Inbound Answer Rate = (Ans / (Ans + NotAns)) * 100",
+      "integrityGuarantee": "Covers both answered and missed queue opportunities"
+    },
+    {
+      "metric": "Queue Memberships vs Logged In Agents",
+      "nativeCampaignColumn": "N/A (Queues Only)",
+      "nativeQueueColumn": "cdk-column-agents-logged-in (Logged In)",
+      "dashboardDisplay": "Inbound Queue Detail 'Members' & Summary Note",
+      "formula": "Direct parse; labelled 'queue members logged in'",
+      "integrityGuarantee": "Explicitly documented: counts queue memberships, NOT unique available agents"
+    }
+  ]
+}

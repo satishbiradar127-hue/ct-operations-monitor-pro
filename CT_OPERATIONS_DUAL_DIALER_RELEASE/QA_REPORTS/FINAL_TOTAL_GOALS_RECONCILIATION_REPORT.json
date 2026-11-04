@@ -1,0 +1,68 @@
+{
+  "version": "11.3.3",
+  "timestamp": "2026-11-02T20:30:21.607Z",
+  "status": "PASS",
+  "goalsReconciliation": {
+    "formula": "TOTAL GOALS = OUTBOUND GOALS + INBOUND GOALS",
+    "sampleCalculations": [
+      {
+        "outbound": 5,
+        "inbound": 1,
+        "combined": 6,
+        "subtitle": "Outbound: 5 · Inbound: 1"
+      },
+      {
+        "outbound": 5,
+        "inbound": 0,
+        "combined": 5,
+        "subtitle": "Outbound: 5 · Inbound: 0"
+      },
+      {
+        "outbound": 0,
+        "inbound": 1,
+        "combined": 1,
+        "subtitle": "Outbound: 0 · Inbound: 1"
+      },
+      {
+        "outbound": 5,
+        "inbound": null,
+        "combined": 5,
+        "subtitle": "PARTIAL · Outbound: 5 · Inbound: connecting"
+      },
+      {
+        "outbound": null,
+        "inbound": 1,
+        "combined": 1,
+        "subtitle": "PARTIAL · Outbound: unavailable · Inbound: 1"
+      },
+      {
+        "outbound": null,
+        "inbound": null,
+        "combined": "—",
+        "subtitle": "Awaiting verified Goals feed"
+      }
+    ],
+    "duplicatePrevention": "Campaigns and Queues have mutually exclusive call channels and call IDs; both reset at dialer midnight; parent/child duplicate rows excluded"
+  },
+  "insightsPrecisionFix": {
+    "metric": "abandonRate",
+    "legacyDisplay": "0.0% (toFixed(1))",
+    "correctedDisplay": "0.03% (formatRatePercent - 2 decimals)",
+    "status": "VERIFIED"
+  },
+  "testResults": {
+    "uniqueTestsPerDialer": 125,
+    "uniqueTestsCombined": 250,
+    "runsPerSuite": 2,
+    "totalExecutions": 500,
+    "passes": 500,
+    "fails": 0,
+    "skips": 0
+  },
+  "packages": {
+    "v11_3_3": {
+      "east2": "c68bc924b0bfb29a193dd884a93b34ac86f9074b632b0d663cb42b84481dcfcc",
+      "east3": "a1212a7b5f9934e8f85b2975c7c720e1758cbb9fb9833972d14eab3256e73076"
+    }
+  }
+}

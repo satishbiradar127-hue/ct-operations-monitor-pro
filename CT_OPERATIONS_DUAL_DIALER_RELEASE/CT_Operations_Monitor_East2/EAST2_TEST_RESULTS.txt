@@ -1,0 +1,966 @@
+================================================================================
+EAST-2 AUTOMATED TEST VERIFICATION SUITE — RUN 1 & RUN 2
+Edition: CT Operations Monitor — East-2 (v11.3.3)
+Target Host: east-2.calltools.io
+Total Tests: 155 | Passed: 155 | Failed: 0
+================================================================================
+
+--- [TEST RUN 1] ---
+Command: node --test tests/suite.test.js
+Working Directory: C:\Users\Orange Carrot\Downloads\CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL\CT_OPERATIONS_DUAL_DIALER_RELEASE\CT_Operations_Monitor_East2
+Timestamp: 2026-11-04T15:16:20.186Z
+
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+✔ PHASE 3 & 7: CT.number and CT.parseMetric distinguish valid zero from missing data (61.551ms)
+✔ PHASE 2 & 7: parser.js extracts multi-tier CallTools Queue table correctly without header index offset (25.0705ms)
+✔ PHASE 3 & 7: Missing Not Answered column is reported as missing, NEVER synthesized as total - answered (16.1671ms)
+✔ PHASE 5 & 7: Action Center alert deduplication, stable signatures and recovery tracking (13.1968ms)
+✔ PHASE 4 & 7: Inbound totals calculation handles non-synthesized totals and zero-wait correctly (13.2247ms)
+✔ PHASE 7: Column reordering test — parser extracts metrics when column positions change (34.6335ms)
+✔ PHASE 7: Outbound regression and manual campaign order preservation (13.9119ms)
+✔ PHASE 7: Dynamic queue changes — adding and removing queues in DOM updates queue list (89.9781ms)
+✔ PHASE 3 & 7: Delta calculation is only performed between valid comparable readings (10.1327ms)
+✔ PHASE 5 & 7: Clear All clears visible signals and preserves future distinct detection (5.5823ms)
+✔ PHASE 2, 3 & 8: parser.js extracts 2-tier CallTools Campaigns table correctly without header index offset (23.2078ms)
+✔ PHASE 5 & 8: Missing agent metrics on Campaigns table are represented as unavailable (null), not zero, preventing false alerts (11.752ms)
+✔ PHASE 4 & 8: REALTIME shared lead pool deduplication and aggregate calculations (8.3501ms)
+✔ UPGRADE TEST 14: Active Campaigns Command Summary filters operational campaigns and computes required summary columns (7.1703ms)
+✔ UPGRADE TEST 15: Discrepancy reconciliation between active operational totals and all visible campaigns (9.1089ms)
+✔ UPGRADE TEST 16: Honest Lead Runway states distinguish gathering vs stable lead pool vs exhaustion (6.5439ms)
+✔ UPGRADE TEST 17: Inbound missing not-answered column yields null and never reports false zero (7.4639ms)
+✔ UPGRADE TEST 18: Inbound findings consistency — callers waiting > 0 ALWAYS produces a finding pill; never falsely claims 'No callers waiting' (5.3674ms)
+✔ UPGRADE TEST 19: loggedMemberships aggregation and KPI mapping — sums queue loggedIn counts and distinguishes from unique agents (4.1049ms)
+✔ UPGRADE TEST 20: Responsive layout calculations across zoom/viewports (2304x1094 wide viewport down to 1024x768) (7.1011ms)
+✔ UPGRADE TEST 21: Active Campaigns Command Summary 14 columns verification including honest connection rate and abandoned formatting (5.6101ms)
+✔ UPGRADE TEST 22: Combined state filter (all, active, inactive) + health filter + search query (6.7812ms)
+✔ UPGRADE TEST 23: Outbound attempts scope reconciliation (top snapshot active sum vs single operating campaign breakdown) (6.5457ms)
+✔ UPGRADE TEST 24: Campaign row selection, toggle all visible, and clear selection behavior (4.7966ms)
+✔ UPGRADE TEST 25: Drag-and-drop campaign reordering and Reset Order restoration (9.8862ms)
+✔ UPGRADE TEST 26: Outbound Focus single-campaign deduplication vs multi-campaign operating view (4.8006ms)
+✔ UPGRADE TEST 27: Inbound Queue Detail header and cell grid template column alignment without overlap (5.5522ms)
+✔ UPGRADE TEST 28: Campaign filter state persistence & restoration across reload/refresh (5.9489ms)
+✔ UPGRADE TEST 29: Inbound Not Answered resolution maps native Inbound No Answer without false zero (4.7875ms)
+✔ UPGRADE TEST 30: Drag-and-drop reordering with filtered view preserves hidden campaigns (6.2746ms)
+✔ UPGRADE TEST 31: Inbound table grid template min-width and sticky header requirements (5.5632ms)
+✔ UPGRADE TEST 32: updateActiveCommandSummary renders ordered campaigns over raw source order (4.1119ms)
+✔ UPGRADE TEST 33: Keyboard accessible reordering (Alt+ArrowUp/Down) invokes identical reorder algorithm (3.6769ms)
+✔ UPGRADE TEST 34: Global filter synchronization guarantees button active states match storage without overwrite (6.523ms)
+✔ UPGRADE TEST 35: Row reorder buttons (up/down) invoke reorderCampaignByIds and preserve full ordering sequence (4.2325ms)
+✔ UPGRADE TEST 36: Command Summary Table 18-column colgroup, matching classes, and fixed layout (3.9691ms)
+✔ UPGRADE TEST 37: Outbound Focus Section A (identity), Section B (10 metrics), Section C (4 clusters), Section D (findings) (7.8095ms)
+✔ UPGRADE TEST 38: Inbound Queue Detail explicit column grid alignment, sticky header, and snapshot consistency (4.5407ms)
+✔ UPGRADE TEST 39: Responsive layout and container max-height containment across viewport dimensions (3.3159ms)
+✔ UPGRADE TEST 40: Freshness indicators distinguishing poll interval, update timestamp, and snapshot age (5.8001ms)
+✔ UPGRADE TEST 41: Action Center elevated wait alert generation, warning vs critical threshold classification (30s vs 60s), and counter consistency (5.6371ms)
+✔ UPGRADE TEST 42: Outbound Focus and Action Center consistent condition model (4.0616ms)
+✔ UPGRADE TEST 43: Alert deduplication, dismissal, Clear All, and escalation stability across polling cycles (5.1929ms)
+✔ UPGRADE TEST 44: Outbound Focus Section B 10 individual rounded cards with 5x2 grid layout and tooltips (5.6571ms)
+✔ UPGRADE TEST 45: Active Campaigns Command Summary table styling with hard box borders and middle order GOALS (4.4808ms)
+✔ UPGRADE TEST 46: Zoom-scaled resizing and drag expansion bounds (90% zoom allows expanding to bottom of viewport) (5.6533ms)
+✔ UPGRADE TEST 47: Outbound Operational Findings notification placed at top of operating panel for immediate operator visibility (11.3215ms)
+✔ EAST-2 UPGRADE 48: Manifest configuration and host permissions match target dialer (27.2193ms)
+✔ EAST-2 UPGRADE 49: Storage keys are strictly isolated with 'ct_east2_' prefix (8.4513ms)
+✔ EAST-2 UPGRADE 50: Inbound Queue Detail strictly preserves native CallTools Queue row order (Requirement 9) (6.9665ms)
+✔ EAST-2 UPGRADE 51: INBOUND_HEARTBEAT_STALE_MS is set to 15000ms to eliminate false stale warnings (9.1013ms)
+✔ EAST-2 UPGRADE 52: Outbound Focus Section B does NOT coerce unexposed campaign agent metrics to 0 (9.1017ms)
+✔ EAST-2 UPGRADE 53: Persistent Goals Engine establishes initial baseline on first observation without firing false alerts (4.5377ms)
+✔ EAST-2 UPGRADE 54: Outbound and Inbound Goal increases trigger prominent persistent alert records (5.0056ms)
+✔ EAST-2 UPGRADE 55: Action Center 'Clear All' clears temporary alerts but preserves persistent Goal alerts (5.385ms)
+✔ EAST-2 UPGRADE 56: Clicking NOTED acknowledges and removes only that specific persistent alert (4.3663ms)
+✔ EAST-2 UPGRADE 57: Daily counter reset or decrease resets baseline without firing false alert (3.9564ms)
+✔ EAST-2 UPGRADE 58: Dashboard action buttons render valid labels without corrupted UTF-8 glyphs (12.2983ms)
+✔ EAST-2 UPGRADE 59: Cross-dialer isolation verifies host and storage separation from EAST-3 (10.14ms)
+✔ EAST-2 UPGRADE 60: Initial baseline establishment (0 false alerts on cold start) (19.449ms)
+✔ EAST-2 UPGRADE 61: Normal increments within thresholds trigger zero alerts (4.2794ms)
+✔ EAST-2 UPGRADE 62: Normal decreases within thresholds trigger zero alerts (5.1668ms)
+✔ EAST-2 UPGRADE 63: Sudden increase observation 1 held in pending confirmation (6.1348ms)
+✔ EAST-2 UPGRADE 64: Consecutive observation 2 confirms sudden increase anomaly (Engine B) (4.6471ms)
+✔ EAST-2 UPGRADE 65: Sudden decrease in agent capacity triggers confirmed DECREASE alert (Engine C) (6.141ms)
+✔ EAST-2 UPGRADE 66: Independent percentage and absolute threshold rules per metric profile (4.7806ms)
+✔ EAST-2 UPGRADE 67: Repeated polling duplicate suppression across identical snapshots (5.0506ms)
+✔ EAST-2 UPGRADE 68: Midnight reset safe downward adjustment with zero false alerts (4.2033ms)
+✔ EAST-2 UPGRADE 69: Unexpected counter reset outside midnight window flags RESET integrity alert (8.0554ms)
+✔ EAST-2 UPGRADE 70: Outbound campaign disappearance detection and confirmation (Engine D) (6.4948ms)
+✔ EAST-2 UPGRADE 71: Inbound queue disappearance detection and confirmation (Engine D) (6.2604ms)
+✔ EAST-2 UPGRADE 72: Missing native table container in DOM flags TABLE_MISSING alert immediately (5.6294ms)
+✔ EAST-2 UPGRADE 73: Stale source feed (>15s) flags FEED_STALE warning and suspends comparisons (4.3704ms)
+✔ EAST-2 UPGRADE 74: Authentication loss flags AUTH_LOST critical alert immediately (5.4612ms)
+✔ EAST-2 UPGRADE 75: Browser and extension restart survival reloads active alerts from storage (5.5669ms)
+✔ EAST-2 UPGRADE 76: Operator individual acknowledgement via [NOTED] dismisses active card and retains history (4.8201ms)
+✔ EAST-2 UPGRADE 77: Action Center Clear All preserves unacknowledged intelligence alerts (5.4526ms)
+✔ EAST-2 UPGRADE 78: Complete bidirectional storage and namespace isolation from EAST-3 (5.9088ms)
+✔ EAST-2 UPGRADE 79: Sales & Goals immediate increase detection (Engine A) without 2-observation delay (4.2751ms)
+✔ EAST-2 UPGRADE 80: Both sources LIVE produces global LIVE state with green badge (4.8199ms)
+✔ EAST-2 UPGRADE 81: Outbound LIVE and Inbound connecting produces PARTIALLY CONNECTED global state (6.7403ms)
+✔ EAST-2 UPGRADE 82: Inbound LIVE and Outbound waiting produces PARTIALLY CONNECTED global state (4.5673ms)
+✔ EAST-2 UPGRADE 83: Inbound panel and global subtitle derive from identical inbound source state (4.5823ms)
+✔ EAST-2 UPGRADE 84: Outbound heartbeat does NOT refresh inbound freshness timestamp (5.6263ms)
+✔ EAST-2 UPGRADE 85: Inbound heartbeat does NOT refresh outbound freshness timestamp (3.5399ms)
+✔ EAST-2 UPGRADE 86: Outbound LIVE and Inbound STALE produces PARTIALLY CONNECTED with stale warning (3.8704ms)
+✔ EAST-2 UPGRADE 87: Both sources STALE produces global STALE state with critical badge (5.8157ms)
+✔ EAST-2 UPGRADE 88: Auth loss on either source triggers AUTH LOST immediately (5.0691ms)
+✔ EAST-2 UPGRADE 89: Source error distinguishes table missing from auth loss (3.8901ms)
+✔ EAST-2 UPGRADE 90: Abandoned rate precision formats 9 / 39,997 as 0.02% (never 0.0%) (4.9526ms)
+✔ EAST-2 UPGRADE 91: Small nonzero rate (<0.01%) formats as <0.01% (never 0.00%) (4.7926ms)
+✔ EAST-2 UPGRADE 92: Zero rate formats as exactly 0.00% (3.5737ms)
+✔ EAST-2 UPGRADE 93: Connect rate calculates accurately from Human Connects ÷ Outbound Attempts (4.1949ms)
+✔ EAST-2 UPGRADE 94: Human Connects (1,790) and Agent Connects (1,814) retained as distinct metrics (5.5364ms)
+✔ EAST-2 UPGRADE 95: Inbound total reconciliation accounts for 477 = 333 answered + 100 not answered + 44 other/IVR (3.8903ms)
+✔ EAST-2 UPGRADE 96: Inbound Not Answered semantics uses primary callsTodayNotAnswered when present (3.8518ms)
+✔ EAST-2 UPGRADE 97: Inbound Not Answered semantics falls back to inboundNoAnswer when primary is null/empty (4.242ms)
+✔ EAST-2 UPGRADE 98: Inbound Not Answered semantics NEVER sums primary and fallback (6.0385ms)
+✔ EAST-2 UPGRADE 99: Inbound Abandoned semantics: CallTools Queues table has no native Abandoned column (3.6322ms)
+✔ EAST-2 UPGRADE 100: Observer-only refresh executes 0 native .click() calls (3.3207ms)
+✔ EAST-2 UPGRADE 101: Dialer isolation verifies event names and namespaces (CT_EAST_2_UPDATE vs CT_EAST_3_UPDATE) (8.0138ms)
+✔ EAST-2 UPGRADE 102: Missing denominator returns '—' without NaN or division by zero (4.3465ms)
+✔ EAST-2 UPGRADE 103: Missing numerator returns '—' without NaN (4.3816ms)
+✔ EAST-2 UPGRADE 104: Empty queue row renders '—' for missing metrics (4.1788ms)
+✔ EAST-2 UPGRADE 105: Queue memberships (73) explicitly labeled as memberships not unique agents (5.012ms)
+✔ EAST-2 UPGRADE 106: Single active queue count correctly reflects filtered active queues (3.867ms)
+✔ EAST-2 UPGRADE 107: Outbound contact pool inventory decrease tracking (13,844 -> 13,773) (3.5438ms)
+✔ EAST-2 UPGRADE 108: Outbound attempts increment tracking (39,918 -> 39,997) (4.4978ms)
+✔ EAST-2 UPGRADE 109: Human connects increment tracking (1,782 -> 1,790) (4.7832ms)
+✔ EAST-2 UPGRADE 110: Agent connects increment tracking (1,808 -> 1,814) (4.0938ms)
+✔ EAST-2 UPGRADE 111: Action Center Clear All preserves unacknowledged Goal and Intelligence alerts (3.8572ms)
+✔ EAST-2 UPGRADE 112: Operator [NOTED] acknowledgement clears only targeted alert card (5.5186ms)
+✔ EAST-2 UPGRADE 113: Browser restart recovery restores active alerts from storage (6.0984ms)
+✔ EAST-2 UPGRADE 114: East-2 and East-3 storage keys do not collide (4.4513ms)
+✔ EAST-2 UPGRADE 115: Read-only observer security verification (0 network calls, 0 native clicks) (9.7564ms)
+✔ EAST-2 UPGRADE 116: Outbound 5 + Inbound 1 produces combined Total Goals 6 with full breakdown (5.0858ms)
+✔ EAST-2 UPGRADE 117: Outbound 5 + Inbound 0 produces combined Total Goals 5 with full breakdown (6.8029ms)
+✔ EAST-2 UPGRADE 118: Outbound 0 + Inbound 1 produces combined Total Goals 1 with full breakdown (5.4453ms)
+✔ EAST-2 UPGRADE 119: Inbound unavailable produces partial Outbound 5 with unavailable note (5.1701ms)
+✔ EAST-2 UPGRADE 120: Outbound unavailable produces partial Inbound 1 with unavailable note (5.2347ms)
+✔ EAST-2 UPGRADE 121: Both unavailable produces '—' with awaiting note (5.9009ms)
+✔ EAST-2 UPGRADE 122: Repeated snapshots do not duplicate goals or trigger false goal increase alerts (4.9725ms)
+✔ EAST-2 UPGRADE 123: Manual refresh does not alter cumulative goal count or generate artificial increments (5.9605ms)
+✔ EAST-2 UPGRADE 124: Insights abandonRate card formats 13 / 44,369 as 0.03% (never truncated to 0.0%) (5.4488ms)
+✔ EAST-2 UPGRADE 125: East-2 and East-3 maintain strictly isolated goal baselines and storage namespaces (4.4945ms)
+✔ EAST-2 UPGRADE 126: tableReady accepts partial/loading rows as long as one named campaign exists (5.4855ms)
+✔ EAST-2 UPGRADE 127: cdk-column-goals_today is recognized by parser fallback classes (5.3937ms)
+✔ EAST-2 UPGRADE 128: Tab visibility change triggers immediate refresh without waiting for polling interval (4.8519ms)
+✔ EAST-2 UPGRADE 129: Feed states follow explicit hierarchy: LIVE, WAITING, CONNECTING, STALE, ERROR (4.1673ms)
+✔ EAST-2 UPGRADE 130: Inbound and outbound feed readiness remain decoupled during partial feed initialization (5.2214ms)
+✔ EAST-2 UPGRADE 131: Positive inventory change (+500 leads) triggers NEW LEADS ADDED alert with full metadata (4.4739ms)
+✔ EAST-2 UPGRADE 132: Large negative inventory change (-3,570 leads) debounced over 2 observations triggers LARGE LEAD INVENTORY REDUCTION (3.6215ms)
+✔ EAST-2 UPGRADE 133: Small negative change below threshold (e.g. -15 leads from normal dialing) does NOT trigger reduction alert (5.5267ms)
+✔ EAST-2 UPGRADE 134: Out of leads condition (inventory drops to 0) confirmed over 2 observations triggers critical OUT OF LEADS alert (6.8626ms)
+✔ EAST-2 UPGRADE 135: Newly appearing active campaign triggers CAMPAIGN ADDED lifecycle alert (4.2943ms)
+✔ EAST-2 UPGRADE 136: Disappearing active campaign missing for 2 consecutive cycles triggers CAMPAIGN DISAPPEARED alert (4.7802ms)
+✔ EAST-2 UPGRADE 137: Temporary missing DOM row on 1st observation is debounced and does NOT fire immediate alert (4.0988ms)
+✔ EAST-2 UPGRADE 138: Alert has unique stable event ID and persists across simulated page refresh (4.6453ms)
+✔ EAST-2 UPGRADE 139: Duplicate prevention: repeated polls with identical counts do not create duplicate alert records (3.9902ms)
+✔ EAST-2 UPGRADE 140: Clear All button clears ephemeral noise but NEVER erases unacknowledged Sales, Goals, or Lead alerts (5.6318ms)
+✔ EAST-2 UPGRADE 141: Individual [NOTED] button click acknowledges and dismisses that specific card with timestamp (5.5127ms)
+✔ EAST-2 UPGRADE 142: Once acknowledged via [NOTED], page reload does NOT resurrect the acknowledged alert (4.4521ms)
+✔ EAST-2 UPGRADE 143: Independent storage namespaces: acknowledging an EAST-2 alert does not affect EAST-3 alert state (6.4005ms)
+✔ EAST-2 UPGRADE 144: Changed campaign cells are parsed and published on observation cycle (4.4873ms)
+✔ EAST-2 UPGRADE 145: Delayed native table / DOM replacement handled gracefully with recovery (6.7518ms)
+✔ EAST-2 UPGRADE 146: Decoupled feeds: when Outbound is LIVE and Inbound is WAITING, Outbound feed is LIVE and not demoted to WAITING (6.8655ms)
+✔ EAST-2 UPGRADE 147: Subtitle displays separate freshness and last successful native observation times (5.9355ms)
+✔ EAST-2 UPGRADE 148: Stale feed (>15s without observation) correctly transitions to STALE status (6.6404ms)
+✔ EAST-2 UPGRADE 149: .ct-actions toolbar enforces flex-wrap: nowrap so Reset control never wraps to a second row (5.0559ms)
+✔ EAST-2 UPGRADE 150: Layout defaults enforce wide container width (1420px - 1560px) on standard viewports (4.3169ms)
+✔ EAST-2 UPGRADE 151: Two-column balance: Outbound focus is on LEFT and Inbound focus is on RIGHT side-by-side (5.1097ms)
+✔ EAST-2 UPGRADE 152: Viewport resize and zoom normalization prevents clipping or layout corruption (7.9184ms)
+✔ EAST-2 UPGRADE 153: Strict observer-only: zero native clicks, zero native form submissions, zero operational mutations (4.2032ms)
+✔ EAST-2 UPGRADE 154: Strict read-only: no fetch or XMLHttpRequest network calls for operational metrics (12.4104ms)
+✔ EAST-2 UPGRADE 155: Strict URL host boundary: EAST-2 only matches east-2.calltools.io and rejects east-3.calltools.io (6.546ms)
+ℹ tests 155
+ℹ suites 0
+ℹ pass 155
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1564.7651
+
+
+--- [TEST RUN 2] ---
+Command: node --test tests/suite.test.js
+Working Directory: C:\Users\Orange Carrot\Downloads\CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL\CT_OPERATIONS_DUAL_DIALER_RELEASE\CT_Operations_Monitor_East2
+Timestamp: 2026-11-04T15:16:20.187Z
+
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.3
+✔ PHASE 3 & 7: CT.number and CT.parseMetric distinguish valid zero from missing data (83.6501ms)
+✔ PHASE 2 & 7: parser.js extracts multi-tier CallTools Queue table correctly without header index offset (56.9151ms)
+✔ PHASE 3 & 7: Missing Not Answered column is reported as missing, NEVER synthesized as total - answered (26.6081ms)
+✔ PHASE 5 & 7: Action Center alert deduplication, stable signatures and recovery tracking (9.2559ms)
+✔ PHASE 4 & 7: Inbound totals calculation handles non-synthesized totals and zero-wait correctly (7.2054ms)
+✔ PHASE 7: Column reordering test — parser extracts metrics when column positions change (15.6813ms)
+✔ PHASE 7: Outbound regression and manual campaign order preservation (9.8011ms)
+✔ PHASE 7: Dynamic queue changes — adding and removing queues in DOM updates queue list (48.4705ms)
+✔ PHASE 3 & 7: Delta calculation is only performed between valid comparable readings (6.2155ms)
+✔ PHASE 5 & 7: Clear All clears visible signals and preserves future distinct detection (12.6957ms)
+✔ PHASE 2, 3 & 8: parser.js extracts 2-tier CallTools Campaigns table correctly without header index offset (18.2534ms)
+✔ PHASE 5 & 8: Missing agent metrics on Campaigns table are represented as unavailable (null), not zero, preventing false alerts (10.8886ms)
+✔ PHASE 4 & 8: REALTIME shared lead pool deduplication and aggregate calculations (5.3028ms)
+✔ UPGRADE TEST 14: Active Campaigns Command Summary filters operational campaigns and computes required summary columns (6.5424ms)
+✔ UPGRADE TEST 15: Discrepancy reconciliation between active operational totals and all visible campaigns (13.6437ms)
+✔ UPGRADE TEST 16: Honest Lead Runway states distinguish gathering vs stable lead pool vs exhaustion (5.7867ms)
+✔ UPGRADE TEST 17: Inbound missing not-answered column yields null and never reports false zero (5.5728ms)
+✔ UPGRADE TEST 18: Inbound findings consistency — callers waiting > 0 ALWAYS produces a finding pill; never falsely claims 'No callers waiting' (4.3595ms)
+✔ UPGRADE TEST 19: loggedMemberships aggregation and KPI mapping — sums queue loggedIn counts and distinguishes from unique agents (5.1783ms)
+✔ UPGRADE TEST 20: Responsive layout calculations across zoom/viewports (2304x1094 wide viewport down to 1024x768) (5.5969ms)
+✔ UPGRADE TEST 21: Active Campaigns Command Summary 14 columns verification including honest connection rate and abandoned formatting (4.1786ms)
+✔ UPGRADE TEST 22: Combined state filter (all, active, inactive) + health filter + search query (4.1132ms)
+✔ UPGRADE TEST 23: Outbound attempts scope reconciliation (top snapshot active sum vs single operating campaign breakdown) (5.2946ms)
+✔ UPGRADE TEST 24: Campaign row selection, toggle all visible, and clear selection behavior (4.1983ms)
+✔ UPGRADE TEST 25: Drag-and-drop campaign reordering and Reset Order restoration (5.0999ms)
+✔ UPGRADE TEST 26: Outbound Focus single-campaign deduplication vs multi-campaign operating view (5.6253ms)
+✔ UPGRADE TEST 27: Inbound Queue Detail header and cell grid template column alignment without overlap (5.0359ms)
+✔ UPGRADE TEST 28: Campaign filter state persistence & restoration across reload/refresh (4.0186ms)
+✔ UPGRADE TEST 29: Inbound Not Answered resolution maps native Inbound No Answer without false zero (7.7636ms)
+✔ UPGRADE TEST 30: Drag-and-drop reordering with filtered view preserves hidden campaigns (8.0686ms)
+✔ UPGRADE TEST 31: Inbound table grid template min-width and sticky header requirements (4.408ms)
+✔ UPGRADE TEST 32: updateActiveCommandSummary renders ordered campaigns over raw source order (5.9883ms)
+✔ UPGRADE TEST 33: Keyboard accessible reordering (Alt+ArrowUp/Down) invokes identical reorder algorithm (4.253ms)
+✔ UPGRADE TEST 34: Global filter synchronization guarantees button active states match storage without overwrite (4.0319ms)
+✔ UPGRADE TEST 35: Row reorder buttons (up/down) invoke reorderCampaignByIds and preserve full ordering sequence (6.9242ms)
+✔ UPGRADE TEST 36: Command Summary Table 18-column colgroup, matching classes, and fixed layout (5.4151ms)
+✔ UPGRADE TEST 37: Outbound Focus Section A (identity), Section B (10 metrics), Section C (4 clusters), Section D (findings) (3.7053ms)
+✔ UPGRADE TEST 38: Inbound Queue Detail explicit column grid alignment, sticky header, and snapshot consistency (6.2217ms)
+✔ UPGRADE TEST 39: Responsive layout and container max-height containment across viewport dimensions (4.5589ms)
+✔ UPGRADE TEST 40: Freshness indicators distinguishing poll interval, update timestamp, and snapshot age (3.9099ms)
+✔ UPGRADE TEST 41: Action Center elevated wait alert generation, warning vs critical threshold classification (30s vs 60s), and counter consistency (6.4086ms)
+✔ UPGRADE TEST 42: Outbound Focus and Action Center consistent condition model (5.3534ms)
+✔ UPGRADE TEST 43: Alert deduplication, dismissal, Clear All, and escalation stability across polling cycles (4.1086ms)
+✔ UPGRADE TEST 44: Outbound Focus Section B 10 individual rounded cards with 5x2 grid layout and tooltips (4.6653ms)
+✔ UPGRADE TEST 45: Active Campaigns Command Summary table styling with hard box borders and middle order GOALS (4.7182ms)
+✔ UPGRADE TEST 46: Zoom-scaled resizing and drag expansion bounds (90% zoom allows expanding to bottom of viewport) (4.4136ms)
+✔ UPGRADE TEST 47: Outbound Operational Findings notification placed at top of operating panel for immediate operator visibility (9.4875ms)
+✔ EAST-2 UPGRADE 48: Manifest configuration and host permissions match target dialer (7.6457ms)
+✔ EAST-2 UPGRADE 49: Storage keys are strictly isolated with 'ct_east2_' prefix (10.6906ms)
+✔ EAST-2 UPGRADE 50: Inbound Queue Detail strictly preserves native CallTools Queue row order (Requirement 9) (4.1837ms)
+✔ EAST-2 UPGRADE 51: INBOUND_HEARTBEAT_STALE_MS is set to 15000ms to eliminate false stale warnings (7.9063ms)
+✔ EAST-2 UPGRADE 52: Outbound Focus Section B does NOT coerce unexposed campaign agent metrics to 0 (7.8192ms)
+✔ EAST-2 UPGRADE 53: Persistent Goals Engine establishes initial baseline on first observation without firing false alerts (3.9ms)
+✔ EAST-2 UPGRADE 54: Outbound and Inbound Goal increases trigger prominent persistent alert records (5.254ms)
+✔ EAST-2 UPGRADE 55: Action Center 'Clear All' clears temporary alerts but preserves persistent Goal alerts (4.9602ms)
+✔ EAST-2 UPGRADE 56: Clicking NOTED acknowledges and removes only that specific persistent alert (3.9449ms)
+✔ EAST-2 UPGRADE 57: Daily counter reset or decrease resets baseline without firing false alert (3.7052ms)
+✔ EAST-2 UPGRADE 58: Dashboard action buttons render valid labels without corrupted UTF-8 glyphs (11.9358ms)
+✔ EAST-2 UPGRADE 59: Cross-dialer isolation verifies host and storage separation from EAST-3 (8.0046ms)
+✔ EAST-2 UPGRADE 60: Initial baseline establishment (0 false alerts on cold start) (16.811ms)
+✔ EAST-2 UPGRADE 61: Normal increments within thresholds trigger zero alerts (4.8788ms)
+✔ EAST-2 UPGRADE 62: Normal decreases within thresholds trigger zero alerts (4.0587ms)
+✔ EAST-2 UPGRADE 63: Sudden increase observation 1 held in pending confirmation (4.4971ms)
+✔ EAST-2 UPGRADE 64: Consecutive observation 2 confirms sudden increase anomaly (Engine B) (6.3249ms)
+✔ EAST-2 UPGRADE 65: Sudden decrease in agent capacity triggers confirmed DECREASE alert (Engine C) (6.0523ms)
+✔ EAST-2 UPGRADE 66: Independent percentage and absolute threshold rules per metric profile (3.6335ms)
+✔ EAST-2 UPGRADE 67: Repeated polling duplicate suppression across identical snapshots (5.9941ms)
+✔ EAST-2 UPGRADE 68: Midnight reset safe downward adjustment with zero false alerts (4.4268ms)
+✔ EAST-2 UPGRADE 69: Unexpected counter reset outside midnight window flags RESET integrity alert (3.9979ms)
+✔ EAST-2 UPGRADE 70: Outbound campaign disappearance detection and confirmation (Engine D) (5.6407ms)
+✔ EAST-2 UPGRADE 71: Inbound queue disappearance detection and confirmation (Engine D) (6.7792ms)
+✔ EAST-2 UPGRADE 72: Missing native table container in DOM flags TABLE_MISSING alert immediately (4.3421ms)
+✔ EAST-2 UPGRADE 73: Stale source feed (>15s) flags FEED_STALE warning and suspends comparisons (5.8966ms)
+✔ EAST-2 UPGRADE 74: Authentication loss flags AUTH_LOST critical alert immediately (5.8518ms)
+✔ EAST-2 UPGRADE 75: Browser and extension restart survival reloads active alerts from storage (6.0606ms)
+✔ EAST-2 UPGRADE 76: Operator individual acknowledgement via [NOTED] dismisses active card and retains history (8.6425ms)
+✔ EAST-2 UPGRADE 77: Action Center Clear All preserves unacknowledged intelligence alerts (4.8731ms)
+✔ EAST-2 UPGRADE 78: Complete bidirectional storage and namespace isolation from EAST-3 (6.5763ms)
+✔ EAST-2 UPGRADE 79: Sales & Goals immediate increase detection (Engine A) without 2-observation delay (6.69ms)
+✔ EAST-2 UPGRADE 80: Both sources LIVE produces global LIVE state with green badge (4.2722ms)
+✔ EAST-2 UPGRADE 81: Outbound LIVE and Inbound connecting produces PARTIALLY CONNECTED global state (6.8384ms)
+✔ EAST-2 UPGRADE 82: Inbound LIVE and Outbound waiting produces PARTIALLY CONNECTED global state (8.1135ms)
+✔ EAST-2 UPGRADE 83: Inbound panel and global subtitle derive from identical inbound source state (6.675ms)
+✔ EAST-2 UPGRADE 84: Outbound heartbeat does NOT refresh inbound freshness timestamp (4.6223ms)
+✔ EAST-2 UPGRADE 85: Inbound heartbeat does NOT refresh outbound freshness timestamp (3.7481ms)
+✔ EAST-2 UPGRADE 86: Outbound LIVE and Inbound STALE produces PARTIALLY CONNECTED with stale warning (3.9763ms)
+✔ EAST-2 UPGRADE 87: Both sources STALE produces global STALE state with critical badge (6.5863ms)
+✔ EAST-2 UPGRADE 88: Auth loss on either source triggers AUTH LOST immediately (5.4773ms)
+✔ EAST-2 UPGRADE 89: Source error distinguishes table missing from auth loss (3.6508ms)
+✔ EAST-2 UPGRADE 90: Abandoned rate precision formats 9 / 39,997 as 0.02% (never 0.0%) (6.9031ms)
+✔ EAST-2 UPGRADE 91: Small nonzero rate (<0.01%) formats as <0.01% (never 0.00%) (4.0737ms)
+✔ EAST-2 UPGRADE 92: Zero rate formats as exactly 0.00% (3.5365ms)
+✔ EAST-2 UPGRADE 93: Connect rate calculates accurately from Human Connects ÷ Outbound Attempts (6.1645ms)
+✔ EAST-2 UPGRADE 94: Human Connects (1,790) and Agent Connects (1,814) retained as distinct metrics (4.3321ms)
+✔ EAST-2 UPGRADE 95: Inbound total reconciliation accounts for 477 = 333 answered + 100 not answered + 44 other/IVR (3.5207ms)
+✔ EAST-2 UPGRADE 96: Inbound Not Answered semantics uses primary callsTodayNotAnswered when present (3.7209ms)
+✔ EAST-2 UPGRADE 97: Inbound Not Answered semantics falls back to inboundNoAnswer when primary is null/empty (4.7452ms)
+✔ EAST-2 UPGRADE 98: Inbound Not Answered semantics NEVER sums primary and fallback (4.8096ms)
+✔ EAST-2 UPGRADE 99: Inbound Abandoned semantics: CallTools Queues table has no native Abandoned column (3.8053ms)
+✔ EAST-2 UPGRADE 100: Observer-only refresh executes 0 native .click() calls (3.7167ms)
+✔ EAST-2 UPGRADE 101: Dialer isolation verifies event names and namespaces (CT_EAST_2_UPDATE vs CT_EAST_3_UPDATE) (9.276ms)
+✔ EAST-2 UPGRADE 102: Missing denominator returns '—' without NaN or division by zero (3.6536ms)
+✔ EAST-2 UPGRADE 103: Missing numerator returns '—' without NaN (4.1407ms)
+✔ EAST-2 UPGRADE 104: Empty queue row renders '—' for missing metrics (5.4678ms)
+✔ EAST-2 UPGRADE 105: Queue memberships (73) explicitly labeled as memberships not unique agents (4.0535ms)
+✔ EAST-2 UPGRADE 106: Single active queue count correctly reflects filtered active queues (4.5895ms)
+✔ EAST-2 UPGRADE 107: Outbound contact pool inventory decrease tracking (13,844 -> 13,773) (5.422ms)
+✔ EAST-2 UPGRADE 108: Outbound attempts increment tracking (39,918 -> 39,997) (4.8909ms)
+✔ EAST-2 UPGRADE 109: Human connects increment tracking (1,782 -> 1,790) (3.5749ms)
+✔ EAST-2 UPGRADE 110: Agent connects increment tracking (1,808 -> 1,814) (4.3286ms)
+✔ EAST-2 UPGRADE 111: Action Center Clear All preserves unacknowledged Goal and Intelligence alerts (5.9087ms)
+✔ EAST-2 UPGRADE 112: Operator [NOTED] acknowledgement clears only targeted alert card (4.0228ms)
+✔ EAST-2 UPGRADE 113: Browser restart recovery restores active alerts from storage (4.092ms)
+✔ EAST-2 UPGRADE 114: East-2 and East-3 storage keys do not collide (4.3667ms)
+✔ EAST-2 UPGRADE 115: Read-only observer security verification (0 network calls, 0 native clicks) (7.3188ms)
+✔ EAST-2 UPGRADE 116: Outbound 5 + Inbound 1 produces combined Total Goals 6 with full breakdown (3.9174ms)
+✔ EAST-2 UPGRADE 117: Outbound 5 + Inbound 0 produces combined Total Goals 5 with full breakdown (6.0094ms)
+✔ EAST-2 UPGRADE 118: Outbound 0 + Inbound 1 produces combined Total Goals 1 with full breakdown (5.4986ms)
+✔ EAST-2 UPGRADE 119: Inbound unavailable produces partial Outbound 5 with unavailable note (4.2145ms)
+✔ EAST-2 UPGRADE 120: Outbound unavailable produces partial Inbound 1 with unavailable note (4.0546ms)
+✔ EAST-2 UPGRADE 121: Both unavailable produces '—' with awaiting note (5.5941ms)
+✔ EAST-2 UPGRADE 122: Repeated snapshots do not duplicate goals or trigger false goal increase alerts (3.5783ms)
+✔ EAST-2 UPGRADE 123: Manual refresh does not alter cumulative goal count or generate artificial increments (4.8454ms)
+✔ EAST-2 UPGRADE 124: Insights abandonRate card formats 13 / 44,369 as 0.03% (never truncated to 0.0%) (7.3969ms)
+✔ EAST-2 UPGRADE 125: East-2 and East-3 maintain strictly isolated goal baselines and storage namespaces (5.8885ms)
+✔ EAST-2 UPGRADE 126: tableReady accepts partial/loading rows as long as one named campaign exists (10.0618ms)
+✔ EAST-2 UPGRADE 127: cdk-column-goals_today is recognized by parser fallback classes (7.3939ms)
+✔ EAST-2 UPGRADE 128: Tab visibility change triggers immediate refresh without waiting for polling interval (6.5736ms)
+✔ EAST-2 UPGRADE 129: Feed states follow explicit hierarchy: LIVE, WAITING, CONNECTING, STALE, ERROR (9.4121ms)
+✔ EAST-2 UPGRADE 130: Inbound and outbound feed readiness remain decoupled during partial feed initialization (4.9388ms)
+✔ EAST-2 UPGRADE 131: Positive inventory change (+500 leads) triggers NEW LEADS ADDED alert with full metadata (7.5608ms)
+✔ EAST-2 UPGRADE 132: Large negative inventory change (-3,570 leads) debounced over 2 observations triggers LARGE LEAD INVENTORY REDUCTION (4.8379ms)
+✔ EAST-2 UPGRADE 133: Small negative change below threshold (e.g. -15 leads from normal dialing) does NOT trigger reduction alert (5.4805ms)
+✔ EAST-2 UPGRADE 134: Out of leads condition (inventory drops to 0) confirmed over 2 observations triggers critical OUT OF LEADS alert (7.7028ms)
+✔ EAST-2 UPGRADE 135: Newly appearing active campaign triggers CAMPAIGN ADDED lifecycle alert (4.8127ms)
+✔ EAST-2 UPGRADE 136: Disappearing active campaign missing for 2 consecutive cycles triggers CAMPAIGN DISAPPEARED alert (9.8649ms)
+✔ EAST-2 UPGRADE 137: Temporary missing DOM row on 1st observation is debounced and does NOT fire immediate alert (5.5043ms)
+✔ EAST-2 UPGRADE 138: Alert has unique stable event ID and persists across simulated page refresh (5.3832ms)
+✔ EAST-2 UPGRADE 139: Duplicate prevention: repeated polls with identical counts do not create duplicate alert records (6.5096ms)
+✔ EAST-2 UPGRADE 140: Clear All button clears ephemeral noise but NEVER erases unacknowledged Sales, Goals, or Lead alerts (4.7585ms)
+✔ EAST-2 UPGRADE 141: Individual [NOTED] button click acknowledges and dismisses that specific card with timestamp (6.6004ms)
+✔ EAST-2 UPGRADE 142: Once acknowledged via [NOTED], page reload does NOT resurrect the acknowledged alert (6.1728ms)
+✔ EAST-2 UPGRADE 143: Independent storage namespaces: acknowledging an EAST-2 alert does not affect EAST-3 alert state (4.9693ms)
+✔ EAST-2 UPGRADE 144: Changed campaign cells are parsed and published on observation cycle (6.201ms)
+✔ EAST-2 UPGRADE 145: Delayed native table / DOM replacement handled gracefully with recovery (7.0855ms)
+✔ EAST-2 UPGRADE 146: Decoupled feeds: when Outbound is LIVE and Inbound is WAITING, Outbound feed is LIVE and not demoted to WAITING (4.7244ms)
+✔ EAST-2 UPGRADE 147: Subtitle displays separate freshness and last successful native observation times (8.2053ms)
+✔ EAST-2 UPGRADE 148: Stale feed (>15s without observation) correctly transitions to STALE status (4.2815ms)
+✔ EAST-2 UPGRADE 149: .ct-actions toolbar enforces flex-wrap: nowrap so Reset control never wraps to a second row (5.1838ms)
+✔ EAST-2 UPGRADE 150: Layout defaults enforce wide container width (1420px - 1560px) on standard viewports (5.4622ms)
+✔ EAST-2 UPGRADE 151: Two-column balance: Outbound focus is on LEFT and Inbound focus is on RIGHT side-by-side (6.7897ms)
+✔ EAST-2 UPGRADE 152: Viewport resize and zoom normalization prevents clipping or layout corruption (6.0309ms)
+✔ EAST-2 UPGRADE 153: Strict observer-only: zero native clicks, zero native form submissions, zero operational mutations (5.6293ms)
+✔ EAST-2 UPGRADE 154: Strict read-only: no fetch or XMLHttpRequest network calls for operational metrics (4.508ms)
+✔ EAST-2 UPGRADE 155: Strict URL host boundary: EAST-2 only matches east-2.calltools.io and rejects east-3.calltools.io (4.5674ms)
+ℹ tests 155
+ℹ suites 0
+ℹ pass 155
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1696.2977
+

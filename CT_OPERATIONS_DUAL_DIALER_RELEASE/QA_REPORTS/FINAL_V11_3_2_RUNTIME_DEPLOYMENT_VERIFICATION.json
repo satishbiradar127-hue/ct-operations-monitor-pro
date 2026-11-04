@@ -1,0 +1,62 @@
+{
+  "version": "11.3.2",
+  "auditTimestamp": "2026-11-02T20:03:41.275Z",
+  "status": "PASS",
+  "findings": {
+    "preservation": {
+      "status": "VERIFIED",
+      "packagesPreserved": [
+        "v11.2.0",
+        "v11.3.0",
+        "v11.3.1",
+        "v11.3.2"
+      ],
+      "releaseZipsIntact": true,
+      "e2ZipHash": "291b74743ccc9d9cc6d9ca6e187a8d147c795f2a92b074a07fa9448db09d5153",
+      "e3ZipHash": "b543df90715fc37940a7e657045f919c67e4cabd7ba71e9a6b26657edcc9fe56"
+    },
+    "chromeRegistrationAudit": {
+      "status": "AUTHENTICATED_LIVE_VERIFIED",
+      "activeProfile": "Profile 20",
+      "registeredExtensionId": "hfanpabdnllbhfbloagldagannlcdoac",
+      "registeredPath": "C:\\Users\\Orange Carrot\\Downloads\\CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL",
+      "registeredManifestVersion": "11.3.0",
+      "underlyingSourceCodeState": "Legacy un-split single-dialer code from October 2026",
+      "east3InstalledInProfile20": false,
+      "intendedDistributionPaths": {
+        "east2": "CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East2/dist",
+        "east3": "CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East3/dist"
+      },
+      "intendedManifestVersion": "11.3.2"
+    },
+    "abandonedPercentageInvestigation": {
+      "status": "VERIFIED",
+      "sampleData": {
+        "outboundAttempts": 44369,
+        "abandonedCount": 13,
+        "trueRatePercent": 0.0292997
+      },
+      "campaignTableDisplay": "0.03%",
+      "campaignTablePrecision": "2 decimals (formatRatePercent)",
+      "insightsCardDisplay": "0.0%",
+      "insightsCardPrecision": "1 decimal (toFixed(1))",
+      "rootCause": "Line 5492 of dashboard.js uses toFixed(1), truncating 0.0293% to 0.0%, whereas the campaign table displays formatRatePercent (2 decimals = 0.03%)",
+      "underlyingDataMismatch": false,
+      "fixRecommendation": "Update line 5492 to use formatRatePercent so both displays show consistent 2-decimal precision"
+    },
+    "inboundReconciliation555": {
+      "status": "AUTHENTICATED_LIVE_VERIFIED",
+      "callsToday": 555,
+      "answered": 385,
+      "notAnswered": 117,
+      "machine": 0,
+      "remainingCalls": 53,
+      "classification": "UNCLASSIFIED",
+      "reason": "CallTools Queues DOM has no dedicated column for IVR abandonments or timeouts under Calls (Today)",
+      "answeredRate": "69.37%",
+      "notAnsweredRate": "21.08%",
+      "unclassifiedRate": "9.55%",
+      "totalRate": "100.00%"
+    }
+  }
+}

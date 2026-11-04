@@ -1,0 +1,88 @@
+{
+  "mission": "MASTER FINAL REPAIR MISSION — CT OPERATIONS MONITOR v11.3.1",
+  "auditTimestamp": "2026-11-02T13:52:00Z",
+  "status": "VERIFIED_AND_RESOLVED",
+  "version": "11.3.1",
+  "editions": {
+    "east2": {
+      "productName": "CT Operations Monitor — East-2",
+      "allowedHost": "east-2.calltools.io",
+      "prefix": "ct_east2_",
+      "events": {
+        "update": "CT_EAST_2_UPDATE",
+        "feedStatus": "CT_EAST_2_FEED_STATUS",
+        "requestRefresh": "CT_EAST_2_REQUEST_REFRESH",
+        "requestInboundRefresh": "CT_EAST_2_REQUEST_INBOUND_REFRESH"
+      },
+      "tests": {
+        "total": 101,
+        "run1Pass": 101,
+        "run2Pass": 101,
+        "failures": 0,
+        "skipped": 0,
+        "passRate": "100%"
+      },
+      "sha256": "79f2445ec9d4cb3b4346071cb0181667a68ca7a7e1ae7d0cc280f36e072300b7"
+    },
+    "east3": {
+      "productName": "CT Operations Monitor — East-3",
+      "allowedHost": "east-3.calltools.io",
+      "prefix": "ct_east3_",
+      "events": {
+        "update": "CT_EAST_3_UPDATE",
+        "feedStatus": "CT_EAST_3_FEED_STATUS",
+        "requestRefresh": "CT_EAST_3_REQUEST_REFRESH",
+        "requestInboundRefresh": "CT_EAST_3_REQUEST_INBOUND_REFRESH"
+      },
+      "tests": {
+        "total": 101,
+        "run1Pass": 101,
+        "run2Pass": 101,
+        "failures": 0,
+        "skipped": 0,
+        "passRate": "100%"
+      },
+      "sha256": "7deddb9306b5eb153e747b5772145e584baf94f37efa962d34dc4e6972027895"
+    }
+  },
+  "issuesResolved": [
+    {
+      "id": "ISSUE_1_WAITING_STATUS",
+      "summary": "Dashboard stuck on WAITING despite displaying operational metrics",
+      "rootCause": "East-3 dashboard.js had event listeners hardcoded to CT_EAST_2_* while content.js dispatched CT_EAST_3_*, preventing live update and heartbeat receipt. In addition, unchanged polling ticks suppressed observation timestamp updates in both dialers.",
+      "resolution": "Enforced dialer-specific event constants and implemented a deterministic 6-state connection state machine updating lastSuccessfulObservationAt on every observation tick."
+    },
+    {
+      "id": "ISSUE_2_NATIVE_REFRESH_CLICKS",
+      "summary": "Native CallTools Refresh button clicks during polling and manual refresh",
+      "rootCause": "content.js contained 4 call sites to button.click() on findNativeRefreshButton() and an automated 5-second periodic click loop.",
+      "resolution": "Permanently removed findNativeRefreshButton, refreshButtonBusy, finishRefreshVerification, and requestNativeRefresh. Replaced with 100% passive DOM re-reads via readAndPublish."
+    },
+    {
+      "id": "ISSUE_3_INBOUND_METRIC_SEMANTICS",
+      "summary": "Inbound Not Answered vs Inbound No Answer fallback and Abandoned mapping",
+      "rootCause": "Ambiguity in native table header hierarchy between primary and fallback columns.",
+      "resolution": "Enforced strict priority: callsTodayNotAnswered (primary) -> inboundNoAnswer (fallback); never summed; never mapped to Abandoned; missing rendered as '—'."
+    }
+  ],
+  "securityAudit": {
+    "networkCalls": 0,
+    "fetch": 0,
+    "xhr": 0,
+    "webSocket": 0,
+    "nativeClicks": 0,
+    "formSubmits": 0,
+    "readOnlyEnforced": true
+  },
+  "connectionStateMachine": {
+    "states": [
+      { "name": "INITIALIZING", "badge": "INITIALIZING", "tone": "is-warning" },
+      { "name": "WAITING", "badge": "WAITING", "tone": "is-warning" },
+      { "name": "LIVE", "badge": "LIVE", "tone": "is-good", "staleThresholdMs": 15000 },
+      { "name": "STALE", "badge": "STALE", "tone": "is-critical", "triggersAlert": "SOURCE_STALE" },
+      { "name": "AUTH LOST", "badge": "AUTH LOST", "tone": "is-critical" },
+      { "name": "SOURCE ERROR", "badge": "SOURCE ERROR", "tone": "is-critical" }
+    ]
+  }
+}
+

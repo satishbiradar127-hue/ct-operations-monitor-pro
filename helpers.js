@@ -1,6 +1,6 @@
 // ===============================
-// CT Operations Monitor Helpers
-// Version 3.0
+// CT Operations Monitor Helpers (EAST-2)
+// Version 11.2.0
 // ===============================
 
 window.CT = window.CT || {};
@@ -24,7 +24,6 @@ CT.get = function (parent, selector) {
  * Escape HTML.
  */
 CT.escape = function (value) {
-
     return String(value ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -72,16 +71,11 @@ CT.parseMetric = function (value) {
  * Return status color.
  */
 CT.waitColor = function (wait) {
-
     const n = parseFloat(wait);
-
     if (isNaN(n)) return "#777";
-
     if (n >= 60) return "#d32f2f";
-
     if (n >= 30) return "#f57c00";
-
     return "#2e7d32";
 };
 
-console.log("Helpers Loaded");
+console.log("Helpers Loaded (EAST-2)");

@@ -1,0 +1,104 @@
+/* CT Operations Monitor (EAST-3) Styles */
+/* Base injected styles are dynamically scoped to #ct-operations-dashboard-east3 */
+.ct-dialer-tag {
+    display: inline-block;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: 950;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+    letter-spacing: .06em;
+}
+.ct-dialer-east2 {
+    background: #0284c7;
+    color: #ffffff;
+    border: 1px solid #38bdf8;
+}
+.ct-dialer-east3 {
+    background: #7c3aed;
+    color: #ffffff;
+    border: 1px solid #a78bfa;
+}
+.ct-persistent-goals-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.ct-persistent-goal-card {
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(16, 185, 129, 0.14));
+    border: 1.5px solid #f59e0b;
+    box-shadow: 0 4px 16px rgba(245, 158, 11, 0.15);
+    color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ct-goal-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ct-goal-badge {
+    background: #f59e0b;
+    color: #0f172a;
+    font-weight: 950;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+.ct-goal-direction-tag {
+    background: rgba(148, 163, 184, 0.25);
+    color: #cbd5e1;
+    font-size: 8.5px;
+    font-weight: 850;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+.ct-goal-time {
+    margin-left: auto;
+    font-size: 9px;
+    color: #94a3b8;
+}
+.ct-goal-card-body {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+.ct-goal-target-name {
+    font-size: 13px;
+    font-weight: 850;
+    color: #f1f5f9;
+}
+.ct-goal-stat-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+}
+.ct-goal-increase {
+    font-weight: 950;
+    color: #34d399;
+}
+.ct-btn-noted {
+    align-self: flex-end;
+    padding: 4px 12px;
+    font-size: 10px;
+    font-weight: 950;
+    background: #059669;
+    color: #ffffff;
+    border: 1px solid #34d399;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+.ct-btn-noted:hover {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}

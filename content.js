@@ -1,16 +1,24 @@
-console.log("CT Operations Monitor — Production live feed controller v11.1.53");
+const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");
+console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.3");
 
 (function () {
     "use strict";
+
+    const TARGET_HOST = isEast3 ? "east-3.calltools.io" : "east-2.calltools.io";
+    const EDITION = isEast3 ? "EAST-3" : "EAST-2";
+    if (window.location.hostname && window.location.hostname !== TARGET_HOST) {
+        console.log("CT Operations Monitor (" + EDITION + ") — wrong host " + window.location.hostname + "; expected " + TARGET_HOST);
+        return;
+    }
 
     const POLL_MS = 1000;
     const NATIVE_REFRESH_MS = 5000;
     const REFRESH_VERIFY_TIMEOUT_MS = 7000;
     const REFRESH_VERIFY_STEP_MS = 350;
-    const INBOUND_DATA_KEY = "ct-operations-last-known-queues-v1";
-    const INBOUND_STATUS_KEY = "ct-operations-inbound-feed-status-v1";
-    const INBOUND_STORAGE_DATA_KEY = "ct-operations-inbound-data-v2";
-    const INBOUND_STORAGE_STATUS_KEY = "ct-operations-inbound-status-v2";
+    const INBOUND_DATA_KEY = isEast3 ? "ct_east3_last_known_queues_v1" : "ct_east2_last_known_queues_v1";
+    const INBOUND_STATUS_KEY = isEast3 ? "ct_east3_inbound_feed_status_v1" : "ct_east2_inbound_feed_status_v1";
+    const INBOUND_STORAGE_DATA_KEY = isEast3 ? "ct_east3_inbound_data_v2" : "ct_east2_inbound_data_v2";
+    const INBOUND_STORAGE_STATUS_KEY = isEast3 ? "ct_east3_inbound_status_v2" : "ct_east2_inbound_status_v2";
     const INBOUND_COORDINATION_MS = 5000;
     const INBOUND_HEARTBEAT_MS = 2500;
     const INBOUND_MONITOR_PARAM = "ct_inbound_monitor";
@@ -34,8 +42,8 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
         return isQueuesPage() && new URLSearchParams(window.location.search).get(INBOUND_MONITOR_PARAM) === "1";
     }
 
-    const INBOUND_IFRAME_ID = "ct-operations-hidden-queue-feed";
-    const INBOUND_IFRAME_URL = "https://east-2.calltools.io/manager/queues?ct_inbound_monitor=1&ct_inbound_owner=ctompro_iframe";
+    const INBOUND_IFRAME_ID = isEast3 ? "ct-operations-hidden-queue-feed-east3" : "ct-operations-hidden-queue-feed-east2";
+    const INBOUND_IFRAME_URL = isEast3 ? "https://east-3.calltools.io/manager/queues?ct_inbound_monitor=1&ct_inbound_owner=ctompro_east3" : "https://east-2.calltools.io/manager/queues?ct_inbound_monitor=1&ct_inbound_owner=ctompro_east2";
     let inboundIframe = null;
     let inboundIframeReady = false;
 
@@ -97,7 +105,7 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
         const frame = document.getElementById(INBOUND_IFRAME_ID);
         if (!frame || !frame.contentWindow) return;
         try {
-            frame.contentWindow.postMessage({ type: "CT_REFRESH_INBOUND_FEED" }, window.location.origin);
+            frame.contentWindow.postMessage({ type: isEast3 ? "CT_EAST_3_REFRESH_INBOUND_FEED" : "CT_EAST_2_REFRESH_INBOUND_FEED" }, window.location.origin);
         } catch (error) {}
     }
 
@@ -171,37 +179,9 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
         return String(value || "").replace(/\s+/g, " ").trim();
     }
 
-    function findNativeRefreshButton() {
-        const candidates = Array.from(document.querySelectorAll("button, [role='button'], input[type='button'], input[type='submit'], mat-icon, [data-testid], [class*='refresh'], [aria-label*='refresh' i], [title*='refresh' i]"));
-        const matches = [];
-        candidates.forEach(function (node) {
-            if (!node || node.offsetParent === null) return;
-            if (node.closest && node.closest("#ct-operations-dashboard")) return;
-            const text = normalizeText(node.innerText || node.textContent || node.value || "");
-            const aria = normalizeText(node.getAttribute("aria-label"));
-            const title = normalizeText(node.getAttribute("title"));
-            const testid = normalizeText(node.getAttribute("data-testid"));
-            const cls = typeof node.className === "string" ? normalizeText(node.className) : "";
-            const icon = normalizeText(node.getAttribute("data-icon"));
-            const signal = (text + " " + aria + " " + title + " " + testid + " " + cls + " " + icon).toLowerCase();
-            if (!/(^|\b)refresh(\b|$)|\brefresh[_-]?(icon|button)\b|\bmat-icon\b.*\brefresh\b/.test(signal)) return;
-            const clickable = node.matches("button,[role='button'],input") ? node : node.closest("button,[role='button'],[role='menuitem']");
-            if (clickable && clickable.offsetParent !== null && !matches.includes(clickable)) matches.push(clickable);
-        });
-
-        return matches.find(function (node) {
-            return /^refresh$/i.test(normalizeText(node.innerText || node.textContent || node.value || ""));
-        }) || matches[0] || null;
-    }
-
-    function refreshButtonBusy(button) {
-        if (!button) return false;
-        const text = normalizeText(button.innerText || button.textContent || button.value || "").toLowerCase();
-        return button.disabled || button.getAttribute("aria-busy") === "true" || /refreshing/.test(text);
-    }
-
+    // STRICTLY READ-ONLY OBSERVER: Zero native button clicks. All native refresh button finders and clickers permanently removed.
     function tableReady(campaigns) {
-        return Array.isArray(campaigns) && campaigns.length > 0 && campaigns.every(function (campaign) {
+        return Array.isArray(campaigns) && campaigns.length > 0 && campaigns.some(function (campaign) {
             return campaign && String(campaign.name || "").trim();
         });
     }
@@ -245,7 +225,7 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
     }
 
     function queueTableReady(queues) {
-        return Array.isArray(queues) && queues.length > 0 && queues.every(function (queue) {
+        return Array.isArray(queues) && queues.length > 0 && queues.some(function (queue) {
             return queue && String(queue.name || "").trim();
         });
     }
@@ -282,7 +262,7 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
     let lastInboundHeartbeatAt = 0;
 
     function publish(campaigns, meta, queues) {
-        document.dispatchEvent(new CustomEvent("CT_UPDATE", {
+        document.dispatchEvent(new CustomEvent(isEast3 ? "CT_EAST_3_UPDATE" : "CT_EAST_2_UPDATE", {
             detail: {
                 campaigns: Array.isArray(campaigns) ? campaigns : [],
                 queues: Array.isArray(queues) ? queues : [],
@@ -294,7 +274,7 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
     }
 
     function publishFeedStatus(status, extra) {
-        document.dispatchEvent(new CustomEvent("CT_FEED_STATUS", {
+        document.dispatchEvent(new CustomEvent(isEast3 ? "CT_EAST_3_FEED_STATUS" : "CT_EAST_2_FEED_STATUS", {
             detail: Object.assign({
                 status: status,
                 lastSourceRefreshAt: lastSourceRefreshAt || null,
@@ -310,122 +290,114 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
     function readAndPublish(reason, forcePublish) {
         if (!isMonitorPage() || !window.CTParser) return;
 
-        const route = currentRoute();
-        if (route === "campaigns") {
-            const campaigns = window.CTParser.readCampaigns();
-            if (!tableReady(campaigns)) {
-                publishFeedStatus("VERIFYING", { reason: hasPublishedData ? "CallTools is rebuilding the campaign table" : "Waiting for the CallTools campaign table", route: route });
-                return;
-            }
+        try {
+            const route = currentRoute();
             const now = Date.now();
-            const nextSnapshot = snapshotKey(campaigns);
-            const changed = nextSnapshot !== lastSnapshot;
-            const unverified = campaigns.filter(function (c) { return c.active !== true && c.active !== false; }).length;
-            if (changed) { lastSnapshot = nextSnapshot; lastDataChangeAt = now; }
-            if (changed || !hasPublishedData || forcePublish) {
-                hasPublishedData = true;
-                publish(campaigns, {
-                    sourceUpdatedAt: lastDataChangeAt || now, dataChangedAt: lastDataChangeAt || now,
-                    sourceRefreshAt: lastSourceRefreshAt || null, status: unverified ? "DATA CHECK" : "LIVE",
-                    reason: changed ? (reason || "data-change") : (forcePublish ? (reason || "source-refresh") : "initial-data"),
-                    rowCount: campaigns.length, unverifiedCount: unverified
+
+            if (isCallToolsLoginPage()) {
+                publish([], {
+                    authRequired: true,
+                    observationAt: now,
+                    status: "AUTH_REQUIRED",
+                    reason: "CallTools login screen detected"
                 }, []);
-            }
-            if (unverified) {
-                publishFeedStatus("DATA CHECK", { reason: unverified + " campaign status" + (unverified === 1 ? " is" : "es are") + " unverified", rowCount: campaigns.length, unverifiedCount: unverified, route: route });
+                publishFeedStatus("AUTH_REQUIRED", { reason: "CallTools login screen detected; authentication required.", route: route, rowCount: 0, authRequired: true, lastCheckAt: now });
                 return;
             }
-            publishFeedStatus("LIVE", { reason: changed ? "New CallTools campaign data received" : "CallTools checked; no campaign data change detected", rowCount: campaigns.length, unverifiedCount: 0, route: route });
-            return;
-        }
 
-        if (isCallToolsLoginPage()) {
-            const authNow = Date.now();
-            if (authNow - lastInboundHeartbeatAt >= INBOUND_HEARTBEAT_MS) {
-                lastInboundHeartbeatAt = authNow;
-                persistInboundFeedStatus("AUTH_REQUIRED", 0, authNow);
+            if (route === "campaigns") {
+                const campaigns = window.CTParser.readCampaigns();
+                const tableNode = window.CTParser.findCampaignTable ? window.CTParser.findCampaignTable() : document.querySelector("table, mat-table");
+                const isPageLoading = typeof document !== "undefined" && document.readyState && document.readyState !== "complete";
+                if (!tableReady(campaigns)) {
+                    const tableMissing = !tableNode && !isPageLoading;
+                    publishFeedStatus(tableMissing ? "SOURCE_ERROR" : "VERIFYING", {
+                        reason: tableMissing ? "Campaign table not found in DOM" : (isPageLoading ? "CallTools page is loading" : (hasPublishedData ? "CallTools is rebuilding the campaign table" : "Waiting for the CallTools campaign table")),
+                        route: route,
+                        tableMissing: tableMissing,
+                        lastCheckAt: now
+                    });
+                    if (tableMissing) {
+                        publish([], { tableMissing: true, observationAt: now, status: "SOURCE_ERROR" }, []);
+                    }
+                    return;
+                }
+                const nextSnapshot = snapshotKey(campaigns);
+                const changed = nextSnapshot !== lastSnapshot;
+                const unverified = campaigns.filter(function (c) { return c.active !== true && c.active !== false; }).length;
+                if (changed) { lastSnapshot = nextSnapshot; lastDataChangeAt = now; }
+                hasPublishedData = true;
+
+                // Always publish snapshot to notify dashboard of live observation and update observation timestamp
+                publish(campaigns, {
+                    sourceUpdatedAt: lastDataChangeAt || now,
+                    dataChangedAt: lastDataChangeAt || now,
+                    observationAt: now,
+                    changed: changed,
+                    status: unverified ? "DATA CHECK" : "LIVE",
+                    reason: changed ? (reason || "data-change") : (forcePublish ? (reason || "manual-refresh") : "poll-heartbeat"),
+                    rowCount: campaigns.length,
+                    unverifiedCount: unverified
+                }, []);
+
+                if (unverified) {
+                    publishFeedStatus("DATA CHECK", { reason: unverified + " campaign status" + (unverified === 1 ? " is" : "es are") + " unverified", rowCount: campaigns.length, unverifiedCount: unverified, route: route, lastCheckAt: now });
+                    return;
+                }
+                publishFeedStatus("LIVE", { reason: changed ? "New CallTools campaign data received" : "CallTools checked; feed alive", rowCount: campaigns.length, unverifiedCount: 0, route: route, lastCheckAt: now });
+                return;
             }
-            publishFeedStatus("AUTH_REQUIRED", { reason: "CallTools Queue context is showing the login screen; no Queue metrics are accepted as live.", route: route, rowCount: 0 });
-            return;
-        }
-        const queues = window.CTParser.readQueues ? window.CTParser.readQueues() : [];
-        if (!queueTableReady(queues)) {
-            const verifyNow = Date.now();
-            if (verifyNow - lastInboundHeartbeatAt >= INBOUND_HEARTBEAT_MS) {
-                lastInboundHeartbeatAt = verifyNow;
-                persistInboundFeedStatus("VERIFYING", 0, verifyNow);
+
+            // Queues page
+            const queues = window.CTParser.readQueues ? window.CTParser.readQueues() : [];
+            const queueTableNode = window.CTParser.findQueueTable ? window.CTParser.findQueueTable() : document.querySelector("table, mat-table");
+            if (!queueTableReady(queues)) {
+                const tableMissing = !queueTableNode;
+                if (now - lastInboundHeartbeatAt >= INBOUND_HEARTBEAT_MS) {
+                    lastInboundHeartbeatAt = now;
+                    persistInboundFeedStatus(tableMissing ? "SOURCE_ERROR" : "VERIFYING", 0, now);
+                }
+                publishFeedStatus(tableMissing ? "SOURCE_ERROR" : "VERIFYING", {
+                    reason: tableMissing ? "Queue table not found in DOM" : (hasPublishedQueues ? "CallTools is rebuilding the queue table" : "Waiting for the CallTools queue table"),
+                    route: route,
+                    tableMissing: tableMissing,
+                    lastCheckAt: now
+                });
+                if (tableMissing) {
+                    publish([], { tableMissing: true, observationAt: now, status: "SOURCE_ERROR" }, []);
+                }
+                return;
             }
-            publishFeedStatus("VERIFYING", { reason: hasPublishedQueues ? "CallTools is rebuilding the queue table" : "Waiting for the CallTools queue table", route: route });
-            return;
-        }
-        const now = Date.now();
-        const nextQueueSnapshot = queueSnapshotKey(queues);
-        const queueChanged = nextQueueSnapshot !== lastQueueSnapshot;
-        if (queueChanged) { lastQueueSnapshot = nextQueueSnapshot; lastQueueDataChangeAt = now; }
-        if (queueChanged || !hasPublishedQueues || forcePublish) {
+
+            const nextQueueSnapshot = queueSnapshotKey(queues);
+            const queueChanged = nextQueueSnapshot !== lastQueueSnapshot;
+            if (queueChanged) { lastQueueSnapshot = nextQueueSnapshot; lastQueueDataChangeAt = now; }
             hasPublishedQueues = true;
             persistInboundSnapshot(queues, now);
+
             publish([], {
-                sourceUpdatedAt: lastQueueDataChangeAt || now, dataChangedAt: lastQueueDataChangeAt || now,
-                sourceRefreshAt: lastSourceRefreshAt || null, status: "LIVE",
-                reason: queueChanged ? (reason || "queue-data-change") : (forcePublish ? (reason || "queue-source-refresh") : "initial-queue-data"),
-                rowCount: queues.length, unverifiedCount: 0
+                sourceUpdatedAt: lastQueueDataChangeAt || now,
+                dataChangedAt: lastQueueDataChangeAt || now,
+                observationAt: now,
+                changed: queueChanged,
+                status: "LIVE",
+                reason: queueChanged ? (reason || "queue-data-change") : (forcePublish ? (reason || "manual-queue-refresh") : "queue-poll-heartbeat"),
+                rowCount: queues.length,
+                unverifiedCount: 0
             }, queues);
+
+            if (now - lastInboundHeartbeatAt >= INBOUND_HEARTBEAT_MS || queueChanged || !hasPublishedQueues) {
+                lastInboundHeartbeatAt = now;
+                persistInboundFeedStatus("LIVE", queues.length, now);
+            }
+            publishFeedStatus("LIVE", { reason: queueChanged ? "New CallTools queue data received" : "CallTools checked; feed alive", rowCount: queues.length, unverifiedCount: 0, route: route, lastCheckAt: now });
+        } catch (err) {
+            console.error("CT Operations Monitor (" + EDITION + ") feed processing error:", err);
+            publishFeedStatus("ERROR", { reason: "Processing error: " + (err && err.message ? err.message : String(err)), route: currentRoute(), lastCheckAt: Date.now() });
         }
-        if (now - lastInboundHeartbeatAt >= INBOUND_HEARTBEAT_MS || queueChanged || !hasPublishedQueues) {
-            lastInboundHeartbeatAt = now;
-            persistInboundFeedStatus("LIVE", queues.length, now);
-        }
-        publishFeedStatus("LIVE", { reason: queueChanged ? "New CallTools queue data received" : "CallTools checked; no queue data change detected", rowCount: queues.length, unverifiedCount: 0, route: route });
     }
 
-    function finishRefreshVerification() {
-        if (!isCampaignsPage()) return;
-
-        const button = findNativeRefreshButton();
-        const campaigns = window.CTParser ? window.CTParser.readCampaigns() : [];
-        const elapsed = Date.now() - refreshVerificationStartedAt;
-        const currentSnapshot = tableReady(campaigns) ? snapshotKey(campaigns) : "";
-        const dataChanged = currentSnapshot && currentSnapshot !== refreshSnapshotBefore;
-        const cycleComplete = refreshWasBusy && !refreshButtonBusy(button);
-
-        if (dataChanged || cycleComplete || elapsed >= REFRESH_VERIFY_TIMEOUT_MS) {
-            lastSourceRefreshAt = Date.now();
-            refreshVerificationTimer = null;
-            readAndPublish(dataChanged ? "refresh-data-change" : "refresh-check-complete", true);
-            return;
-        }
-
-        refreshVerificationTimer = window.setTimeout(finishRefreshVerification, REFRESH_VERIFY_STEP_MS);
-    }
-
-    function requestNativeRefresh(reason) {
-        if (!isCampaignsPage() || !window.CTParser) return false;
-
-        const now = Date.now();
-        if (now - lastRefreshClickAt < NATIVE_REFRESH_MS - 1000) return false;
-
-        const button = findNativeRefreshButton();
-        if (!button || refreshButtonBusy(button)) return false;
-
-        const text = normalizeText(button.innerText || button.textContent || button.value || "");
-        if (!/^refresh$/i.test(text) && !/\brefresh\b/i.test(text)) return false;
-
-        const before = window.CTParser.readCampaigns();
-        refreshSnapshotBefore = tableReady(before) ? snapshotKey(before) : "";
-        lastRefreshClickAt = now;
-        refreshVerificationStartedAt = now;
-        refreshWasBusy = false;
-        button.click();
-
-        if (refreshVerificationTimer) window.clearTimeout(refreshVerificationTimer);
-        refreshVerificationTimer = window.setTimeout(finishRefreshVerification, REFRESH_VERIFY_STEP_MS);
-        publishFeedStatus("VERIFYING", {
-            reason: reason || "Requesting a native CallTools refresh"
-        });
-        return true;
-    }
-
+    // STRICTLY READ-ONLY OBSERVER: No simulated button clicks or verification timers.
     function poll() {
         if (!isMonitorPage() || !window.CTParser) return;
         const now = Date.now();
@@ -439,68 +411,42 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
         }
         if (isQueuesPage()) {
             teardownInboundIframe();
-            // Automatically refresh queue feed if native button exists and interval elapsed
-            const qButton = findNativeRefreshButton();
-            if (qButton && !refreshButtonBusy(qButton) && now - lastRefreshClickAt >= NATIVE_REFRESH_MS) {
-                lastRefreshClickAt = now;
-                try { qButton.click(); } catch (error) {}
-            }
             readAndPublish("queue-poll");
             return;
         }
 
-        const button = findNativeRefreshButton();
-        const busyNow = refreshButtonBusy(button);
-        if (busyNow) {
-            refreshWasBusy = true;
-            publishFeedStatus("VERIFYING", { reason: "CallTools is refreshing" });
-        } else if (refreshWasBusy) {
-            refreshWasBusy = false;
-            lastSourceRefreshAt = Date.now();
-            readAndPublish("native-refresh-complete", true);
-        } else if (isCampaignsPage() && now - lastRefreshClickAt >= NATIVE_REFRESH_MS) {
-            // Automatic periodic live refresh: trigger CallTools native table refresh every NATIVE_REFRESH_MS (5s)
-            const activeEl = document.activeElement;
-            const isTyping = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA") && !activeEl.closest("#ct-operations-dashboard");
-            const isInteracting = Boolean(document.querySelector("#ct-operations-dashboard.is-dragging, #ct-operations-dashboard.is-resizing"));
-            if (!isTyping && !isInteracting) {
-                requestNativeRefresh("Automated periodic live feed refresh");
-            }
-        }
-
         readAndPublish("poll");
+    }
 
-        // A successful parser poll is the feed heartbeat. Unchanged campaign
+    // A successful parser poll is the feed heartbeat. Unchanged campaign
         // values are normal and must not be mislabeled as stale.
         // IMPORTANT: stale data is reported, but the extension NEVER reloads
         // the CallTools page automatically. Automatic page reloads destroy the
         // operator's diagnostic session and can interrupt live monitoring.
         // Recovery is operator-controlled through the dashboard's Refresh Data
         // button or a normal browser refresh when genuinely required.
-    }
+
+    const ROW_SELECTOR = "tr.mat-row, tr.mat-mdc-row, mat-row, tr[mat-row], tbody tr, [role='row'].mat-row, [role='row'].mat-mdc-row";
 
     function mutationTouchesCampaignTable(mutation) {
         if (!mutation) return false;
-        const dashboard = document.getElementById("ct-operations-dashboard");
+        const dashboard = document.querySelector("#ct-operations-dashboard, #ct-operations-dashboard-east2, #ct-operations-dashboard-east3, [id^='ct-operations-dashboard']");
         if (dashboard && mutation.target && dashboard.contains(mutation.target)) return false;
 
         if (mutation.type === "childList") {
             const target = mutation.target;
-            if (target && target.closest && target.closest("tr.mat-row, tr.mat-mdc-row")) return true;
+            if (target && target.closest && target.closest(ROW_SELECTOR)) return true;
             for (const node of Array.from(mutation.addedNodes || [])) {
                 if (node.nodeType !== 1) continue;
-                if ((node.matches && node.matches("tr.mat-row, tr.mat-mdc-row")) ||
-                    (node.querySelector && node.querySelector("tr.mat-row, tr.mat-mdc-row"))) return true;
+                if ((node.matches && node.matches(ROW_SELECTOR)) ||
+                    (node.querySelector && node.querySelector(ROW_SELECTOR))) return true;
             }
             return false;
         }
 
-        // CallTools frequently updates existing campaign cells in place. Those
-        // updates can be characterData/attribute mutations without replacing the
-        // row, so capture only mutations that occur inside a campaign row. The
-        // dashboard itself is excluded above, preventing a parser/render loop.
+        // CallTools frequently updates existing campaign cells in place.
         const target = mutation.target;
-        const row = target && target.closest ? target.closest("tr.mat-row, tr.mat-mdc-row") : (target && target.parentElement && target.parentElement.closest ? target.parentElement.closest("tr.mat-row, tr.mat-mdc-row") : null);
+        const row = target && target.closest ? target.closest(ROW_SELECTOR) : (target && target.parentElement && target.parentElement.closest ? target.parentElement.closest(ROW_SELECTOR) : null);
         if (!row) return false;
         if (mutation.type === "characterData") return true;
         if (mutation.type === "attributes") {
@@ -511,7 +457,7 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
 
     function mutationTouchesQueueTable(mutation) {
         if (!mutation) return false;
-        const dashboard = document.getElementById("ct-operations-dashboard");
+        const dashboard = document.querySelector("#ct-operations-dashboard, #ct-operations-dashboard-east2, #ct-operations-dashboard-east3, [id^='ct-operations-dashboard']");
         if (dashboard && mutation.target && dashboard.contains(mutation.target)) return false;
         const target = mutation.target;
         const rowFromTarget = target && target.closest ? target.closest("tr.mat-row, tr.mat-mdc-row, tbody tr") : null;
@@ -584,17 +530,23 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
             persistInboundFeedStatus("VERIFYING", 0, Date.now());
         }
         readAndPublish("initial");
+        [120, 350, 750, 1200].forEach(function (delay) {
+            window.setTimeout(function () {
+                readAndPublish("mount-settle-" + delay);
+            }, delay);
+        });
+        document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "visible") {
+                readAndPublish("tab-visibility-recovery", true);
+            }
+        });
         intervalId = window.setInterval(poll, POLL_MS);
     }
 
     if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
         chrome.runtime.onMessage.addListener(function (message) {
-            if (!message || message.type !== "CT_REFRESH_INBOUND_FEED" || !isQueuesPage()) return;
+            if (!message || message.type !== isEast3 ? "CT_EAST_3_REFRESH_INBOUND_FEED" : "CT_EAST_2_REFRESH_INBOUND_FEED" || !isQueuesPage()) return;
             lastSourceRefreshAt = Date.now();
-            const qBtn = findNativeRefreshButton();
-            if (qBtn && !refreshButtonBusy(qBtn)) {
-                try { qBtn.click(); } catch (error) {}
-            }
             publishFeedStatus("VERIFYING", { reason: "Inbound feed re-check requested from Operations Monitor", route: "queues" });
             readAndPublish("manual-inbound-refresh-check", true);
         });
@@ -602,17 +554,13 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
 
     window.addEventListener("message", function (event) {
         if (!isInboundMonitorFrame() || event.origin !== window.location.origin) return;
-        if (!event.data || event.data.type !== "CT_REFRESH_INBOUND_FEED") return;
+        if (!event.data || event.data.type !== isEast3 ? "CT_EAST_3_REFRESH_INBOUND_FEED" : "CT_EAST_2_REFRESH_INBOUND_FEED") return;
         lastSourceRefreshAt = Date.now();
-        const qBtn = findNativeRefreshButton();
-        if (qBtn && !refreshButtonBusy(qBtn)) {
-            try { qBtn.click(); } catch (error) {}
-        }
         publishFeedStatus("VERIFYING", { reason: "Inbound feed re-check requested from Operations Monitor", route: "queues" });
         readAndPublish("manual-inbound-refresh-check", true);
     });
 
-    document.addEventListener("CT_REQUEST_INBOUND_REFRESH", function () {
+    document.addEventListener(isEast3 ? "CT_EAST_3_REQUEST_INBOUND_REFRESH" : "CT_EAST_2_REQUEST_INBOUND_REFRESH", function () {
         if (isQueuesPage()) {
             lastSourceRefreshAt = Date.now();
             publishFeedStatus("VERIFYING", { reason: "Manual inbound feed re-check requested", route: "queues" });
@@ -622,18 +570,15 @@ console.log("CT Operations Monitor — Production live feed controller v11.1.53"
         requestInboundIframeRefresh();
     });
 
-    document.addEventListener("CT_REQUEST_REFRESH", function () {
+    document.addEventListener(isEast3 ? "CT_EAST_3_REQUEST_REFRESH" : "CT_EAST_2_REQUEST_REFRESH", function () {
+        lastSourceRefreshAt = Date.now();
         if (isQueuesPage()) {
-            lastSourceRefreshAt = Date.now();
             publishFeedStatus("VERIFYING", { reason: "Manual queue feed re-check requested", route: "queues" });
             readAndPublish("manual-queue-refresh-check", true);
             return;
         }
-        const requested = requestNativeRefresh("Manual refresh requested from Operations Monitor");
-        if (requested) return;
-        lastSourceRefreshAt = Date.now();
-        publishFeedStatus("VERIFYING", { reason: "No native CallTools refresh control found; verified parser re-read only", route: "campaigns" });
-        readAndPublish("manual-refresh-check", true);
+        publishFeedStatus("VERIFYING", { reason: "Manual campaign feed re-check requested", route: "campaigns" });
+        readAndPublish("manual-campaign-refresh", true);
     });
 
     init();

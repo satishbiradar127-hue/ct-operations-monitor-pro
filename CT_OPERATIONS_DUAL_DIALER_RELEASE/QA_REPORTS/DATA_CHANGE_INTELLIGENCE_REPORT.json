@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-11-02T18:13:00.000Z",
+  "version": "11.3.0",
+  "status": "PASS",
+  "feature": "CT Data Change Intelligence Engine",
+  "preservedBaseline": {
+    "version": "11.2.0",
+    "location": "CT_OPERATIONS_DUAL_DIALER_RELEASE/PRESERVED_V11.2.0_PACKAGES/",
+    "east2Hash": "b9ac72d3e1db67a8ea3302bc56ac80f4f96d67e657e0ce3818e69cf518770c6d",
+    "east3Hash": "d9ec86b97e937dcfc786be9e525046271965a25ee935d288d30e37bc902c5cfa"
+  },
+  "releasePackages": {
+    "east2": {
+      "file": "CT_Operations_Monitor_East2.zip",
+      "versioned": "CT_Operations_Monitor_East2_v11.3.0.zip",
+      "sha256": "d6aba0c54e74b1eeb292db29a57fa360e63b3fc03acc6ef7d3329a95b5b1a68c",
+      "host": "https://east-2.calltools.io/*"
+    },
+    "east3": {
+      "file": "CT_Operations_Monitor_East3.zip",
+      "versioned": "CT_Operations_Monitor_East3_v11.3.0.zip",
+      "sha256": "034da6cbfff24ef2ec9dd24e08c70e2dad84c128f850417670d514c3b2825ca3",
+      "host": "https://east-3.calltools.io/*"
+    }
+  },
+  "testResults": {
+    "standaloneIntelligenceTests": {
+      "total": 20,
+      "passed": 20,
+      "failed": 0
+    },
+    "east2SuiteTests": {
+      "total": 79,
+      "passed": 79,
+      "failed": 0
+    },
+    "east3SuiteTests": {
+      "total": 79,
+      "passed": 79,
+      "failed": 0
+    },
+    "syntaxCheck": {
+      "totalFiles": 10,
+      "passed": 10,
+      "failed": 0
+    }
+  },
+  "safety": {
+    "strictlyReadOnly": true,
+    "networkCalls": 0,
+    "nativeDomClicks": 0,
+    "formSubmissions": 0
+  }
+}
+

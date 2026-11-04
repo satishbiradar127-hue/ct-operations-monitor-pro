@@ -1,0 +1,75 @@
+{
+  "version": "11.3.2",
+  "releaseDate": "2026-11-02T19:30:25.906Z",
+  "status": "PASS",
+  "testSummary": {
+    "east2": {
+      "total": 115,
+      "pass": 115,
+      "fail": 0,
+      "run1Pass": true,
+      "run2Pass": true
+    },
+    "east3": {
+      "total": 115,
+      "pass": 115,
+      "fail": 0,
+      "run1Pass": true,
+      "run2Pass": true
+    },
+    "totalExecutions": 230,
+    "passRatePercent": 100
+  },
+  "fixes": [
+    {
+      "id": "HEALTH_SYNC",
+      "description": "Tri-layer independent source health state engine eliminating contradiction between header subtitle and inbound panel badge",
+      "status": "VERIFIED"
+    },
+    {
+      "id": "PARTIAL_STATE",
+      "description": "PARTIALLY CONNECTED composite state when one source is LIVE and the other is WAITING/STALE",
+      "status": "VERIFIED"
+    },
+    {
+      "id": "INBOUND_RECONCILIATION",
+      "description": "Inbound call outcomes reconciliation accounting for all 477 calls = 333 answered + 100 not answered + 44 other/IVR",
+      "status": "VERIFIED"
+    },
+    {
+      "id": "CONNECTS_DISTINCTION",
+      "description": "Clear demarcation and separate tooltips for Human Connects (AMD voice) vs Agent Connects (bridged headset)",
+      "status": "VERIFIED"
+    },
+    {
+      "id": "PERCENT_PRECISION",
+      "description": "2-decimal percentage precision formatting 9 / 39,997 as 0.02% without truncating to 0.0%",
+      "status": "VERIFIED"
+    }
+  ],
+  "security": {
+    "readOnlyObserver": true,
+    "networkCalls": 0,
+    "nativeClicks": 0,
+    "formSubmits": 0,
+    "hostIsolationVerified": true
+  },
+  "packageHashes": {
+    "v11_3_2": {
+      "east2": "291b74743ccc9d9cc6d9ca6e187a8d147c795f2a92b074a07fa9448db09d5153",
+      "east3": "b543df90715fc37940a7e657045f919c67e4cabd7ba71e9a6b26657edcc9fe56"
+    },
+    "v11_3_1_preserved": {
+      "east2": "79f2445ec9d4cb3b4346071cb0181667a68ca7a7e1ae7d0cc280f36e072300b7",
+      "east3": "7deddb9306b5eb153e747b5772145e584baf94f37efa962d34dc4e6972027895"
+    },
+    "v11_3_0_preserved": {
+      "east2": "d6aba0c54e74b1eeb292db29a57fa360e63b3fc03acc6ef7d3329a95b5b1a68c",
+      "east3": "034da6cbfff24ef2ec9dd24e08c70e2dad84c128f850417670d514c3b2825ca3"
+    },
+    "v11_2_0_preserved": {
+      "east2": "b9ac72d378bf8a0ad2c6dc67d6000280ce44d68b6d3d5236fe9baa82d8c12e77",
+      "east3": "d9ec86b971bfcd44aff84373747794cf314d24030907e3ea2e45ec91408fc4fe"
+    }
+  }
+}

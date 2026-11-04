@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-11-02T20:59:13.255Z",
+  "backup_dir": "BACKUPS_2026-11-02T20-59-02-393Z",
+  "packages": {
+    "east2_v11_3_3": {
+      "path": "CT_OPERATIONS_DUAL_DIALER_RELEASE/RELEASE_PACKAGES/CT_Operations_Monitor_East2_v11.3.3.zip",
+      "sha256": "c68bc924b0bfb29a193dd884a93b34ac86f9074b632b0d663cb42b84481dcfcc"
+    },
+    "east3_v11_3_3": {
+      "path": "CT_OPERATIONS_DUAL_DIALER_RELEASE/RELEASE_PACKAGES/CT_Operations_Monitor_East3_v11.3.3.zip",
+      "sha256": "a1212a7b5f9934e8f85b2975c7c720e1758cbb9fb9833972d14eab3256e73076"
+    }
+  },
+  "chrome_profile": "Profile 20",
+  "active_chrome_pid": 6192
+}

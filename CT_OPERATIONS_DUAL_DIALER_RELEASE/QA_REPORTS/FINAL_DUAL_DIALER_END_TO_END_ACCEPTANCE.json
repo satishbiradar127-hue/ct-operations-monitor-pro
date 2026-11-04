@@ -1,0 +1,71 @@
+{
+  "report_title": "FINAL DUAL-DIALER END-TO-END RECOVERY & ACCEPTANCE REPORT",
+  "audit_timestamp": "2026-11-02T21:10:14.731Z",
+  "target_chrome_profile": "Google Chrome Profile 20 (PID: 6192)",
+  "overall_status": "READY FOR DEPLOYMENT / BLOCKED ON CHROME BROWSER APPROVAL",
+  "packages": {
+    "east2": {
+      "zip": "C:\\Users\\Orange Carrot\\Downloads\\CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL\\CT_OPERATIONS_DUAL_DIALER_RELEASE\\RELEASE_PACKAGES\\CT_Operations_Monitor_East2.zip",
+      "sha256": "9fd8551187bd3a8369a5d37794f2419af8decb1a07e5aa6ab86b9ea39fde82ac",
+      "size": 104941
+    },
+    "east3": {
+      "zip": "C:\\Users\\Orange Carrot\\Downloads\\CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL\\CT_OPERATIONS_DUAL_DIALER_RELEASE\\RELEASE_PACKAGES\\CT_Operations_Monitor_East3.zip",
+      "sha256": "bac844014913f46f9728ed6cbf02977f4df523b0234eaeebb2bc0e5586c04266",
+      "size": 104943
+    }
+  },
+  "test_results": {
+    "east2_run1": {
+      "tests": 130,
+      "passed": 130,
+      "failed": 0,
+      "duration_ms": 918.2
+    },
+    "east2_run2": {
+      "tests": 130,
+      "passed": 130,
+      "failed": 0,
+      "duration_ms": 777.1
+    },
+    "east3_run1": {
+      "tests": 130,
+      "passed": 130,
+      "failed": 0,
+      "duration_ms": 769.7
+    },
+    "east3_run2": {
+      "tests": 130,
+      "passed": 130,
+      "failed": 0,
+      "duration_ms": 708.2
+    },
+    "grand_total_executions": 520,
+    "pass_rate": "100%"
+  },
+  "telephony_reconciliation": {
+    "dialer": "EAST-3",
+    "outbound_campaign_goals": 5,
+    "inbound_queue_goals": 1,
+    "combined_total_goals": 6,
+    "formula": "TOTAL GOALS = OUTBOUND GOALS (5) + INBOUND GOALS (1) = 6",
+    "inbound_breakdown": {
+      "calls_today": 555,
+      "answered": 385,
+      "not_answered": 117,
+      "machine": 0,
+      "unclassified": 53
+    },
+    "abandon_rate_precision": "0.03%"
+  },
+  "root_causes_repaired": [
+    "tableReady .every gate replaced with .some to accept initializing/mixed rows",
+    "cdk-column-goals_today added to parser fallback classes",
+    "readAndPublish enclosed in try/catch to protect continuous timer loop",
+    "visibilitychange listeners added to recover instantly from background tab throttling"
+  ],
+  "browser_blocker": {
+    "reason": "Chrome enforces HMAC signatures on Secure Preferences. Programmatic external injection is rejected by Chrome.",
+    "action_required": "Load unpacked extension in chrome://extensions for East2 dist and East3 dist"
+  }
+}

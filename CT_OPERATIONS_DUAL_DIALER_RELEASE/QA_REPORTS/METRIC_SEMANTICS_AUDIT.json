@@ -1,0 +1,121 @@
+{
+  "inboundSemantics": {
+    "answeredHeader": "Answered",
+    "answeredClass": "cdk-column-calls_today_answered",
+    "notAnsweredHeader": "Not Answered",
+    "notAnsweredClass": "cdk-column-calls_today_not_answered",
+    "inboundNoAnswerHeader": "Inbound No Answer",
+    "inboundNoAnswerClass": "cdk-column-inbound_no_answer",
+    "abandonedInQueueDOM": "UNAVAILABLE (Not present in CallTools native Queues table)",
+    "dashboardInboundAbandoned": "— (Unavailable)",
+    "inboundColumnLabel": "NOT ANS (Not answered calls today)",
+    "inboundKpiLabel": "NOT ANSWERED",
+    "isConflated": false
+  },
+  "outboundSemantics": {
+    "abandonedHeader": "Abandoned",
+    "abandonedClass": "cdk-column-calls-today-abandoned / cdk-column-abandoned",
+    "noAnswerHeader": "No Ans",
+    "noAnswerClass": "cdk-column-calls-today-no-answer / cdk-column-no_answer",
+    "dashboardKpi": "ABANDONED",
+    "dashboardCol": "ABANDONED",
+    "isConflated": false
+  },
+  "formulaAudit": [
+    {
+      "context": "East-2 Outbound Campaign 'REALTIME 101'",
+      "nativeInputs": {
+        "callsTodayTotal": 1564,
+        "callsTodayAnswered": 342,
+        "callsTodayNoAnswer": 1204,
+        "callsTodayAbandoned": 18,
+        "callsNowWaiting": 0,
+        "callsNowOnCall": 14,
+        "goals": 45
+      },
+      "dashboardOutputs": {
+        "totalCallsDisplay": "1,564",
+        "connectedDisplay": "342",
+        "connectRateDisplay": "21.9%",
+        "abandonedDisplay": "18 (1.2%)",
+        "goalsDisplay": "45",
+        "waitingDisplay": "0",
+        "onCallDisplay": "14"
+      },
+      "formulas": {
+        "connectRate": "((342 / 1564) * 100).toFixed(1) + '%' = 21.9%",
+        "abandonRate": "((18 / 1564) * 100).toFixed(1) + '%' = 1.2%"
+      }
+    },
+    {
+      "context": "East-2 Inbound Queue 'Customer Support'",
+      "nativeInputs": {
+        "callsTodayTotal": 99,
+        "callsTodayAnswered": 87,
+        "callsTodayNotAnswered": 12,
+        "inboundNoAnswer": 12,
+        "abandoned": null,
+        "loggedIn": 6,
+        "onQueueCalls": 4,
+        "callersWaiting": 1,
+        "waitMax": 42,
+        "goals": 8
+      },
+      "dashboardOutputs": {
+        "callsTodayDisplay": "99",
+        "answeredDisplay": "87",
+        "notAnsweredDisplay": "12",
+        "abandonedDisplay": "— (Unavailable)",
+        "answerRateDisplay": "87.9%",
+        "loggedMembersDisplay": "6",
+        "waitingDisplay": "1",
+        "maxWaitDisplay": "42s",
+        "goalsDisplay": "8"
+      },
+      "formulas": {
+        "answerRate": "((87 / 99) * 100).toFixed(1) + '%' = 87.9%",
+        "missRate": "((12 / 99) * 100).toFixed(1) + '%' = 12.1%",
+        "abandoned": "UNAVAILABLE (renders '—'; never synthesized from Not Answered)"
+      }
+    }
+  ],
+  "alertEngine": [
+    {
+      "scenario": "Outbound Campaign Goals Increase",
+      "dialer": "EAST-2",
+      "direction": "OUTBOUND",
+      "target": "REALTIME 101",
+      "metric": "Goals",
+      "previous": 45,
+      "current": 47,
+      "increase": 2,
+      "detectedAt": "12:45:00 PM",
+      "alertId": "EAST-2_OUTBOUND_GOALS_c101_1762080000_47"
+    },
+    {
+      "scenario": "Inbound Queue Goals Increase",
+      "dialer": "EAST-3",
+      "direction": "INBOUND",
+      "target": "Customer Support",
+      "metric": "Goals",
+      "previous": 8,
+      "current": 11,
+      "increase": 3,
+      "detectedAt": "12:45:02 PM",
+      "alertId": "EAST-3_INBOUND_GOALS_q201_1762080002_11"
+    }
+  ],
+  "packagePreservation": {
+    "CT_Operations_Monitor_East2.zip": {
+      "size": 217639,
+      "sha256": "b9ac72d378bf8a0ad2c6dc67d6000280ce44d68b6d3d5236fe9baa82d8c12e77",
+      "matched": true
+    },
+    "CT_Operations_Monitor_East3.zip": {
+      "size": 217642,
+      "sha256": "d9ec86b971bfcd44aff84373747794cf314d24030907e3ea2e45ec91408fc4fe",
+      "matched": true
+    }
+  },
+  "passed": true
+}

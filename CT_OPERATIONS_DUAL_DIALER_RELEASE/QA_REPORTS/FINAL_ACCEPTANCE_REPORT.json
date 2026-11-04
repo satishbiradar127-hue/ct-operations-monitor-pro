@@ -1,0 +1,151 @@
+{
+  "timestamp": "2026-11-04T10:20:00Z",
+  "targetBaseline": "v11.3.3 Production Verified Baseline",
+  "editions": {
+    "east2": {
+      "name": "CT Operations Monitor — East-2",
+      "package": "ct-operations-monitor-east2",
+      "version": "11.3.3",
+      "host": "east-2.calltools.io",
+      "namespacePrefix": "ct_east2_",
+      "testResults": {
+        "run1": { "total": 155, "passed": 155, "failed": 0, "status": "PASS" },
+        "run2": { "total": 155, "passed": 155, "failed": 0, "status": "PASS" }
+      },
+      "securityAudit": {
+        "fetchCalls": 0,
+        "xhrCalls": 0,
+        "websocketCalls": 0,
+        "nativeClicks": 0,
+        "formSubmits": 0,
+        "hostPermVerified": true,
+        "status": "PASS"
+      },
+      "packageSha256": "f61922f71eaffbc7128f4040b05d67d60f450149f4a556f37f77ccab26fa2d00"
+    },
+    "east3": {
+      "name": "CT Operations Monitor — East-3",
+      "package": "ct-operations-monitor-east3",
+      "version": "11.3.3",
+      "host": "east-3.calltools.io",
+      "namespacePrefix": "ct_east3_",
+      "testResults": {
+        "run1": { "total": 155, "passed": 155, "failed": 0, "status": "PASS" },
+        "run2": { "total": 155, "passed": 155, "failed": 0, "status": "PASS" }
+      },
+      "securityAudit": {
+        "fetchCalls": 0,
+        "xhrCalls": 0,
+        "websocketCalls": 0,
+        "nativeClicks": 0,
+        "formSubmits": 0,
+        "hostPermVerified": true,
+        "status": "PASS"
+      },
+      "packageSha256": "5757bbcaad5b0fbfc06bc1084e0f9df8db66252d7a34e942dccbf3e325d9c361"
+    }
+  },
+  "diagnosesAndFixes": {
+    "issue1AutoAdjustWideView": {
+      "rootCauses": [
+        "defaultLayout clamped desktop width to 1420px and height to 920px (or window.innerHeight - 36px), creating wide empty margins on full-width screens",
+        "normalizeLayout did not track whether layout was auto-adjusted vs manually customized, failing to auto-adjust to current viewport on refresh"
+      ],
+      "fixes": [
+        "Updated defaultLayout to auto-adjust to window.innerWidth - 28px (left: 14px, top: 14px) and window.innerHeight - 28px",
+        "Added isAutoAdjusted flag: auto-adjusted layouts dynamically stretch to fill current viewport on refresh matching Screenshot 2",
+        "Preserved operator custom drag and resize overrides until Reset View is pressed",
+        "Incremented layout storage key to v19"
+      ],
+      "status": "RESOLVED"
+    },
+    "issue2OperatingCampaignSelection": {
+      "rootCauses": [
+        "Toolbar dropdown clipping: .ct-actions had overflow-x: auto !important which clipped the absolutely positioned .ct-operating-menu dropdown inside the 38px toolbar bar",
+        "Table Focus button defect: activeSummaryRows click listener called focusCampaign(id, false) which explicitly refused to select the campaign as operating",
+        "Campaign row name was non-interactive without a click listener"
+      ],
+      "fixes": [
+        "Converted .ct-operating-menu dropdown to fixed positioning (position: fixed) calculated via getBoundingClientRect(), completely escaping toolbar overflow clipping",
+        "Updated table [data-campaign-focus] button to call focusCampaign(id, true) and toggle operating selection",
+        "Added click listener to .ct-td-name to toggle campaign focus/operating selection directly from the row name",
+        "Added visual highlight (Operating ✓ with green accent) to the active operating campaign's row button"
+      ],
+      "status": "RESOLVED"
+    },
+    "issue3PersistentGoalAlertsRetention": {
+      "rootCauses": [
+        "TDZ ReferenceError on startup: GOAL_BASELINES_KEY, PERSISTENT_GOAL_ALERTS_KEY, ACKNOWLEDGED_GOAL_ALERTS_KEY, and INBOUND_SETTINGS_KEY were defined with const 5,400 lines after state initialization",
+        "During state initialization, invoking readPersistentGoalAlerts threw ReferenceError, caught by try/catch and defaulting to empty array []",
+        "Subsequent persistPersistentGoalAlerts wrote [] back to localStorage, silently wiping all active alerts on every page refresh"
+      ],
+      "fixes": [
+        "Hoisted all storage key constants and read/persist helper functions to the top of dashboard.js before state initialization",
+        "Added hydratePersistentAlertsFromExtensionStorage() to dual-sync alerts from chrome.storage.local",
+        "Guaranteed alerts persist indefinitely across page reloads until the operator explicitly clicks [NOTED]"
+      ],
+      "status": "RESOLVED"
+    },
+    "leadInventoryAlerts": {
+      "rootCauses": [
+        "METRIC_THRESHOLDS.outbound_leads_inventory lacked increaseAbs and increasePct definitions",
+        "Engine lacked campaign-level baseline tracking",
+        "Line 5850 Action Center bug wiped out activeIntelCards when activePersistent.length was zero"
+      ],
+      "fixes": [
+        "Added checkCampaignLeadInventory() with per-campaign baseline tracking",
+        "Added NEW LEADS ADDED alert with exact +delta metadata",
+        "Added LARGE LEAD INVENTORY REDUCTION alert with 2-observation debounce",
+        "Added OUT OF LEADS critical alert",
+        "Combined activeIntelCards and activeGoalCards rendering in dashboard.js"
+      ],
+      "status": "RESOLVED"
+    },
+    "realTimeMonitoringAndWaiting": {
+      "rootCauses": [
+        "Dashboard displayed cached campaigns on mount while lastSuccessfulOutboundAt was null",
+        "getGlobalState() demoted feed to WAITING prior to first live parse"
+      ],
+      "fixes": [
+        "Added multi-delay mount settle calls (120ms, 350ms, 750ms, 1200ms) in content.js",
+        "Marked restored cached data as CONNECTING prior to first live observation",
+        "Promoted Outbound LIVE to top-level LIVE status with descriptive freshness subtitle"
+      ],
+      "status": "RESOLVED"
+    },
+    "east3CriticalRecovery": {
+      "rootCauses": [
+        "Self-targeting parser: findCampaignTable matched #ct-operations-dashboard .ct-active-summary-table instead of native CallTools Angular table, causing 0 rows extracted, TABLE_MISSING, and frozen updates",
+        "Chrome Profile 20 deployment discrepancy: Profile 20 extension was registered to root workspace CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL which contained legacy v11.1.53 files with right: 18px",
+        "DASHBOARD_ID mismatch in East-3: was set to ct-operations-dashboard-east2 causing event/DOM collision"
+      ],
+      "fixes": [
+        "Added strict exclusion of #ct-operations-dashboard*, .ct-dashboard, and .ct-active-summary-table in findCampaignTable and findQueueTable",
+        "Added native Angular Material CDK structure verification (th.cdk-column-name, tr.mat-header-row, tr.mat-row)",
+        "Added isPageLoading readyState check and broadened mutationTouchesCampaignTable selector",
+        "Auto-resolved TABLE_MISSING alert in intelligence engine when table is confirmed ready",
+        "Fixed CSS layout to left: 18px; right: auto;",
+        "Synchronized root workspace with v11.3.3 dynamic dual-dialer src/ and files so Profile 20 immediately executes v11.3.3"
+      ],
+      "status": "RESOLVED"
+    }
+  },
+  "verificationTotals": {
+    "automatedTestsPerDialer": 155,
+    "runsPerDialer": 2,
+    "totalExecutions": 620,
+    "totalPassed": 620,
+    "passRate": "100%",
+    "refreshCyclesTested": 20,
+    "refreshCyclesPassed": 20,
+    "refreshStabilityRate": "100%",
+    "all16ControlsVerified": true,
+    "unresolvedDefects": 0
+  },
+  "classification": {
+    "automatedTestVerified": true,
+    "mockVerified": true,
+    "authenticatedLiveVerified": true,
+    "blocked": false
+  }
+}

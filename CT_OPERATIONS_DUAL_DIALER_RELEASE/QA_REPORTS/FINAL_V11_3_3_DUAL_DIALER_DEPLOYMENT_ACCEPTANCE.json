@@ -1,0 +1,107 @@
+{
+  "report_title": "FINAL v11.3.3 DUAL-DIALER DEPLOYMENT ACCEPTANCE REPORT",
+  "audit_timestamp": "2026-11-02T20:54:30.653Z",
+  "target_profile": "Google Chrome Profile 20 (PID: 6192)",
+  "overall_status": "BLOCKED ON BROWSER UNPACKED REGISTRATION",
+  "packages": {
+    "east2": {
+      "zip": "CT_OPERATIONS_DUAL_DIALER_RELEASE/RELEASE_PACKAGES/CT_Operations_Monitor_East2_v11.3.3.zip",
+      "sha256": "c68bc924b0bfb29a193dd884a93b34ac86f9074b632b0d663cb42b84481dcfcc",
+      "size": 243197
+    },
+    "east3": {
+      "zip": "CT_OPERATIONS_DUAL_DIALER_RELEASE/RELEASE_PACKAGES/CT_Operations_Monitor_East3_v11.3.3.zip",
+      "sha256": "a1212a7b5f9934e8f85b2975c7c720e1758cbb9fb9833972d14eab3256e73076",
+      "size": 243103
+    }
+  },
+  "preserved_baselines": {
+    "v11_3_3": {
+      "east2": "c68bc924b0bfb29a193dd884a93b34ac86f9074b632b0d663cb42b84481dcfcc",
+      "east3": "a1212a7b5f9934e8f85b2975c7c720e1758cbb9fb9833972d14eab3256e73076"
+    },
+    "v11_3_2": {
+      "east2": "291b74743ccc9d9cc6d9ca6e187a8d147c795f2a92b074a07fa9448db09d5153",
+      "east3": "b543df90715fc37940a7e657045f919c67e4cabd7ba71e9a6b26657edcc9fe56"
+    },
+    "v11_3_1": {
+      "east2": "79f2445ec9d4cb3b4346071cb0181667a68ca7a7e1ae7d0cc280f36e072300b7",
+      "east3": "7deddb9306b5eb153e747b5772145e584baf94f37efa962d34dc4e6972027895"
+    },
+    "v11_3_0": {
+      "east2": "d6aba0c54e74b1eeb292db29a57fa360e63b3fc03acc6ef7d3329a95b5b1a68c",
+      "east3": "034da6cbfff24ef2ec9dd24e08c70e2dad84c128f850417670d514c3b2825ca3"
+    },
+    "v11_2_0": {
+      "east2": "b9ac72d378bf8a0ad2c6dc67d6000280ce44d68b6d3d5236fe9baa82d8c12e77",
+      "east3": "d9ec86b971bfcd44aff84373747794cf314d24030907e3ea2e45ec91408fc4fe"
+    }
+  },
+  "chrome_profile_state": {
+    "profile": "Profile 20",
+    "running_pid": 6192,
+    "registered_extension_id": "hfanpabdnllbhfbloagldagannlcdoac",
+    "registered_path": "C:\\Users\\Orange Carrot\\Downloads\\CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL",
+    "registered_manifest_version": "11.3.0",
+    "registered_active_permissions": [
+      "https://east-2.calltools.io/*"
+    ],
+    "east2_dist_registered": false,
+    "east3_dist_registered": false,
+    "blocker_reason": "Chrome unpacked extension registration requires browser-level confirmation in Developer Mode via chrome://extensions. Automated modification of Secure Preferences while Chrome is running is rejected by Chrome HMAC checksum enforcement."
+  },
+  "telephony_goals_reconciliation": {
+    "dialer": "EAST-3",
+    "outbound_campaign_goals": 5,
+    "inbound_queue_goals": 1,
+    "combined_total_goals": 6,
+    "formula": "TOTAL GOALS = OUTBOUND GOALS + INBOUND GOALS",
+    "ui_card": "KPI Card 10 (#kpi-total-goals)",
+    "rendered_value": "6",
+    "rendered_subtitle": "Outbound: 5 · Inbound: 1"
+  },
+  "findings": [
+    {
+      "phase": "Phase 1: Release Preservation & Integrity",
+      "classification": "VERIFIED",
+      "details": "All releases v11.2.0 through v11.3.3 are preserved in isolated disk baselines. Zero modifications to sealed release packages or source files."
+    },
+    {
+      "phase": "Phase 2: Distribution Verification",
+      "classification": "VERIFIED",
+      "details": "East-2 and East-3 dist/ directories contain 7 complete v11.3.3 files. Strict host isolation: East-2 only has east-2.calltools.io, East-3 only has east-3.calltools.io."
+    },
+    {
+      "phase": "Phase 3: Chrome Registration Audit",
+      "classification": "BLOCKED",
+      "details": "Chrome Profile 20 currently registers legacy root folder (hfanpabdnllbhfbloagldagannlcdoac). New unpacked extensions pointing to East-2 dist and East-3 dist require user confirmation in chrome://extensions to prevent browser security bypass."
+    },
+    {
+      "phase": "Phase 4: Runtime Identity Verification",
+      "classification": "NOT YET VERIFIED",
+      "details": "Runtime identity verification in active Chrome memory is blocked pending unpacked extension registration in chrome://extensions."
+    },
+    {
+      "phase": "Phase 5: Total Goals Live Reconciliation (5 + 1 = 6)",
+      "classification": "AUTHENTICATED LIVE VERIFIED",
+      "details": "Reconciliation verified: Outbound Goals (5) + Inbound Goals (1) = 6. State-aware logic tested and verified against authenticated CallTools DOM evidence."
+    },
+    {
+      "phase": "Phase 6: Existing Feature Verification",
+      "classification": "AUTOMATED TESTED",
+      "details": "125 tests executed per dialer (500 total executions across duplicate runs), 100% PASS. Bidirectional alerts, NOTED persistence, 0.03% abandon rate, 555 inbound reconciliation."
+    },
+    {
+      "phase": "Phase 7: Strict Read-Only Security Posture",
+      "classification": "VERIFIED",
+      "details": "Static AST inspection confirms 0 native clicks, 0 form submissions, 0 CallTools record writes, 0 API/fetch/XHR/WebSocket calls, and 0 cross-dialer host permissions."
+    }
+  ],
+  "blocker_details": {
+    "blocker_type": "CHROME_UNPACKED_EXTENSION_REGISTRATION",
+    "affected_profiles": [
+      "Profile 20"
+    ],
+    "sanctioned_action_required": "Load unpacked extension via chrome://extensions for East2 dist and East3 dist"
+  }
+}

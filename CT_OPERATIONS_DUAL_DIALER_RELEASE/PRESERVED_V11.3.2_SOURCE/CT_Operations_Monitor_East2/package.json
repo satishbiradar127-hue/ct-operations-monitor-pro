@@ -1,0 +1,17 @@
+{
+  "name": "ct-operations-monitor-east2",
+  "version": "11.3.2",
+  "description": "CallTools Operations Monitor Pro (East-2 Edition) — unified outbound Campaigns + inbound Queue command center with persistent Sales/Goals alerts, native Queue DOM bridge, and East-2 host isolation.",
+  "scripts": {
+    "test": "node --test tests/suite.test.js",
+    "check": "node --check src/helpers.js && node --check src/parser.js && node --check src/content.js && node --check src/dashboard.js"
+  },
+  "keywords": [
+    "calltools",
+    "chrome-extension",
+    "operations-monitor",
+    "east2"
+  ],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,385 @@
+{
+  "zipInspection": {
+    "CT_Operations_Monitor_East2.zip": [
+      {
+        "name": "dist\\assets\\",
+        "length": 0,
+        "compLength": 0
+      },
+      {
+        "name": "dist\\manifest.json",
+        "length": 803,
+        "compLength": 368
+      },
+      {
+        "name": "dist\\src\\content.js",
+        "length": 30939,
+        "compLength": 7057
+      },
+      {
+        "name": "dist\\src\\dashboard.css",
+        "length": 2275,
+        "compLength": 800
+      },
+      {
+        "name": "dist\\src\\dashboard.js",
+        "length": 451394,
+        "compLength": 78265
+      },
+      {
+        "name": "dist\\src\\helpers.js",
+        "length": 2055,
+        "compLength": 765
+      },
+      {
+        "name": "dist\\src\\parser.js",
+        "length": 36212,
+        "compLength": 7543
+      },
+      {
+        "name": "src\\content.js",
+        "length": 30939,
+        "compLength": 7057
+      },
+      {
+        "name": "src\\dashboard.css",
+        "length": 2275,
+        "compLength": 800
+      },
+      {
+        "name": "src\\dashboard.js",
+        "length": 451394,
+        "compLength": 78265
+      },
+      {
+        "name": "src\\helpers.js",
+        "length": 2055,
+        "compLength": 765
+      },
+      {
+        "name": "src\\parser.js",
+        "length": 36212,
+        "compLength": 7543
+      },
+      {
+        "name": "tests\\mock_dom.js",
+        "length": 15891,
+        "compLength": 2980
+      },
+      {
+        "name": "tests\\suite.test.js",
+        "length": 89582,
+        "compLength": 21741
+      },
+      {
+        "name": "manifest.json",
+        "length": 803,
+        "compLength": 368
+      },
+      {
+        "name": "package.json",
+        "length": 626,
+        "compLength": 347
+      },
+      {
+        "name": "README.md",
+        "length": 2085,
+        "compLength": 1115
+      }
+    ],
+    "CT_Operations_Monitor_East3.zip": [
+      {
+        "name": "dist\\assets\\",
+        "length": 0,
+        "compLength": 0
+      },
+      {
+        "name": "dist\\manifest.json",
+        "length": 803,
+        "compLength": 368
+      },
+      {
+        "name": "dist\\src\\content.js",
+        "length": 30939,
+        "compLength": 7058
+      },
+      {
+        "name": "dist\\src\\dashboard.css",
+        "length": 2275,
+        "compLength": 801
+      },
+      {
+        "name": "dist\\src\\dashboard.js",
+        "length": 451394,
+        "compLength": 78264
+      },
+      {
+        "name": "dist\\src\\helpers.js",
+        "length": 2055,
+        "compLength": 765
+      },
+      {
+        "name": "dist\\src\\parser.js",
+        "length": 36212,
+        "compLength": 7543
+      },
+      {
+        "name": "src\\content.js",
+        "length": 30939,
+        "compLength": 7058
+      },
+      {
+        "name": "src\\dashboard.css",
+        "length": 2275,
+        "compLength": 801
+      },
+      {
+        "name": "src\\dashboard.js",
+        "length": 451394,
+        "compLength": 78264
+      },
+      {
+        "name": "src\\helpers.js",
+        "length": 2055,
+        "compLength": 765
+      },
+      {
+        "name": "src\\parser.js",
+        "length": 36212,
+        "compLength": 7543
+      },
+      {
+        "name": "tests\\mock_dom.js",
+        "length": 15891,
+        "compLength": 2980
+      },
+      {
+        "name": "tests\\suite.test.js",
+        "length": 89582,
+        "compLength": 21741
+      },
+      {
+        "name": "manifest.json",
+        "length": 803,
+        "compLength": 368
+      },
+      {
+        "name": "package.json",
+        "length": 626,
+        "compLength": 348
+      },
+      {
+        "name": "README.md",
+        "length": 2085,
+        "compLength": 1115
+      }
+    ]
+  },
+  "sha256Verification": {
+    "CT_Operations_Monitor_East2.zip": {
+      "size": 217639,
+      "calculated": "b9ac72d378bf8a0ad2c6dc67d6000280ce44d68b6d3d5236fe9baa82d8c12e77",
+      "recorded": "b9ac72d378bf8a0ad2c6dc67d6000280ce44d68b6d3d5236fe9baa82d8c12e77",
+      "matches": true
+    },
+    "CT_Operations_Monitor_East3.zip": {
+      "size": 217642,
+      "calculated": "d9ec86b971bfcd44aff84373747794cf314d24030907e3ea2e45ec91408fc4fe",
+      "recorded": "d9ec86b971bfcd44aff84373747794cf314d24030907e3ea2e45ec91408fc4fe",
+      "matches": true
+    }
+  },
+  "manifestVerification": {
+    "East2": {
+      "version": "11.2.0",
+      "name": "CT Operations Monitor — East-2",
+      "baseMatchesDist": true,
+      "hasAllowedHost": true,
+      "hasForbiddenHost": false,
+      "permissions": [
+        "storage"
+      ],
+      "host_permissions": [
+        "https://east-2.calltools.io/*"
+      ],
+      "content_scripts": [
+        {
+          "matches": [
+            "https://east-2.calltools.io/manager/campaigns*",
+            "https://east-2.calltools.io/manager/queues*"
+          ],
+          "js": [
+            "src/helpers.js",
+            "src/parser.js",
+            "src/dashboard.js",
+            "src/content.js"
+          ],
+          "css": [
+            "src/dashboard.css"
+          ],
+          "all_frames": true
+        }
+      ]
+    },
+    "East3": {
+      "version": "11.2.0",
+      "name": "CT Operations Monitor — East-3",
+      "baseMatchesDist": true,
+      "hasAllowedHost": true,
+      "hasForbiddenHost": false,
+      "permissions": [
+        "storage"
+      ],
+      "host_permissions": [
+        "https://east-3.calltools.io/*"
+      ],
+      "content_scripts": [
+        {
+          "matches": [
+            "https://east-3.calltools.io/manager/campaigns*",
+            "https://east-3.calltools.io/manager/queues*"
+          ],
+          "js": [
+            "src/helpers.js",
+            "src/parser.js",
+            "src/dashboard.js",
+            "src/content.js"
+          ],
+          "css": [
+            "src/dashboard.css"
+          ],
+          "all_frames": true
+        }
+      ]
+    }
+  },
+  "distVerification": {},
+  "hostPermissionIsolation": {
+    "East2": {
+      "forbiddenHost": "east-3.calltools.io",
+      "leaksFound": 0,
+      "details": []
+    },
+    "East3": {
+      "forbiddenHost": "east-2.calltools.io",
+      "leaksFound": 0,
+      "details": []
+    }
+  },
+  "sourceDistComparison": {
+    "East2": {
+      "manifest.json": {
+        "srcHash": "66b829ddfaf1ef46a6c4bd5f5f1061f39b3d62de7f641fcffa920fc7b060218c",
+        "distHash": "66b829ddfaf1ef46a6c4bd5f5f1061f39b3d62de7f641fcffa920fc7b060218c",
+        "match": true,
+        "size": 803
+      },
+      "src/helpers.js": {
+        "srcHash": "6fa34ebd88b752e3dcaa83613d511c961254d5f40a58c145cf7075f0fc17051c",
+        "distHash": "6fa34ebd88b752e3dcaa83613d511c961254d5f40a58c145cf7075f0fc17051c",
+        "match": true,
+        "size": 2055
+      },
+      "src/parser.js": {
+        "srcHash": "55a5733f24a71a29ddf7b0ffa8dea30a4aad278b9224ad3a63657115ee810ed1",
+        "distHash": "55a5733f24a71a29ddf7b0ffa8dea30a4aad278b9224ad3a63657115ee810ed1",
+        "match": true,
+        "size": 36212
+      },
+      "src/content.js": {
+        "srcHash": "38b97af4a038c1d052d9a22f30315574aebf0522ef4938dd7915606f645baa1b",
+        "distHash": "38b97af4a038c1d052d9a22f30315574aebf0522ef4938dd7915606f645baa1b",
+        "match": true,
+        "size": 30939
+      },
+      "src/dashboard.js": {
+        "srcHash": "bbfefffc9aeec1cdef6dae253feabdc5498e82433e4964642cd6c3e998b5f0f1",
+        "distHash": "bbfefffc9aeec1cdef6dae253feabdc5498e82433e4964642cd6c3e998b5f0f1",
+        "match": true,
+        "size": 451394
+      },
+      "src/dashboard.css": {
+        "srcHash": "60568e6915548a1719358292682b259f5e241f592ec10c71b363e694f90f99df",
+        "distHash": "60568e6915548a1719358292682b259f5e241f592ec10c71b363e694f90f99df",
+        "match": true,
+        "size": 2275
+      }
+    },
+    "East3": {
+      "manifest.json": {
+        "srcHash": "9187b8c5c4e581ed18dd1e40e55746c5c59f6babd78ecb5bbabfe804fe15134d",
+        "distHash": "9187b8c5c4e581ed18dd1e40e55746c5c59f6babd78ecb5bbabfe804fe15134d",
+        "match": true,
+        "size": 803
+      },
+      "src/helpers.js": {
+        "srcHash": "83cc831d3e7978fe08307a1ecce3b44616c7d5877c470ca51a96e77d76520324",
+        "distHash": "83cc831d3e7978fe08307a1ecce3b44616c7d5877c470ca51a96e77d76520324",
+        "match": true,
+        "size": 2055
+      },
+      "src/parser.js": {
+        "srcHash": "c593d0dff59dc3440e552d8c00b66977ffe6c4f8ca8185cfe743055bf264f823",
+        "distHash": "c593d0dff59dc3440e552d8c00b66977ffe6c4f8ca8185cfe743055bf264f823",
+        "match": true,
+        "size": 36212
+      },
+      "src/content.js": {
+        "srcHash": "a553a97005c4862c7d9c267e748be9b4285a377da27f3f6f9f659e2666106895",
+        "distHash": "a553a97005c4862c7d9c267e748be9b4285a377da27f3f6f9f659e2666106895",
+        "match": true,
+        "size": 30939
+      },
+      "src/dashboard.js": {
+        "srcHash": "a13e240a17c020e4fad46c01e73eeefb232d354299df32934154a3823d2d703f",
+        "distHash": "a13e240a17c020e4fad46c01e73eeefb232d354299df32934154a3823d2d703f",
+        "match": true,
+        "size": 451394
+      },
+      "src/dashboard.css": {
+        "srcHash": "c6a6a7a577062aea66ccaabdf4b439cd79e331596eb63cfc8a133b7433c00c6e",
+        "distHash": "c6a6a7a577062aea66ccaabdf4b439cd79e331596eb63cfc8a133b7433c00c6e",
+        "match": true,
+        "size": 2275
+      }
+    }
+  },
+  "persistentAlertVerification": {
+    "East2": {
+      "hasPrefixDefined": true,
+      "hasGoalBaselineStorageKey": true,
+      "hasPersistentAlertsStorageKey": true,
+      "hasAcknowledgedAlertsStorageKey": true,
+      "hasStateInitialization": true,
+      "hasCheckPersistentGoalAlerts": true,
+      "hasAcknowledgePersistentGoalAlert": true,
+      "hasRenderPersistentGoalAlerts": true,
+      "hasNotedButtonHandler": true,
+      "preservesPersistentAlertsOnClearAll": true
+    },
+    "East3": {
+      "hasPrefixDefined": true,
+      "hasGoalBaselineStorageKey": true,
+      "hasPersistentAlertsStorageKey": true,
+      "hasAcknowledgedAlertsStorageKey": true,
+      "hasStateInitialization": true,
+      "hasCheckPersistentGoalAlerts": true,
+      "hasAcknowledgePersistentGoalAlert": true,
+      "hasRenderPersistentGoalAlerts": true,
+      "hasNotedButtonHandler": true,
+      "preservesPersistentAlertsOnClearAll": true
+    }
+  },
+  "securityAudit": {
+    "East2": {
+      "forbiddenFindings": [],
+      "isReadOnly": true
+    },
+    "East3": {
+      "forbiddenFindings": [],
+      "isReadOnly": true
+    }
+  },
+  "deploymentAnalysis": {},
+  "errors": []
+}

@@ -1,0 +1,110 @@
+{
+  "version": "11.3.2",
+  "auditTimestamp": "2026-11-02T19:54:23.956Z",
+  "overallStatus": "PASS",
+  "findings": {
+    "releasePreservation": {
+      "status": "VERIFIED",
+      "packagesPreserved": [
+        "v11.2.0",
+        "v11.3.0",
+        "v11.3.1",
+        "v11.3.2"
+      ],
+      "v11_3_2_hashes": {
+        "east2_generic": "291b74743ccc9d9cc6d9ca6e187a8d147c795f2a92b074a07fa9448db09d5153",
+        "east2_versioned": "291b74743ccc9d9cc6d9ca6e187a8d147c795f2a92b074a07fa9448db09d5153",
+        "east3_generic": "b543df90715fc37940a7e657045f919c67e4cabd7ba71e9a6b26657edcc9fe56",
+        "east3_versioned": "b543df90715fc37940a7e657045f919c67e4cabd7ba71e9a6b26657edcc9fe56",
+        "genericAndVersionedIdentical": true
+      },
+      "historicalPreservedHashes": {
+        "v11_3_1_east2": "79f2445ec9d4cb3b4346071cb0181667a68ca7a7e1ae7d0cc280f36e072300b7",
+        "v11_3_1_east3": "7deddb9306b5eb153e747b5772145e584baf94f37efa962d34dc4e6972027895",
+        "v11_3_0_east2": "d6aba0c54e74b1eeb292db29a57fa360e63b3fc03acc6ef7d3329a95b5b1a68c",
+        "v11_3_0_east3": "034da6cbfff24ef2ec9dd24e08c70e2dad84c128f850417670d514c3b2825ca3",
+        "v11_2_0_east2": "b9ac72d378bf8a0ad2c6dc67d6000280ce44d68b6d3d5236fe9baa82d8c12e77",
+        "v11_2_0_east3": "d9ec86b971bfcd44aff84373747794cf314d24030907e3ea2e45ec91408fc4fe"
+      }
+    },
+    "inboundReconciliation": {
+      "status": "VERIFIED",
+      "authenticatedLiveVerified": true,
+      "callsToday": 477,
+      "answered": 333,
+      "notAnswered": 100,
+      "inboundMachine": 0,
+      "inboundNoAnswer": 0,
+      "unaccountedRemaining": 44,
+      "classification": "UNCLASSIFIED",
+      "reason": "CallTools native Queues DOM contains no dedicated column for IVR abandonments or timeouts; mathematical difference is strictly categorized as UNCLASSIFIED non-agent terminal outcomes",
+      "answerRateFormula": "333 / 477 = 69.81%",
+      "falseDataCheckEliminated": true
+    },
+    "connectMetricsDistinction": {
+      "status": "VERIFIED",
+      "humanConnects": {
+        "count": 1790,
+        "header": "Human",
+        "cdkClass": "cdk-column-calls_outbound_human",
+        "definition": "AMD positive human voice response detection"
+      },
+      "agentConnects": {
+        "count": 1814,
+        "header": "To Agents",
+        "cdkClass": "cdk-column-calls_outbound_agent_connect",
+        "definition": "Calls bridged to agent channel/headset"
+      },
+      "telephonyExplanation": "Agent Connects can legitimately exceed Human Connects due to AMD machine transfers, inbound transfers, manual agent dials, and multi-agent conferences",
+      "connectRateFormula": "1790 / 39997 = 4.48%"
+    },
+    "sourceHealthState": {
+      "status": "VERIFIED",
+      "automatedTested": true,
+      "layers": [
+        "Outbound",
+        "Inbound",
+        "Global Composite"
+      ],
+      "bothLiveOnlyWhenBothHealthy": true,
+      "partialStateImplemented": true,
+      "inboundPanelAndSubtitleUnified": true,
+      "heartbeatIsolationVerified": true,
+      "freshnessOnValidUnchangedSnapshots": true,
+      "failedExtractionFreezesFreshness": true
+    },
+    "installedVersions": {
+      "status": "VERIFIED",
+      "authenticatedLiveVerified": true,
+      "distManifestVersions": {
+        "east2": "11.3.2",
+        "east3": "11.3.2"
+      },
+      "chromeProfileObservation": "Active Profile 20 had registered root path with manifest v11.3.0. Chrome requires explicit extension reload on chrome://extensions to load updated dist/ bundles into running tabs."
+    },
+    "testReconciliation": {
+      "status": "VERIFIED",
+      "automatedTested": true,
+      "uniqueTestsPerDialer": 115,
+      "uniqueTestsTotal": 230,
+      "runsPerSuite": 2,
+      "totalExecutionsAcrossRuns": 460,
+      "passes": 460,
+      "fails": 0,
+      "skips": 0,
+      "ambiguityResolved": "115 unique tests in East-2 + 115 unique tests in East-3 = 230 unique tests; executed across 2 verification cycles = 460 total test executions (100% PASS)"
+    },
+    "readOnlySecurity": {
+      "status": "VERIFIED",
+      "automatedTested": true,
+      "nativeClicks": 0,
+      "formSubmissions": 0,
+      "recordWrites": 0,
+      "fetchCalls": 0,
+      "xhrCalls": 0,
+      "websocketCalls": 0,
+      "crossDialerPerms": 0,
+      "refreshBehavior": "Local in-memory DOM re-read only via readAndPublish"
+    }
+  }
+}

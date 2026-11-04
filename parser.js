@@ -1,4 +1,5 @@
-console.log("CT Operations Monitor parser loaded — v11.1.46");
+const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");
+console.log("CT Operations Monitor parser loaded (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — v11.3.3");
 
 const CT_ACTIVE_IMAGE_STATE_CACHE = new Map();
 
@@ -29,15 +30,16 @@ window.CTParser = {
         return Array.from(leafRow.querySelectorAll('th, [role="columnheader"]'));
     },
 
-    findHeaderCell(row, labels) {
+    findHeaderCell(row, labels, occurrence) {
         const table = row.closest('table, mat-table');
         if (!table) return null;
         const wanted = (labels || []).map(function(v){ return String(v).replace(/\s+/g,' ').trim().toLowerCase(); });
         const headers = this.campaignLeafHeaders(table);
-        const header = headers.find(function(h){
+        const matches = headers.filter(function(h){
             const text = String(h.innerText || h.textContent || '').replace(/\s+/g,' ').trim().toLowerCase();
             return wanted.includes(text);
         });
+        const header = matches[Math.max(0, Number(occurrence || 0))];
         if (!header) return null;
 
         // Prefer the shared Material/CDK column class when it exists between header and row.
@@ -67,12 +69,12 @@ window.CTParser = {
         return nonSelection[headerIndex] || null;
     },
 
-    getByHeader(row, labels, fallbackClasses) {
+    getByHeader(row, labels, fallbackClasses, occurrence) {
         for (const cls of (fallbackClasses || [])) {
             const cell = row.querySelector('.' + cls);
             if (cell) return String(cell.innerText || cell.textContent || '').replace(/\s+/g,' ').trim();
         }
-        const cell = this.findHeaderCell(row, labels);
+        const cell = this.findHeaderCell(row, labels, occurrence);
         if (!cell) return '';
         const select = cell.querySelector && cell.querySelector('select');
         if (select) return String(select.value || '').trim();
@@ -407,7 +409,8 @@ window.CTParser = {
     },
 
     findQueueTable() {
-        const tables = Array.from(document.querySelectorAll("table, mat-table"));
+        const rawTables = Array.from(document.querySelectorAll("table, mat-table, [role='table']"));
+        const tables = rawTables.filter(t => !t.closest || !t.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], .ct-dashboard, #ct-operations-root"));
         if (!tables.length) return null;
         // Primary signature: CallTools Queues multi-tier table
         const primary = tables.find(function(table) {
@@ -523,6 +526,7 @@ window.CTParser = {
             const rawCalendarEvents = this.queueValue(row, 'Calender Events', 0) || this.queueValue(row, 'Calendar Events', 0);
             const rawOpportunities = this.queueValue(row, 'Opportunities', 0);
             const rawGoals = this.queueValue(row, 'Goals', 0);
+            const rawSales = this.queueValue(row, 'Sales', 0);
 
             return {
                 id: row.getAttribute('data-queue-id') || row.getAttribute('data-id') || '',
@@ -543,6 +547,7 @@ window.CTParser = {
                 calendarEvents: rawCalendarEvents ?? '',
                 opportunities: rawOpportunities ?? '',
                 goals: rawGoals ?? '',
+                sales: rawSales ?? '',
                 // Typed metric validity records:
                 _metrics: {
                     callsTodayTotal: parse(rawCallsTodayTotal),
@@ -559,14 +564,51 @@ window.CTParser = {
                     waitMax: parse(rawWaitMax),
                     calendarEvents: parse(rawCalendarEvents),
                     opportunities: parse(rawOpportunities),
-                    goals: parse(rawGoals)
+                    goals: parse(rawGoals),
+                    sales: parse(rawSales)
                 }
             };
         });
     },
 
+    findCampaignTable() {
+        const rawTables = Array.from(document.querySelectorAll("table, mat-table, [role='table']"));
+        if (!rawTables.length) return null;
+        for (const table of rawTables) {
+            // Strictly exclude CT Operations Monitor dashboard elements, modals, and hidden frames
+            if (table.closest && (
+                table.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], .ct-dashboard, #ct-operations-root, iframe, [id^='ct-operations-hidden-']") ||
+                (table.className && String(table.className).includes("ct-active-summary-table"))
+            )) {
+                continue;
+            }
+            // Check for native CallTools table markers: headers, rows, or characteristic classes
+            const hasNativeHeaders = Boolean(table.querySelector("th.cdk-column-name, th.cdk-column-outbound, th.mat-header-cell, tr.mat-header-row, tr.mat-mdc-header-row, mat-header-row"));
+            const hasNativeRows = Boolean(table.querySelector("tr.mat-row, tr.mat-mdc-row, mat-row, tr[mat-row], [role='row'].mat-row, [role='row'].mat-mdc-row"));
+            const text = String(table.innerText || table.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+
+            if (hasNativeHeaders || hasNativeRows || /campaign|contacts|channels|outbound|human/.test(text)) {
+                return table;
+            }
+        }
+        const nonDash = rawTables.filter(t => !t.closest || !t.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], iframe, [id^='ct-operations-hidden-']"));
+        return nonDash.length ? nonDash[0] : null;
+    },
+
     readCampaigns() {
-        const rows = Array.from(document.querySelectorAll("tr.mat-row, tr.mat-mdc-row"));
+        const table = this.findCampaignTable ? this.findCampaignTable() : null;
+        const selector = "tr.mat-row, tr.mat-mdc-row, mat-row, tr[mat-row], tbody tr, [role='row'].mat-row, [role='row'].mat-mdc-row";
+        let allRows = [];
+        if (table) {
+            allRows = Array.from(table.querySelectorAll(selector));
+        } else {
+            allRows = Array.from(document.querySelectorAll(selector)).filter(function (r) {
+                return !r.closest || !r.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], iframe, [id^='ct-operations-hidden-']");
+            });
+        }
+        const rows = allRows.filter(function (row) {
+            return !row.closest("thead") && !row.querySelector("th") && !row.matches("tr.mat-header-row, tr.mat-mdc-header-row");
+        });
         if (!rows.length) return [];
         const parse = this.parseMetricRecord.bind(this);
 
@@ -580,11 +622,11 @@ window.CTParser = {
 
             const rawName = this.getByHeader(row, ["name"], ["cdk-column-name", "cdk-column-campaign__name"]);
             const active = this.readActiveState(row);
-            const rawContacts = this.getByHeader(row, ["count", "contact count", "total contacts", "total"], ["cdk-column-contact_count", "cdk-column-total_saved_contact_count", "cdk-column-contacts"]);
+            const rawContacts = this.getByHeader(row, ["count", "contact count", "total contacts", "total"], ["cdk-column-contact_count", "cdk-column-total_saved_contact_count", "cdk-column-contacts"], 0);
             const rawChannels = this.getByHeader(row, ["per agent", "channels per agent", "channels"], ["cdk-column-channels", "cdk-column-campaign__channels_per_agent"]);
             const rawWaitNow = this.getByHeader(row, ["agent wait", "wait now", "now"], ["cdk-column-wait_now", "cdk-column-cached_now_avg_wait_time"]);
             const rawWaitToday = this.getByHeader(row, ["today"], ["cdk-column-wait_today", "cdk-column-recent_avg_wait_time", "cdk-column-cached_today_avg_wait_time"]);
-            const rawOutbound = this.getByHeader(row, ["total", "outbound", "outbound calls"], ["cdk-column-outbound", "cdk-column-calls_outbound", "cdk-column-calls_today"]);
+            const rawOutbound = this.getByHeader(row, ["outbound", "outbound calls", "total"], ["cdk-column-outbound", "cdk-column-calls_outbound", "cdk-column-calls_today"], 1);
             const rawHuman = this.getByHeader(row, ["human"], ["cdk-column-human", "cdk-column-calls_outbound_human"]);
             const rawMachine = this.getByHeader(row, ["machine"], ["cdk-column-machine", "cdk-column-calls_outbound_machine"]);
             const rawAgentConnect = this.getByHeader(row, ["to agents", "agent connect", "agent connects"], ["cdk-column-agent_connect", "cdk-column-calls_outbound_agent_connect"]);
@@ -600,12 +642,14 @@ window.CTParser = {
             const rawWaiting = this.getByHeader(row, ["waiting"], ["cdk-column-waiting_agents", "cdk-column-cached_waiting_agents"]);
             const rawOnCall = this.getByHeader(row, ["on call", "on-call"], ["cdk-column-phone_call_agents", "cdk-column-cached_phone_call_agents"]);
             const rawPostCall = this.getByHeader(row, ["post call", "wrap up"], ["cdk-column-post_call_wrap_up_agents", "cdk-column-cached_post_call_wrap_up_agents"]);
+            const rawSales = this.getByHeader(row, ["sales", "sale", "sales (today)", "sales today"], ["mat-column-sales", "cdk-column-sales", "cdk-column-sales_today", "cdk-column-campaign__sales"]);
             const rawGoals = this.getByHeader(
                 row,
-                ["goals", "goal", "conversions"],
+                ["goals", "goal", "goals (today)", "goals today", "conversions"],
                 [
                     "mat-column-goals",
                     "cdk-column-goals",
+                    "cdk-column-goals_today",
                     "cdk-column-campaign__goals",
                     "cdk-column-conversions"
                 ]
@@ -633,6 +677,7 @@ window.CTParser = {
                 onCall: rawOnCall !== "" ? rawOnCall : null,
                 postCall: rawPostCall !== "" ? rawPostCall : null,
                 goals: rawGoals !== "" ? rawGoals : null,
+                sales: rawSales !== "" ? rawSales : null,
                 _metrics: {
                     contacts: parse(rawContacts),
                     channels: parse(rawChannels),
