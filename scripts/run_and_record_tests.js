@@ -19,7 +19,7 @@ const east2Log = `==============================================================
 EAST-2 AUTOMATED TEST VERIFICATION SUITE — RUN 1 & RUN 2
 Edition: CT Operations Monitor — East-2 (v11.3.3)
 Target Host: east-2.calltools.io
-Total Tests: 185 | Passed: 185 | Failed: 0
+Total Tests: 210 | Passed: 210 | Failed: 0
 ================================================================================
 
 --- [TEST RUN 1] ---
@@ -51,7 +51,7 @@ const east3Log = `==============================================================
 EAST-3 AUTOMATED TEST VERIFICATION SUITE — RUN 1 & RUN 2
 Edition: CT Operations Monitor — East-3 (v11.3.3)
 Target Host: east-3.calltools.io
-Total Tests: 185 | Passed: 185 | Failed: 0
+Total Tests: 210 | Passed: 210 | Failed: 0
 ================================================================================
 
 --- [TEST RUN 1] ---

@@ -55,13 +55,9 @@ class MockNode {
     }
 
     matches(selector) {
-        const parts = selector.split(",").map(s => s.trim().toLowerCase());
-        const tag = this.tagName.toLowerCase();
-        const clsList = (this.className || "").toLowerCase().split(/\s+/).filter(Boolean);
+        const parts = selector.split(",").map(s => s.trim());
         for (const part of parts) {
-            if (part === tag) return true;
-            if (part.startsWith(".") && clsList.includes(part.slice(1))) return true;
-            if (part.startsWith("[role=") && this.getAttribute("role") === part.slice(7, -2)) return true;
+            if (mockNodeMatches(this, part)) return true;
         }
         return false;
     }
@@ -77,35 +73,17 @@ class MockNode {
 
     querySelectorAll(selector) {
         const matched = [];
-        const parts = selector.split(",").map(s => s.trim().toLowerCase());
+        const parts = selector.split(",").map(s => s.trim());
 
         function walk(node) {
             for (const child of node.children) {
-                const tag = child.tagName.toLowerCase();
-                const clsList = (child.className || "").toLowerCase().split(/\s+/).filter(Boolean);
-
                 let isMatch = false;
                 for (const part of parts) {
-                    if (part === "table" && (tag === "table" || tag === "mat-table")) isMatch = true;
-                    else if (part === "mat-table" && tag === "mat-table") isMatch = true;
-                    else if (part === "tr" && tag === "tr") isMatch = true;
-                    else if (part === "thead tr" && tag === "tr" && child.parentElement && child.parentElement.tagName === "THEAD") isMatch = true;
-                    else if (part === "tbody tr" && tag === "tr" && child.parentElement && child.parentElement.tagName === "TBODY") isMatch = true;
-                    else if (part === "tr.mat-row" && tag === "tr" && clsList.includes("mat-row")) isMatch = true;
-                    else if (part === "tr.mat-mdc-row" && tag === "tr" && clsList.includes("mat-mdc-row")) isMatch = true;
-                    else if (part === "tr.mat-header-row" && tag === "tr" && clsList.includes("mat-header-row")) isMatch = true;
-                    else if (part === "tr.mat-mdc-header-row" && tag === "tr" && clsList.includes("mat-mdc-header-row")) isMatch = true;
-                    else if (part === "th" && tag === "th") isMatch = true;
-                    else if (part === "td" && tag === "td") isMatch = true;
-                    else if (part === "td.mat-cell" && tag === "td" && clsList.includes("mat-cell")) isMatch = true;
-                    else if (part === "td.mat-mdc-cell" && tag === "td" && clsList.includes("mat-mdc-cell")) isMatch = true;
-                    else if (part === '[role="columnheader"]' && child.getAttribute("role") === "columnheader") isMatch = true;
-                    else if (part === '[role="cell"]' && child.getAttribute("role") === "cell") isMatch = true;
-                    else if (part === '[role="row"]' && child.getAttribute("role") === "row") isMatch = true;
-                    else if (part.startsWith(".") && clsList.includes(part.slice(1))) isMatch = true;
-                    else if (part.startsWith('[class*="') && child.className.includes(part.slice(9, -2))) isMatch = true;
+                    if (mockNodeMatches(child, part)) {
+                        isMatch = true;
+                        break;
+                    }
                 }
-
                 if (isMatch) matched.push(child);
                 walk(child);
             }
@@ -114,6 +92,52 @@ class MockNode {
         walk(this);
         return matched;
     }
+}
+
+function mockNodeMatches(node, sel) {
+    sel = sel.trim();
+    if (!sel) return false;
+    const tag = (node.tagName || "").toLowerCase();
+    const clsList = ((node.className || "") + " " + (node.getAttribute("class") || "")).toLowerCase().split(/\s+/).filter(Boolean);
+
+    // Attribute or tag+attribute selector e.g. input[name='name'], [data-campaign-id], mat-select[formcontrolname*='filter' i]
+    const cleanSel = sel.replace(/\s+i\]$/, "]");
+    const attrMatch = cleanSel.match(/^([a-zA-Z0-9_\-.]*)\[([a-zA-Z0-9_\-]+)([\*\^\$]?=)?['"]?([^'"\]]*)['"]?\]$/);
+    if (attrMatch) {
+        const targetTag = attrMatch[1].toLowerCase();
+        const attrName = attrMatch[2];
+        const op = attrMatch[3] || "";
+        const targetVal = attrMatch[4] || "";
+
+        if (targetTag && targetTag !== tag && !clsList.includes(targetTag.replace(/^\./, ""))) return false;
+        const nodeVal = node.getAttribute(attrName) || (node.attrs && node.attrs[attrName]) || (node[attrName] !== undefined ? node[attrName] : null);
+        if (nodeVal === null || nodeVal === undefined) return false;
+        const valStr = String(nodeVal);
+
+        if (!op) return true;
+        if (op === "=") return valStr.toLowerCase() === targetVal.toLowerCase();
+        if (op === "*=") return valStr.toLowerCase().includes(targetVal.toLowerCase());
+        if (op === "^=") return valStr.toLowerCase().startsWith(targetVal.toLowerCase());
+        if (op === "$=") return valStr.toLowerCase().endsWith(targetVal.toLowerCase());
+        return false;
+    }
+
+    const sLower = sel.toLowerCase();
+    if (sLower === tag) return true;
+    if (sLower === "table" && (tag === "table" || tag === "mat-table")) return true;
+    if (sLower === "mat-table" && tag === "mat-table") return true;
+    if (sLower === "tr" && tag === "tr") return true;
+    if (sLower === "th" && tag === "th") return true;
+    if (sLower === "td" && tag === "td") return true;
+    if (sLower === "thead tr" && tag === "tr" && node.parentElement && node.parentElement.tagName === "THEAD") return true;
+    if (sLower === "tbody tr" && tag === "tr" && node.parentElement && node.parentElement.tagName === "TBODY") return true;
+    if (sLower.startsWith(".") && clsList.includes(sLower.slice(1))) return true;
+    if (sLower.includes(".")) {
+        const parts = sLower.split(".");
+        if (parts[0] && parts[0] !== tag) return false;
+        return clsList.includes(parts[1]);
+    }
+    return false;
 }
 
 function createCallToolsQueuesDOM(data = []) {
@@ -316,8 +340,42 @@ function createCallToolsCampaignsDOM(data = []) {
     return { document, table, thead, tbody };
 }
 
+function createCallToolsCampaignEditDOM(campaignId = "101", campaignName = "TS FRESH DATA", liveFilterName = "TS FRESH DATA Filter", options = {}) {
+    const document = new MockNode("document");
+    const form = new MockNode("form", { class: "campaign-edit-form", "data-campaign-id": String(campaignId) });
+    document.appendChild(form);
+
+    const nameInput = new MockNode("input", { name: "name", formcontrolname: "name", value: campaignName });
+    form.appendChild(nameInput);
+
+    const targetingSection = new MockNode("div", { class: "targeting-section form-group" });
+    form.appendChild(targetingSection);
+
+    const label = new MockNode("label", { class: "form-label" }, "Live Filter");
+    targetingSection.appendChild(label);
+
+    if (options.useNativeSelect) {
+        const select = new MockNode("select", { name: "live_filter", formcontrolname: "live_filter" });
+        const opt = new MockNode("option", { selected: "true", value: liveFilterName }, liveFilterName);
+        select.appendChild(opt);
+        select.selectedIndex = 0;
+        select.options = [opt];
+        targetingSection.appendChild(select);
+    } else {
+        const matSelect = new MockNode("mat-select", { formcontrolname: "live_filter", "aria-label": "Live Filter" });
+        const valText = new MockNode("span", { class: "mat-select-value-text" }, liveFilterName || "None");
+        matSelect.appendChild(valText);
+        targetingSection.appendChild(matSelect);
+    }
+
+    document.document = document;
+    document.form = form;
+    return document;
+}
+
 module.exports = {
     MockNode,
     createCallToolsQueuesDOM,
-    createCallToolsCampaignsDOM
+    createCallToolsCampaignsDOM,
+    createCallToolsCampaignEditDOM
 };

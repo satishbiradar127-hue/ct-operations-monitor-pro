@@ -655,7 +655,7 @@ window.CTParser = {
                 ]
             );
 
-            // Live Filter discovery (Stage 3)
+            // Live Filter discovery (Stage 3 & Phase 13)
             let rawLiveFilter = this.getByHeader(
                 row,
                 ["live filter", "filter", "active filter", "assigned filter"],
@@ -681,12 +681,46 @@ window.CTParser = {
                     if (rawLiveFilter) filterSource = "EDIT_FORM";
                 }
             }
+            // Check active CDK overlays or modals on page for campaign edit drawer
+            if (!rawLiveFilter && typeof document !== "undefined" && id) {
+                const overlay = document.querySelector(".cdk-overlay-container, mat-dialog-container, mat-drawer, mat-sidenav, [role='dialog']");
+                if (overlay) {
+                    const overlayEditForm = (overlay.querySelector && overlay.querySelector(`[data-campaign-id='${id}']`)) || overlay;
+                    const ms = overlayEditForm.querySelector("mat-select[formcontrolname*='filter' i], select[name*='filter' i], .mat-select-value-text");
+                    if (ms) {
+                        const txt = String(ms.innerText || ms.textContent || ms.value || "").trim();
+                        if (txt && txt !== "None" && txt !== "Unassigned" && !txt.toLowerCase().includes("select")) {
+                            rawLiveFilter = txt;
+                            filterSource = "ACTIVE_OVERLAY";
+                        }
+                    }
+                }
+            }
+            // Check verified registry if not found directly in current table row
+            let verifiedTimestamp = null;
+            const storageObj = (typeof localStorage !== "undefined" ? localStorage : null) || (typeof window !== "undefined" && window.localStorage ? window.localStorage : null);
+            if (!rawLiveFilter && id && storageObj) {
+                try {
+                    const regKey = "ct_east2_verified_campaign_filters_v1";
+                    const regData = JSON.parse(storageObj.getItem(regKey) || "{}");
+                    if (regData && regData[String(id)]) {
+                        const entry = regData[String(id)];
+                        const fVal = entry && (entry.liveFilter || entry.filter);
+                        if (fVal) {
+                            rawLiveFilter = fVal;
+                            filterSource = entry.source || "VERIFIED_REGISTRY";
+                            verifiedTimestamp = entry.timestamp || null;
+                        }
+                    }
+                } catch (e) {}
+            }
 
-            const hasLiveFilter = Boolean(rawLiveFilter && String(rawLiveFilter).trim() !== "");
+            const hasLiveFilter = Boolean(rawLiveFilter && String(rawLiveFilter).trim() !== "" && rawLiveFilter !== "None" && rawLiveFilter !== "Unassigned" && rawLiveFilter !== "—");
             const liveFilter = hasLiveFilter ? String(rawLiveFilter).trim() : null;
-            const liveFilterStatus = hasLiveFilter ? "OBSERVED" : "FILTER SOURCE UNAVAILABLE";
+            const liveFilterStatus = hasLiveFilter ? "ASSIGNED" : (rawLiveFilter === "None" || rawLiveFilter === "Unassigned" ? "NONE" : "FILTER SOURCE UNAVAILABLE");
             const liveFilterSource = hasLiveFilter ? filterSource : "DOM_UNAVAILABLE";
             const liveFilterConfidence = hasLiveFilter ? "VERIFIED" : "UNAVAILABLE";
+            const liveFilterTimestamp = verifiedTimestamp || (hasLiveFilter ? Date.now() : null);
 
             return {
                 id: id || "",
@@ -715,6 +749,7 @@ window.CTParser = {
                 liveFilterStatus: liveFilterStatus,
                 liveFilterSource: liveFilterSource,
                 liveFilterConfidence: liveFilterConfidence,
+                liveFilterTimestamp: liveFilterTimestamp,
                 _metrics: {
                     contacts: parse(rawContacts),
                     channels: parse(rawChannels),
@@ -736,5 +771,125 @@ window.CTParser = {
                 }
             };
         });
+    },
+
+    /**
+     * Reads campaign edit form / Targeting section DOM.
+     * Extracts campaignId, campaignName, and selected Live Filter.
+     */
+    readCampaignEditForm(doc) {
+        const targetDoc = doc || (typeof document !== "undefined" ? document : null);
+        if (!targetDoc) return null;
+
+        // 1. Identify Campaign ID
+        let campaignId = "";
+        if (typeof window !== "undefined" && window.location && window.location.pathname) {
+            const match = window.location.pathname.match(/\/campaigns\/edit\/([a-zA-Z0-9_\-]+)/);
+            if (match) campaignId = match[1];
+        }
+        if (!campaignId) {
+            const formWithId = targetDoc.querySelector("[data-campaign-id], [data-id]");
+            if (formWithId) {
+                campaignId = formWithId.getAttribute("data-campaign-id") || formWithId.getAttribute("data-id") || "";
+            }
+        }
+        if (!campaignId) {
+            const idInput = targetDoc.querySelector("input[name='id'], input[formcontrolname='id']");
+            if (idInput && (idInput.value || idInput.getAttribute("value"))) {
+                campaignId = idInput.value || idInput.getAttribute("value") || "";
+            }
+        }
+
+        // 2. Identify Campaign Name
+        let campaignName = "";
+        const nameInput = targetDoc.querySelector("input[name='name'], input[formcontrolname='name']");
+        if (nameInput && (nameInput.value || nameInput.getAttribute("value"))) {
+            campaignName = String(nameInput.value || nameInput.getAttribute("value") || "").trim();
+        } else {
+            const headerEl = targetDoc.querySelector("h1, h2, .page-title, .breadcrumb-item.active");
+            if (headerEl) {
+                const txt = (headerEl.innerText || headerEl.textContent || "").trim();
+                const clean = txt.replace(/^Edit\s+/i, "").trim();
+                if (clean) campaignName = clean;
+            }
+        }
+
+        // 3. Identify Live Filter
+        let liveFilter = null;
+        let filterSource = "NONE";
+
+        // A. Angular Material mat-select
+        const matSelects = Array.from(targetDoc.querySelectorAll("mat-select[formcontrolname*='filter' i], mat-select[name*='filter' i], mat-select[aria-label*='filter' i], mat-select[placeholder*='filter' i]"));
+        for (const ms of matSelects) {
+            const valEl = ms.querySelector(".mat-select-value, .mat-select-value-text, .mat-mdc-select-value-text, .mat-select-min-line");
+            const valText = valEl ? String(valEl.innerText || valEl.textContent || "").trim() : "";
+            if (valText && valText !== "None" && valText !== "Unassigned" && valText !== "—" && !valText.toLowerCase().includes("select")) {
+                liveFilter = valText;
+                filterSource = "MAT_SELECT";
+                break;
+            }
+        }
+
+        // B. Standard HTML select
+        if (!liveFilter) {
+            const nativeSelects = Array.from(targetDoc.querySelectorAll("select[name*='filter' i], select[id*='filter' i], select[formcontrolname*='filter' i]"));
+            for (const sel of nativeSelects) {
+                if (sel.options && sel.options.length > 0) {
+                    const idx = sel.selectedIndex >= 0 ? sel.selectedIndex : 0;
+                    const opt = sel.options[idx];
+                    const text = opt ? String(opt.text || opt.innerText || opt.textContent || opt.value || "").trim() : "";
+                    if (text && text !== "None" && text !== "Unassigned" && !text.toLowerCase().includes("select")) {
+                        liveFilter = text;
+                        filterSource = "NATIVE_SELECT";
+                        break;
+                    }
+                } else if (sel.value) {
+                    const text = String(sel.value).trim();
+                    if (text && text !== "None" && text !== "Unassigned") {
+                        liveFilter = text;
+                        filterSource = "NATIVE_SELECT";
+                        break;
+                    }
+                }
+            }
+        }
+
+        // C. Targeting section / Label associated field
+        if (!liveFilter) {
+            const labels = Array.from(targetDoc.querySelectorAll("label, mat-label, .form-label"));
+            for (const lbl of labels) {
+                const lblText = (lbl.innerText || lbl.textContent || "").toLowerCase();
+                if (lblText.includes("live filter") || (lblText.includes("filter") && lblText.includes("targeting"))) {
+                    const container = (lbl.closest && lbl.closest(".form-group, mat-form-field, .targeting-field")) || lbl.parentElement;
+                    if (container) {
+                        const valEl = container.querySelector(".mat-select-value-text, .mat-select-value, select, input, [data-value]");
+                        if (valEl) {
+                            const txt = String(valEl.value || valEl.innerText || valEl.textContent || "").trim();
+                            if (txt && txt !== "None" && txt !== "Unassigned" && !txt.toLowerCase().includes("select")) {
+                                liveFilter = txt;
+                                filterSource = "TARGETING_SECTION";
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!campaignId && !liveFilter && !campaignName) return null;
+
+        const isAssigned = Boolean(liveFilter && liveFilter !== "None" && liveFilter !== "Unassigned");
+        return {
+            campaignId: campaignId || "unknown",
+            campaignName: campaignName || (campaignId ? `Campaign ${campaignId}` : ""),
+            liveFilter: isAssigned ? liveFilter : null,
+            status: isAssigned ? "ASSIGNED" : "NONE",
+            source: filterSource,
+            timestamp: Date.now()
+        };
     }
 };
+
+if (typeof module !== "undefined" && module.exports) {
+    module.exports = window.CTParser;
+}

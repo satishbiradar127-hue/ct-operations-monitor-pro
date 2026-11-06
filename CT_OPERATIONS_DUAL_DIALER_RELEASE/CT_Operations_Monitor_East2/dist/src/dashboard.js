@@ -2983,6 +2983,19 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
                         </div>
                     </div>
 
+                    <div class="ct-top-live-filter-strip" data-ref="topLiveFilterStrip">
+                        <div class="ct-tlf-left">
+                            <span class="ct-tlf-tag">LIVE FILTER</span>
+                            <span class="ct-tlf-campaign" data-ref="topFilterCampaign">—</span>
+                            <span class="ct-tlf-badge is-unavailable" data-ref="topFilterBadge">FILTER SOURCE UNAVAILABLE</span>
+                        </div>
+                        <div class="ct-tlf-right">
+                            <span class="ct-tlf-source" data-ref="topFilterSource">Source: DOM Unavailable</span>
+                            <span class="ct-tlf-observed" data-ref="topFilterObserved">Last observed: Awaiting DOM</span>
+                            <span class="ct-tlf-change" data-ref="topFilterChange">Last change: None recorded</span>
+                        </div>
+                    </div>
+
                     <div class="ct-summary-section-label"><span>OUTBOUND LIVE SNAPSHOT</span><small>Campaign feed · current outbound operating metrics</small></div>
                     <div class="ct-kpis" aria-label="Outbound Operations KPIs">
                         ${kpiShell("campaigns", "Campaigns")}
@@ -3275,6 +3288,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
             zoomOut: root.querySelector('[data-ref="zoomOut"]'),
             zoomReset: root.querySelector('[data-ref="zoomReset"]'),
             zoomIn: root.querySelector('[data-ref="zoomIn"]'),
+            topLiveFilterStrip: root.querySelector('[data-ref="topLiveFilterStrip"]'),
+            topFilterCampaign: root.querySelector('[data-ref="topFilterCampaign"]'),
+            topFilterBadge: root.querySelector('[data-ref="topFilterBadge"]'),
+            topFilterSource: root.querySelector('[data-ref="topFilterSource"]'),
+            topFilterObserved: root.querySelector('[data-ref="topFilterObserved"]'),
+            topFilterChange: root.querySelector('[data-ref="topFilterChange"]'),
             activeCommandSummary: root.querySelector('[data-ref="activeCommandSummary"]'),
             activeSummaryCount: root.querySelector('[data-ref="activeSummaryCount"]'),
             activeSummaryBadge: root.querySelector('[data-ref="activeSummaryBadge"]'),
@@ -4518,6 +4537,51 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
         setClass(refs.calltoolsHealth, "ct-command-value " + (state.sourceState === "STALE" ? "is-critical" : state.sourceState === "DELAYED" ? "is-warning" : state.sourceState === "LIVE" ? "is-good" : ""));
 
         ensureOperatingBaseline(stats.campaigns || state.campaigns);
+
+        // Update Top Live Filter Strip
+        if (refs.topFilterCampaign && refs.topFilterBadge) {
+            const allCampList = stats.campaigns || state.campaigns || [];
+            let targetCamp = operating || (allCampList.find(function(c) { return c && c.active !== false; })) || allCampList[0] || null;
+
+            if (targetCamp) {
+                const cName = safeValue(targetCamp.name, "Campaign " + (targetCamp.id || ""));
+                const fName = targetCamp.liveFilter || null;
+                const fStatus = targetCamp.liveFilterStatus || (fName ? "ASSIGNED" : "FILTER SOURCE UNAVAILABLE");
+                const fSource = targetCamp.liveFilterSource || "DOM_UNAVAILABLE";
+                const fTime = targetCamp.liveFilterTimestamp ? new Date(targetCamp.liveFilterTimestamp).toLocaleTimeString() : (fName ? new Date().toLocaleTimeString() : "Awaiting DOM");
+
+                let lastChangeText = "None recorded";
+                if (intelligenceEngine && intelligenceEngine.history) {
+                    const recentChange = intelligenceEngine.history.find(function(h) {
+                        return h.category === "LIVE_FILTER" && (String(h.targetId) === String(targetCamp.id) || String(h.campaignId) === String(targetCamp.id));
+                    });
+                    if (recentChange) {
+                        lastChangeText = (recentChange.previous || "None") + " → " + (recentChange.current || "None") + " (" + (recentChange.confirmedAt || recentChange.firstDetectedAt || "") + ")";
+                    }
+                }
+
+                setText(refs.topFilterCampaign, cName);
+                if (fName) {
+                    setText(refs.topFilterBadge, "Filter: " + fName);
+                    setClass(refs.topFilterBadge, "ct-tlf-badge is-assigned");
+                    if (refs.topFilterSource) setText(refs.topFilterSource, "Source: " + (fSource === "TABLE_COLUMN" ? "Campaigns Table" : fSource === "CAMPAIGN_EDIT_DOM" ? "Edit Page DOM" : fSource === "VERIFIED_REGISTRY" ? "Verified Registry" : fSource));
+                    if (refs.topFilterObserved) setText(refs.topFilterObserved, "Last observed: " + fTime);
+                } else {
+                    setText(refs.topFilterBadge, "FILTER SOURCE UNAVAILABLE");
+                    setClass(refs.topFilterBadge, "ct-tlf-badge is-unavailable");
+                    if (refs.topFilterSource) setText(refs.topFilterSource, "Source: DOM Unavailable");
+                    if (refs.topFilterObserved) setText(refs.topFilterObserved, "Last observed: Awaiting DOM source");
+                }
+                if (refs.topFilterChange) setText(refs.topFilterChange, "Last change: " + lastChangeText);
+            } else {
+                setText(refs.topFilterCampaign, "—");
+                setText(refs.topFilterBadge, "FILTER SOURCE UNAVAILABLE");
+                setClass(refs.topFilterBadge, "ct-tlf-badge is-unavailable");
+                if (refs.topFilterSource) setText(refs.topFilterSource, "Source: DOM Unavailable");
+                if (refs.topFilterObserved) setText(refs.topFilterObserved, "Last observed: Awaiting DOM");
+                if (refs.topFilterChange) setText(refs.topFilterChange, "Last change: None recorded");
+            }
+        }
         updateOperatingPanel(operating, stats);
         updateSourceStrip(stats);
         updateOperatingSelect(stats.campaigns || state.campaigns);

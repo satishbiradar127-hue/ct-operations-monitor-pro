@@ -206,6 +206,86 @@
     font-style: italic;
 }
 
+/* Top Live Filter Monitoring Strip */
+.ct-top-live-filter-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin: 6px 0 10px 0;
+    gap: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.ct-tlf-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.ct-tlf-tag {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.ct-tlf-campaign {
+    font-size: 11px;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+.ct-tlf-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.ct-tlf-badge.is-assigned {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+}
+.ct-tlf-badge.is-unavailable {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    font-style: italic;
+}
+.ct-tlf-badge.is-changed {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.ct-tlf-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 10.5px;
+    color: #94a3b8;
+}
+.ct-tlf-source, .ct-tlf-observed, .ct-tlf-change {
+    white-space: nowrap;
+}
+.ct-tlf-change {
+    color: #cbd5e1;
+}
+@media (max-width: 1024px) {
+    .ct-top-live-filter-strip {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+}
+
 
 /* CT Operations Monitor (EAST-3) Styles */
 /* Base injected styles are dynamically scoped to #ct-operations-dashboard-east3 */
@@ -413,4 +493,84 @@
     color: #94a3b8;
     border: 1px solid rgba(148, 163, 184, 0.2);
     font-style: italic;
+}
+
+/* Top Live Filter Monitoring Strip */
+.ct-top-live-filter-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin: 6px 0 10px 0;
+    gap: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.ct-tlf-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.ct-tlf-tag {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+.ct-tlf-campaign {
+    font-size: 11px;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+.ct-tlf-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+.ct-tlf-badge.is-assigned {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+}
+.ct-tlf-badge.is-unavailable {
+    background: rgba(148, 163, 184, 0.12);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    font-style: italic;
+}
+.ct-tlf-badge.is-changed {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.ct-tlf-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 10.5px;
+    color: #94a3b8;
+}
+.ct-tlf-source, .ct-tlf-observed, .ct-tlf-change {
+    white-space: nowrap;
+}
+.ct-tlf-change {
+    color: #cbd5e1;
+}
+@media (max-width: 1024px) {
+    .ct-top-live-filter-strip {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
 }

@@ -18,6 +18,7 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
     const INBOUND_STATUS_KEY = "ct_east3_inbound_feed_status_v1";
     const INBOUND_STORAGE_DATA_KEY = "ct_east3_inbound_data_v2";
     const INBOUND_STORAGE_STATUS_KEY = "ct_east3_inbound_status_v2";
+    const VERIFIED_FILTERS_KEY = "ct_east3_verified_campaign_filters_v1";
     const INBOUND_COORDINATION_MS = 5000;
     const INBOUND_HEARTBEAT_MS = 2500;
     const INBOUND_MONITOR_PARAM = "ct_inbound_monitor";
@@ -30,13 +31,46 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
     function currentRoute() {
         const path = window.location.pathname.replace(/\/+$/, "");
         if (path === "/manager/campaigns") return "campaigns";
+        if (path.startsWith("/manager/campaigns/edit/")) return "campaign_edit";
         if (path === "/manager/queues") return "queues";
         return "other";
     }
 
     function isCampaignsPage() { return currentRoute() === "campaigns"; }
+    function isCampaignEditPage() { return currentRoute() === "campaign_edit"; }
     function isQueuesPage() { return currentRoute() === "queues"; }
-    function isMonitorPage() { return isCampaignsPage() || isQueuesPage(); }
+    function isMonitorPage() { return isCampaignsPage() || isQueuesPage() || isCampaignEditPage(); }
+
+    function observeCampaignEditForm() {
+        if (!window.CTParser || !window.CTParser.readCampaignEditForm) return;
+        try {
+            const editData = window.CTParser.readCampaignEditForm(document);
+            if (editData && editData.campaignId && editData.campaignId !== "unknown") {
+                let registry = {};
+                try {
+                    registry = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}");
+                } catch (e) {}
+
+                registry[String(editData.campaignId)] = {
+                    campaignId: String(editData.campaignId),
+                    campaignName: editData.campaignName,
+                    liveFilter: editData.liveFilter,
+                    status: editData.status,
+                    source: "CAMPAIGN_EDIT_DOM",
+                    timestamp: editData.timestamp
+                };
+
+                try {
+                    localStorage.setItem(VERIFIED_FILTERS_KEY, JSON.stringify(registry));
+                    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                        const obj = {};
+                        obj[VERIFIED_FILTERS_KEY] = registry;
+                        chrome.storage.local.set(obj);
+                    }
+                } catch (e) {}
+            }
+        } catch (e) {}
+    }
     function isBackgroundInboundMonitor() {
         return isQueuesPage() && new URLSearchParams(window.location.search).get(INBOUND_MONITOR_PARAM) === "1";
     }
@@ -399,8 +433,13 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
     // STRICTLY READ-ONLY OBSERVER: No simulated button clicks or verification timers.
     function poll() {
         if (!isMonitorPage() || !window.CTParser) return;
+        if (isCampaignEditPage()) {
+            observeCampaignEditForm();
+            return;
+        }
         const now = Date.now();
         if (isCampaignsPage()) {
+            observeCampaignEditForm();
             if (now - lastInboundCoordinationAt >= INBOUND_COORDINATION_MS) {
                 lastInboundCoordinationAt = now;
                 ensureInboundFeedMonitor();

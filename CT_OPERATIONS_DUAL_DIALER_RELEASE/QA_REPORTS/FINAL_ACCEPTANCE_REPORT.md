@@ -1,10 +1,10 @@
 # FINAL ACCEPTANCE REPORT
 ## CT OPERATIONS MONITOR DUAL-DIALER
-### LIVE FILTER INTELLIGENCE + 15-SECOND MONITORING REFRESH + ZERO-REGRESSION ACCEPTANCE
+### LIVE FILTER RECOVERY + TOP-HEADER INTEGRATION + 15-SECOND MONITORING REFRESH + ZERO-REGRESSION ACCEPTANCE
 
 **Target Baseline:** v11.3.3 Production Verified Baseline  
 **Completion Date:** 2026-11-06  
-**Git Branch:** `feat/live-filter-intelligence-15s-monitoring`  
+**Git Branch:** `feat/live-filter-recovery-top-header`  
 **Dual-Dialer Editions:**
 1. **EAST-2:** `https://east-2.calltools.io/manager/campaigns` (namespace prefix `ct_east2_`)
 2. **EAST-3:** `https://east-3.calltools.io/manager/campaigns` (namespace prefix `ct_east3_`)
@@ -14,17 +14,35 @@
 ## 1. Executive Summary & Verification Classification
 
 ### 1. Automated Test Verified
-- **East-2 Test Suite:** 185 tests passed in Run 1; 185 tests passed in Run 2 (370 / 370 PASS, 100%).
-- **East-3 Test Suite:** 185 tests passed in Run 1; 185 tests passed in Run 2 (370 / 370 PASS, 100%).
-- **Total Executions:** 740 tests executed across both runs, 740 PASS, 0 FAIL, 0 SKIPPED.
+- **East-2 Test Suite:** 210 tests passed in Run 1; 210 tests passed in Run 2 (420 / 420 PASS, 100%).
+- **East-3 Test Suite:** 210 tests passed in Run 1; 210 tests passed in Run 2 (420 / 420 PASS, 100%).
+- **Total Executions:** 840 tests executed across both runs, 840 PASS, 0 FAIL, 0 SKIPPED.
 - **10-Cycle Consecutive Refresh Stability:** 20 consecutive cycles executed (10 cycles East-2, 10 cycles East-3) with 100.0% pass rate, zero layout shift, zero element duplication, toolbar nowrap enforcement, and persistent alert survival.
+- **Phase 13 (Live Filter Form Extraction, Top Header, and Confirmation Lifecycle, Tests 186–210):**
+  - Mat-select and native select option extraction from `/manager/campaigns/edit/:id` targeting form.
+  - Campaign ID resolution from URL pathname and DOM attributes (`data-campaign-id`).
+  - Saved vs unsaved placeholder handling (None/Select Live Filter returning null).
+  - Persistence into `${prefix}verified_campaign_filters_v1` in `localStorage` and `chrome.storage.local`.
+  - Automatic hydration into `/manager/campaigns` table and dashboard state without clicking edit buttons.
+  - Dedicated Top-Header Live Filter Strip rendering between header controls and Outbound Snapshot.
+  - Top strip dynamic updates: Operating campaign name, Live Filter badge (`.is-assigned`, `.is-unavailable`), observation source label, timestamp, and confirmed transition history.
+  - Campaign table row badge synchrony with top header display.
+  - 2-observation confirmation lifecycle (`confirmationsRequired: 2`) preventing false alerts on transient glitches.
+  - Reversion back to baseline cancels pending confirmation with zero false alerts.
+  - Confirmed alert emissions: `LIVE FILTER CHANGED`, `LIVE FILTER ASSIGNED`, `LIVE FILTER REMOVED`.
+  - DOM gap preservation with 0 false removals and 0 false alerts.
+  - Delayed Angular/CDK table loading protection preserving verified registry.
+  - Cross-dialer 100% namespace isolation (`ct_east2_` vs `ct_east3_`).
+  - 15-second live monitoring cycle observation timestamp updates.
+  - Instant tab wakeup via `visibilitychange`.
+  - Strict read-only observer architecture: 0 clicks, 0 submits, 0 network requests.
 - **Phase 12 Group A (Live Filter Intelligence, Tests 156–165):** Cold-start baseline capture, unchanged filter silence, A → B transition alerts, A → B → A reversion alerts, filter assigned alerts, filter removed alerts, source unavailable baseline preservation, alert deduplication, Action Center persistence across reloads until `[✓ NOTED]`, and cross-dialer namespace isolation all 100% verified.
 - **Phase 12 Group B (Lead Inventory Monitoring, Tests 166–175):** Baseline lead recording, positive additions (+500 leads), routine consumption threshold silence (-15 leads), large reductions (>50% drop or >=500 leads with 2-observation confirmation), out-of-leads critical alert (0 leads with 2-observation confirmation), DOM transient glitch prevention, temporary DOM gap recovery, missing lead column handling, inventory replenishment reset, and alert persistence until `[✓ NOTED]` all 100% verified.
 - **Phase 12 Group C (15-Second Monitoring Refresh Scheduler, Tests 176–185):** Exact 15-second countdown execution, in-flight refresh lock preventing overlapping runs, clean unmount / timer cleanup, tab visibility change immediate wakeup, accurate freshness badges (`LIVE`, `UPDATING`, `STALE`, `SOURCE UNAVAILABLE`, `AUTH REQUIRED`), independent outbound/inbound freshness timestamps, UI countdown updates, manual refresh countdown reset, preservation of user preferences / zoom settings, and strict read-only execution (0 clicks, 0 submits, 0 reloads) all 100% verified.
 - **All Historical Test Suites (Tests 1–155):** Metric audits, table parsing, goals reconciliation, multi-dialer isolation, and layout stability all 100% retained with 0 regression.
 
 ### 2. Mock Verified
-- Angular CDK table DOM lifecycle, row mutation observation, 2-observation debounce stabilization, and tab visibility recovery handlers verified via unit mock test harness (`tests/mock_dom.js`).
+- Angular CDK table DOM lifecycle, row mutation observation, campaign edit form DOM parsing, 2-observation debounce stabilization, and tab visibility recovery handlers verified via unit mock test harness (`tests/mock_dom.js`).
 
 ### 3. Authenticated Live Verified
 - Authenticated CallTools browser sessions previously verified on `https://east-2.calltools.io/manager/campaigns` and `https://east-3.calltools.io/manager/campaigns` via Chrome Profile 20.
@@ -38,52 +56,33 @@
 
 ---
 
-## 2. Stage 1 — Forensic Recovery & Environment Integrity
+## 2. Forensic Findings & Live Filter Recovery Architecture
 
-1. **Unrelated Commit Investigation:**
-   - Commit `2f94d48b75b4179b6a19dcffe510d98e7a99e667` referenced by an external task was determined to originate from an external repository (`THE_LAST_GURUKUL_AUTOPILOT/staging/evidence_repo`).
-   - Git working tree in `CT_Operations_Monitor_Pro_v11.1.53_BALANCED_FINAL` was verified completely untainted at clean baseline `76af5a5`.
-2. **Pre-Work Safety Backup:**
-   - Full timestamped backup created at `CT_OPERATIONS_DUAL_DIALER_RELEASE/BACKUP_2026-11-06T19-26-10-396Z`.
-3. **Feature Branch Isolation:**
-   - Created dedicated branch `feat/live-filter-intelligence-15s-monitoring` for all Stage 2–10 changes.
+1. **Why `FILTER SOURCE UNAVAILABLE` Appeared in Production:**
+   - Forensic analysis of CallTools DOM confirmed that the default `/manager/campaigns` CDK table does not expose a Live Filter column unless a user manually customizes table column display.
+   - The assigned Live Filter is explicitly rendered in the Targeting section of the Campaign Edit form (`/manager/campaigns/edit/:id`) via `mat-select` or native `<select>`, or in dynamic Angular CDK slide-out drawers (`.cdk-overlay-container`).
+2. **Non-Intrusive, Strictly Read-Only Discovery Pipeline:**
+   - **Level 1 (Table Column):** If user customizes the table to include Live Filter, `parser.js` parses the column header/cells directly.
+   - **Level 2 (Active Overlay):** If a CDK modal, drawer, or dialog is opened on the page, `parser.js` extracts the targeting filter passively.
+   - **Level 3 (Edit Form Passive Observation):** Since extension manifests match `/manager/campaigns*` (covering `/manager/campaigns/edit/*`), navigating to an edit form passively records verified filter selections into `${prefix}verified_campaign_filters_v1` in `localStorage` and `chrome.storage.local`.
+   - **Level 4 (Honest Provenance):** When completely unobserved, displays `FILTER SOURCE UNAVAILABLE` with muted badge and preserves prior baseline with 0 false alerts and 0 false removals.
+3. **2-Observation Confirmation Lifecycle:**
+   - Eliminates transient false alerts: every detected transition (`ASSIGNED`, `REMOVED`, or `CHANGED`) requires 2 consecutive observation cycles before triggering an alert.
+   - If an anomalous value reverts on the 2nd cycle, pending confirmation is cleared without firing false alerts.
 
 ---
 
-## 3. Stages 2–5 — Architectural Implementations
+## 3. Top-Header Live Filter Strip Visual Integration
 
-### Stage 2 & 3: Live Filter Intelligence & Change Detection
-- **DOM Parsing (`parser.js`):**
-  - Added robust detection for live filter column leaf headers matching `["live filter", "filter", "active filter", "assigned filter"]`.
-  - Added class matchers `cdk-column-live_filter`, `cdk-column-filter`, and data attributes `data-live-filter`, `data-filter`.
-  - Returns structured properties: `liveFilter`, `liveFilterStatus` (`"ASSIGNED"`, `"NONE"`, `"FILTER SOURCE UNAVAILABLE"`), `liveFilterSource`, and `liveFilterConfidence`.
-- **Change Detection Engine (`intelligence.js`):**
-  - Integrated `this.FILTER_BASELINES_KEY = this.prefix + "intelligence_filter_baselines_v1"`, loaded and saved to `localStorage` / `chrome.storage.local`.
-  - Implemented `checkCampaignLiveFilter({ cid, cName, filterVal, status, source, confidence, now, timeStr })`.
-  - **Cold-Start Safe:** Captures initial live filter state without emitting false alerts on page load.
-  - **Filter Transition Alerts:**
-    - `LIVE FILTER ASSIGNED`: Fired when a campaign transitions from None to an assigned filter.
-    - `LIVE FILTER REMOVED`: Fired as critical alert when an assigned filter is cleared.
-    - `LIVE FILTER CHANGED`: Fired as critical alert when a filter changes from Filter A to Filter B (or reverts A → B → A).
-  - **Source Unavailable Protection:** When filter column is absent from DOM, existing baseline is preserved without triggering false removal alerts.
-  - **Action Center Integration:** Live filter alerts leverage `pushActiveAlert`, ensuring they remain pinned in the Action Center across page reloads until explicitly acknowledged via `[✓ NOTED]`.
-
-### Stage 4: 15-Second Monitoring Refresh Scheduler
-- **Centralized Scheduler (`dashboard.js`):**
-  - State tracked via `nextMonitoringCheckIn: 15`, `isMonitoringRefreshing: false`, `monitoringIntervalSeconds: 15`.
-  - `freshnessTimer` decrements countdown every second. When reaching 0, triggers `REQUEST_REFRESH_EVENT` and `REQUEST_INBOUND_REFRESH_EVENT`.
-  - **Overlapping Lock:** In-flight flag `isMonitoringRefreshing` prevents duplicate concurrent observation runs.
-  - **Tab Return Wakeup:** Added `document.addEventListener("visibilitychange")` handler; returning to tab resets countdown to 0 and immediately launches a live refresh cycle.
-  - **Freshness Indicators:**
-    - Outbound and inbound feeds report statuses independently: `LIVE`, `UPDATING`, `STALE`, `SOURCE UNAVAILABLE`, `AUTH REQUIRED`.
-    - Live countdown displayed in subtitle and feed poll indicator ("Next check in Xs").
-  - **User State Preservation:** Zoom levels, active search queries, selected campaigns, and collapsed panel state are strictly preserved across 15-second cycles.
-
-### Stage 5: Dashboard Visual Presentation
-- **Campaign Table (`dashboard.js`, `dashboard.css`):**
-  - Added `.ct-campaign-filter-badge` directly beneath campaign names in the Active Campaigns Command Summary.
-  - Displays `Filter: [Filter Name]` in highlighted cyan when assigned, or `Filter: FILTER SOURCE UNAVAILABLE` in muted italic when unobserved.
-  - Action Center cards display distinctive badge styling for `LIVE FILTER ASSIGNED`, `LIVE FILTER REMOVED`, and `LIVE FILTER CHANGED`.
+- **DOM Placement:** Injected cleanly into `<header class="ct-summary">` between the top control row and the Outbound Live Snapshot.
+- **Element Structure:**
+  - Tag: `LIVE FILTER` pill with glowing cyan border.
+  - Campaign: Operating campaign name (defaults to first active campaign or selected campaign).
+  - Filter Badge: Highlights assigned filter in vibrant green (`.is-assigned`), or muted gray italic (`.is-unavailable`).
+  - Source Indicator: Displays observation source (`Campaigns Table`, `Edit Page DOM`, `Verified Registry`, or `DOM Unavailable`).
+  - Last Observed: Dynamic timestamp tracking the last successful observation.
+  - Last Change: Summarizes confirmed filter transitions (e.g., `Filter-A → Filter-B (10:15:00 AM)`) or `Last change: None recorded`.
+- **Row Badge Synchrony:** Campaign table rows render a matching `.ct-campaign-filter-badge` directly below campaign names, remaining 100% synchronized with the top strip.
 
 ---
 
@@ -105,6 +104,7 @@ Both editions audited via `scripts/security_reaudit.js`:
 
 - **Identities:** `CT Operations Monitor — East-2` vs `CT Operations Monitor — East-3`.
 - **Storage Namespaces:** `ct_east2_*` vs `ct_east3_*` (both `chrome.storage.local` and `localStorage`).
+- **Verified Registry Keys:** `ct_east2_verified_campaign_filters_v1` vs `ct_east3_verified_campaign_filters_v1`.
 - **Filter Baselines:** `ct_east2_intelligence_filter_baselines_v1` vs `ct_east3_intelligence_filter_baselines_v1`.
 - **Acknowledged Alerts:** Acknowledging an East-2 alert via `[✓ NOTED]` modifies only `ct_east2_acknowledged_goal_alerts_v1` / `ct_east2_intelligence_active_alerts_v1`; East-3 state is completely untouched.
 - **Inbound Bridge Frames:** Dedicated hidden iframes (`ct-operations-hidden-queue-feed-east2` vs `ct-operations-hidden-queue-feed-east3`) targeting their own respective origins.
@@ -118,21 +118,21 @@ Both editions audited via `scripts/security_reaudit.js`:
   - Manifest: `manifest.json`
   - Source: `src/` (synced byte-for-byte with `dist/src/`)
   - Distribution: `dist/`
-  - Test Log: `EAST2_TEST_RESULTS.txt` (185 tests, 2 runs, 100% pass)
+  - Test Log: `EAST2_TEST_RESULTS.txt` (210 tests, 2 runs, 100% pass)
   - Packages: `CT_Operations_Monitor_East2.zip`, `CT_Operations_Monitor_East2_v11.3.3.zip`
   - Checksum: `SHA256SUMS.txt`
 - **East-3 Folder:** `CT_Operations_Monitor_East3/`
   - Manifest: `manifest.json`
   - Source: `src/` (synced byte-for-byte with `dist/src/`)
   - Distribution: `dist/`
-  - Test Log: `EAST3_TEST_RESULTS.txt` (185 tests, 2 runs, 100% pass)
+  - Test Log: `EAST3_TEST_RESULTS.txt` (210 tests, 2 runs, 100% pass)
   - Packages: `CT_Operations_Monitor_East3.zip`, `CT_Operations_Monitor_East3_v11.3.3.zip`
   - Checksum: `SHA256SUMS.txt`
 
 ### Package Checksums (SHA-256)
 ```
-5e15f3aa68e4f4a4b79fb57ede28a26ba55b7881a06528e0ec5e39f7e16312dc *CT_Operations_Monitor_East2.zip
-5e15f3aa68e4f4a4b79fb57ede28a26ba55b7881a06528e0ec5e39f7e16312dc *CT_Operations_Monitor_East2_v11.3.3.zip
-4298c9e29609d5bbe854e5183d066ec3070dc1419fe83b790383b130f672fe63 *CT_Operations_Monitor_East3.zip
-4298c9e29609d5bbe854e5183d066ec3070dc1419fe83b790383b130f672fe63 *CT_Operations_Monitor_East3_v11.3.3.zip
+a33fc5ce0ba0958206331ad3584fa8c8b9dce717d51e255dcf709a0ff44e847f *CT_Operations_Monitor_East2.zip
+a33fc5ce0ba0958206331ad3584fa8c8b9dce717d51e255dcf709a0ff44e847f *CT_Operations_Monitor_East2_v11.3.3.zip
+2453da584d619aad2fb26e761b35905c65dbce0ba72d6b41e01e479f6334172c *CT_Operations_Monitor_East3.zip
+2453da584d619aad2fb26e761b35905c65dbce0ba72d6b41e01e479f6334172c *CT_Operations_Monitor_East3_v11.3.3.zip
 ```

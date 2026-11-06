@@ -835,19 +835,22 @@
         /**
          * STAGE 3: Live Filter Change Intelligence
          * Tracks assigned live filter per campaign across observations.
-         * Generates persistent alerts on ASSIGNED, REMOVED, or CHANGED.
+         * Generates persistent alerts on ASSIGNED, REMOVED, or CHANGED with 2-observation confirmation.
          * First observation establishes baseline (no false alert).
          * Unavailable source does NOT overwrite baseline or trigger false removal.
          * Distinct alerts for A -> B -> A transitions.
          */
         checkCampaignLiveFilter({ cid, cName, filterVal, status, source, confidence, now, timeStr }) {
+            const pKey = `filter_change_${cid}`;
+
             // If source is unavailable or unreadable, preserve existing baseline and do not alert
             if (status === "FILTER SOURCE UNAVAILABLE" || filterVal === null || filterVal === undefined) {
-                return;
+                if (this.pendingConfirmations[pKey]) delete this.pendingConfirmations[pKey];
+                return null;
             }
 
             const cleanFilter = String(filterVal).trim();
-            if (!cleanFilter) return;
+            if (!cleanFilter) return null;
 
             const bKey = `campaign_filter_${cid}`;
             const baseline = this.filterBaselines[bKey];
@@ -861,17 +864,39 @@
                     updatedAt: now
                 };
                 this.saveState();
-                return;
+                return null;
             }
 
             const previousFilter = baseline.filter;
 
-            // 2. Unchanged filter: do nothing
+            // 2. Unchanged filter: clear any pending confirmation
             if (previousFilter === cleanFilter) {
-                return;
+                if (this.pendingConfirmations[pKey]) delete this.pendingConfirmations[pKey];
+                return null;
             }
 
-            // 3. Determine transition type
+            // 3. Genuine change detected: require 2 consecutive observations
+            const pending = this.pendingConfirmations[pKey];
+            if (!pending || pending.targetFilter !== cleanFilter) {
+                this.pendingConfirmations[pKey] = {
+                    count: 1,
+                    targetFilter: cleanFilter,
+                    previousFilter: previousFilter,
+                    firstDetectedAt: timeStr,
+                    timestamp: now
+                };
+                return null;
+            }
+
+            // Second observation confirms the change!
+            pending.count += 1;
+            if (pending.count < 2) {
+                return null;
+            }
+
+            delete this.pendingConfirmations[pKey];
+
+            // 4. Determine transition type
             const isPrevEmpty = !previousFilter || previousFilter === "None" || previousFilter === "Unassigned" || previousFilter === "—";
             const isCurrEmpty = !cleanFilter || cleanFilter === "None" || cleanFilter === "Unassigned" || cleanFilter === "—";
 
@@ -895,7 +920,7 @@
 
             const alertId = `${this.dialer}_FILTER_CHANGED_${cid}_${encodeURIComponent(previousFilter)}_${encodeURIComponent(cleanFilter)}_${now}`;
 
-            this.pushActiveAlert({
+            const alertObj = {
                 id: alertId,
                 dialer: this.dialer,
                 category: "LIVE_FILTER",
@@ -910,11 +935,13 @@
                 confidence: confidence || "VERIFIED",
                 severity: severity,
                 message: message,
-                firstDetectedAt: timeStr,
+                firstDetectedAt: pending.firstDetectedAt || timeStr,
                 confirmedAt: timeStr,
                 timestamp: now,
                 acknowledged: false
-            });
+            };
+
+            this.pushActiveAlert(alertObj);
 
             // Update baseline
             baseline.filter = cleanFilter;
@@ -922,6 +949,7 @@
             baseline.source = source || "TABLE_COLUMN";
             baseline.updatedAt = now;
             this.saveState();
+            return alertObj;
         }
 
         /**
