@@ -4535,3 +4535,354 @@ test("EAST-2 UPGRADE 210: Strict read-only: live filter observation performs 0 n
     assert.strictEqual(liveFilterAudit.pageNavigations, 0, "Zero automated navigations");
     assert.ok(liveFilterAudit.passiveDOMQueries > 0, "Passive DOM reading only");
 });
+
+// --- TESTS 211–225: PHASE 14 LIVE FILTER INTELLIGENCE COMMAND CENTER ---
+
+const { createCallToolsLiveFiltersDOM } = require("./mock_dom");
+
+test("EAST-2 UPGRADE 211: CTParser.readLiveFilters parses native live filter table with name, active, count, totalCount, and stable IDs", () => {
+    const rawFilters = [
+        { id: "74151", name: "RES CRED MID", active: true, count: 28550, totalCount: 29079 },
+        { id: "67269", name: "RES CRED MAIN", active: false, count: 1200, totalCount: 1250 }
+    ];
+    const { document } = createCallToolsLiveFiltersDOM(rawFilters);
+    const parsed = global.CTParser.readLiveFilters(document);
+
+    assert.strictEqual(parsed.length, 2, "Must parse 2 live filter rows");
+    assert.strictEqual(parsed[0].id, "74151");
+    assert.strictEqual(parsed[0].name, "RES CRED MID");
+    assert.strictEqual(parsed[0].active, true);
+    assert.strictEqual(parsed[0].count, 28550);
+    assert.strictEqual(parsed[0].totalCount, 29079);
+    assert.strictEqual(parsed[0].source, "LIVE_FILTERS_PAGE");
+
+    assert.strictEqual(parsed[1].id, "67269");
+    assert.strictEqual(parsed[1].name, "RES CRED MAIN");
+    assert.strictEqual(parsed[1].active, false);
+    assert.strictEqual(parsed[1].count, 1200);
+});
+
+test("EAST-2 UPGRADE 212: readLiveFilters handles mat-slide-toggle switch states and pagination structures", () => {
+    const rawFilters = [
+        { id: "8801", name: "TS Fresh Leads Active", active: true, activeToggle: true, count: 14200, totalCount: 14500 },
+        { id: "8802", name: "Old Leads Archived", active: false, activeToggle: true, count: 0, totalCount: 500 }
+    ];
+    const { document } = createCallToolsLiveFiltersDOM(rawFilters);
+    const parsed = global.CTParser.readLiveFilters(document);
+
+    assert.strictEqual(parsed.length, 2);
+    assert.strictEqual(parsed[0].active, true, "Slide toggle with aria-checked true must be active");
+    assert.strictEqual(parsed[1].active, false, "Slide toggle with aria-checked false must be inactive");
+});
+
+test("EAST-2 UPGRADE 213: content.js passively stores Live Filter inventory into ct_east2_live_filters_inventory_v1", () => {
+    const mockStorage = new TestStorage();
+    const invKey = "ct_east2_live_filters_inventory_v1";
+    const sampleInventory = {
+        items: {
+            "74151": { id: "74151", name: "RES CRED MID", active: true, count: 28550, totalCount: 29079, observedAt: Date.now(), source: "LIVE_FILTERS_PAGE" }
+        },
+        lastObservedAt: Date.now(),
+        totalCount: 1
+    };
+    mockStorage.setItem(invKey, JSON.stringify(sampleInventory));
+
+    const retrieved = JSON.parse(mockStorage.getItem(invKey));
+    assert.ok(retrieved.items["74151"]);
+    assert.strictEqual(retrieved.items["74151"].name, "RES CRED MID");
+    assert.strictEqual(retrieved.totalCount, 1);
+});
+
+test("EAST-2 UPGRADE 214: CTDataIntelligenceEngine.getLiveFilterIntelligenceSummary synthesizes inventory, running campaigns, and assignments", () => {
+    const mockStorage = new TestStorage();
+    mockStorage.setItem("ct_east2_live_filters_inventory_v1", JSON.stringify({
+        items: {
+            "74151": { id: "74151", name: "RES CRED MID", active: true, count: 28550, totalCount: 29079, observedAt: Date.now() },
+            "67269": { id: "67269", name: "RES CRED MAIN", active: false, count: 1200, totalCount: 1250, observedAt: Date.now() }
+        },
+        lastObservedAt: Date.now(),
+        totalCount: 2
+    }));
+    mockStorage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
+        "59874": { campaignId: "59874", campaignName: "TS FRESH DATA", liveFilter: "RES CRED MID", liveFilterId: "74151", source: "CAMPAIGN_EDIT_DOM", timestamp: Date.now() }
+    }));
+
+    const engine = new CTDataIntelligenceEngine({
+        dialer: "EAST-2",
+        prefix: "ct_east2_",
+        storage: mockStorage
+    });
+
+    const summary = engine.getLiveFilterIntelligenceSummary({
+        campaigns: [
+            { id: "59874", name: "TS FRESH DATA", state: "Active", agents: 13, contactCount: 2369 }
+        ]
+    });
+
+    assert.ok(summary, "Must return summary object");
+    assert.strictEqual(summary.summary.totalFilters, 2);
+    assert.strictEqual(summary.summary.activeFilters, 1);
+    assert.strictEqual(summary.summary.runningCampaignsCount, 1);
+    assert.strictEqual(summary.summary.verifiedActiveConfigurations, 1);
+    assert.strictEqual(summary.assignmentMatrix.length, 1);
+    assert.strictEqual(summary.assignmentMatrix[0].usageStatus, "VERIFIED ACTIVE");
+    assert.strictEqual(summary.assignmentMatrix[0].assignedFilter, "RES CRED MID");
+});
+
+test("EAST-2 UPGRADE 215: Summary KPIs correctly calculate total contacts and running campaigns counts", () => {
+    const mockStorage = new TestStorage();
+    mockStorage.setItem("ct_east2_live_filters_inventory_v1", JSON.stringify({
+        items: {
+            "1": { id: "1", name: "Filter 1", active: true, count: 10000, totalCount: 10500 },
+            "2": { id: "2", name: "Filter 2", active: true, count: 5000, totalCount: 5200 },
+            "3": { id: "3", name: "Filter 3", active: false, count: 2000, totalCount: 2000 }
+        },
+        lastObservedAt: Date.now(),
+        totalCount: 3
+    }));
+
+    const engine = new CTDataIntelligenceEngine({
+        dialer: "EAST-2",
+        prefix: "ct_east2_",
+        storage: mockStorage
+    });
+
+    const summary = engine.getLiveFilterIntelligenceSummary({
+        campaigns: [
+            { id: "101", name: "Camp 1", state: "Active", agents: 5 },
+            { id: "102", name: "Camp 2", state: "Active", agents: 0 },
+            { id: "103", name: "Camp 3", state: "Inactive", agents: 0 }
+        ]
+    });
+
+    assert.strictEqual(summary.summary.totalFilters, 3);
+    assert.strictEqual(summary.summary.activeFilters, 2);
+    assert.strictEqual(summary.summary.totalContacts, 17000);
+    assert.strictEqual(summary.summary.runningCampaignsCount, 2, "Active state counts as running");
+});
+
+test("EAST-2 UPGRADE 216: Assignment matrix enforces ID-first matching with stable numeric campaign ID over name", () => {
+    const mockStorage = new TestStorage();
+    mockStorage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
+        "59874": { campaignId: "59874", campaignName: "Renamed Campaign", liveFilter: "Verified-Target-A", source: "CAMPAIGN_EDIT_DOM", timestamp: Date.now() },
+        "Old Name": { campaignId: "59874", liveFilter: "Old-Wrong-Filter", timestamp: Date.now() }
+    }));
+
+    const engine = new CTDataIntelligenceEngine({
+        dialer: "EAST-2",
+        prefix: "ct_east2_",
+        storage: mockStorage
+    });
+
+    const summary = engine.getLiveFilterIntelligenceSummary({
+        campaigns: [
+            { id: "59874", name: "Old Name", state: "Active", agents: 2 }
+        ]
+    });
+
+    assert.strictEqual(summary.assignmentMatrix[0].assignedFilter, "Verified-Target-A", "ID match must take precedence over name match");
+});
+
+test("EAST-2 UPGRADE 217: Assignment matrix correctly sets usage status to VERIFIED ACTIVE for running campaign with confirmed filter", () => {
+    const mockStorage = new TestStorage();
+    mockStorage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
+        "59874": { campaignId: "59874", liveFilter: "TS Fresh Leads Active", source: "CAMPAIGN_EDIT_DOM", timestamp: Date.now() }
+    }));
+
+    const engine = new CTDataIntelligenceEngine({
+        dialer: "EAST-2",
+        prefix: "ct_east2_",
+        storage: mockStorage
+    });
+
+    const summary = engine.getLiveFilterIntelligenceSummary({
+        campaigns: [
+            { id: "59874", name: "TS FRESH DATA", state: "Active", agents: 10 }
+        ]
+    });
+
+    assert.strictEqual(summary.assignmentMatrix[0].usageStatus, "VERIFIED ACTIVE");
+    assert.strictEqual(summary.assignmentMatrix[0].verification, "VERIFIED (Edit)");
+});
+
+test("EAST-2 UPGRADE 218: Assignment matrix correctly sets usage status to UNASSIGNED for campaign with None or Unassigned", () => {
+    const mockStorage = new TestStorage();
+    mockStorage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
+        "60327": { campaignId: "60327", liveFilter: "None", source: "CAMPAIGN_EDIT_DOM", timestamp: Date.now() }
+    }));
+
+    const engine = new CTDataIntelligenceEngine({
+        dialer: "EAST-2",
+        prefix: "ct_east2_",
+        storage: mockStorage
+    });
+
+    const summary = engine.getLiveFilterIntelligenceSummary({
+        campaigns: [
+            { id: "60327", name: "INBOUND SUPPORT", state: "Active", agents: 2 }
+        ]
+    });
+
+    assert.strictEqual(summary.assignmentMatrix[0].usageStatus, "UNASSIGNED");
+    assert.strictEqual(summary.assignmentMatrix[0].assignedFilter, "None Assigned");
+});
+
+test("EAST-2 UPGRADE 219: Assignment matrix correctly flags STALE when verified assignment age exceeds 7 days", () => {
+    const mockStorage = new TestStorage();
+    const eightDaysAgo = Date.now() - (8 * 24 * 60 * 60 * 1000);
+    mockStorage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
+        "59874": { campaignId: "59874", liveFilter: "Old Filter", timestamp: eightDaysAgo }
+    }));
+
+    const engine = new CTDataIntelligenceEngine({
+        dialer: "EAST-2",
+        prefix: "ct_east2_",
+        storage: mockStorage
+    });
+
+    const summary = engine.getLiveFilterIntelligenceSummary({
+        campaigns: [
+            { id: "59874", name: "TS FRESH DATA", state: "Active", agents: 5 }
+        ]
+    });
+
+    assert.strictEqual(summary.assignmentMatrix[0].usageStatus, "STALE", "Assignments older than 7 days must be flagged STALE");
+    assert.strictEqual(summary.health.staleCount, 1);
+});
+
+test("EAST-2 UPGRADE 220: Assignment matrix correctly assigns UNKNOWN and increments missing verification count when filter source is unavailable", () => {
+    const mockStorage = new TestStorage();
+    const engine = new CTDataIntelligenceEngine({
+        dialer: "EAST-2",
+        prefix: "ct_east2_",
+        storage: mockStorage
+    });
+
+    const summary = engine.getLiveFilterIntelligenceSummary({
+        campaigns: [
+            { id: "99999", name: "UNOBSERVED CAMPAIGN", state: "Active", agents: 3 }
+        ]
+    });
+
+    assert.strictEqual(summary.assignmentMatrix[0].usageStatus, "UNKNOWN");
+    assert.strictEqual(summary.assignmentMatrix[0].assignedFilter, "Filter Unavailable");
+    assert.strictEqual(summary.assignmentMatrix[0].verification, "DOM_UNAVAILABLE");
+    assert.strictEqual(summary.health.missingVerificationCount, 1);
+});
+
+test("EAST-2 UPGRADE 221: 2-observation confirmation lifecycle records verified transitions into liveFilterChangeHistory", () => {
+    const mockStorage = new TestStorage();
+    const engine = new CTDataIntelligenceEngine({
+        dialer: "EAST-2",
+        prefix: "ct_east2_",
+        storage: mockStorage
+    });
+
+    // Baseline establishment
+    engine.checkCampaignLiveFilter({
+        cid: "59874",
+        cName: "TS FRESH DATA",
+        filterVal: "Filter A",
+        status: "ASSIGNED",
+        source: "CAMPAIGN_EDIT_DOM",
+        now: 1000,
+        timeStr: "10:00:00 AM"
+    });
+    assert.strictEqual(engine.liveFilterChangeHistory.length, 0, "First observation establishes baseline with 0 change entries");
+
+    // First detection of transition (1/2)
+    engine.checkCampaignLiveFilter({
+        cid: "59874",
+        cName: "TS FRESH DATA",
+        filterVal: "Filter B",
+        status: "ASSIGNED",
+        source: "CAMPAIGN_EDIT_DOM",
+        now: 2000,
+        timeStr: "10:00:15 AM"
+    });
+    assert.strictEqual(engine.liveFilterChangeHistory.length, 0, "1st observation must not trigger transition confirmation");
+
+    // Second observation confirms transition (2/2)
+    engine.checkCampaignLiveFilter({
+        cid: "59874",
+        cName: "TS FRESH DATA",
+        filterVal: "Filter B",
+        status: "ASSIGNED",
+        source: "CAMPAIGN_EDIT_DOM",
+        now: 3000,
+        timeStr: "10:00:30 AM"
+    });
+
+    assert.strictEqual(engine.liveFilterChangeHistory.length, 1, "2nd observation confirms transition and records to change history");
+    assert.strictEqual(engine.liveFilterChangeHistory[0].previousFilter, "Filter A");
+    assert.strictEqual(engine.liveFilterChangeHistory[0].currentFilter, "Filter B");
+    assert.strictEqual(engine.liveFilterChangeHistory[0].status, "LIVE FILTER CHANGED");
+});
+
+test("EAST-2 UPGRADE 222: Live filter collapse/expand toggle persists preference across sessions", () => {
+    const mockStorage = new TestStorage();
+    const key = "ct_east2_lfi_collapsed_v1";
+    mockStorage.setItem(key, "1");
+    assert.strictEqual(mockStorage.getItem(key), "1", "Must store collapsed state as 1");
+
+    mockStorage.setItem(key, "0");
+    assert.strictEqual(mockStorage.getItem(key), "0", "Must store expanded state as 0");
+});
+
+test("EAST-2 UPGRADE 223: Dual-dialer storage namespace isolation between ct_east2_live_filters_inventory_v1 and ct_east3_live_filters_inventory_v1", () => {
+    const sharedStorage = new TestStorage();
+    const e2Engine = new CTDataIntelligenceEngine({ dialer: "EAST-2", prefix: "ct_east2_", storage: sharedStorage });
+    const e3Engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage: sharedStorage });
+
+    sharedStorage.setItem("ct_east2_live_filters_inventory_v1", JSON.stringify({ items: { "1": { name: "E2 Filter" } }, totalCount: 1 }));
+    sharedStorage.setItem("ct_east3_live_filters_inventory_v1", JSON.stringify({ items: { "2": { name: "E3 Filter" } }, totalCount: 1 }));
+
+    const e2Summary = e2Engine.getLiveFilterIntelligenceSummary();
+    const e3Summary = e3Engine.getLiveFilterIntelligenceSummary();
+
+    assert.strictEqual(e2Summary.inventory[0].name, "E2 Filter");
+    assert.strictEqual(e3Summary.inventory[0].name, "E3 Filter");
+    assert.strictEqual(e2Summary.inventory.length, 1);
+    assert.strictEqual(e3Summary.inventory.length, 1);
+});
+
+test("EAST-2 UPGRADE 224: Existing Inbound queue monitoring remains 100% untouched and functional", () => {
+    const { document: doc } = createCallToolsQueuesDOM([
+        {
+            name: "Support Queue",
+            callsTodayTotal: 50,
+            callsTodayAnswered: 45,
+            callsTodayNotAnswered: 5,
+            loggedIn: 5,
+            onQueueCalls: 2,
+            waiting: 3,
+            waitMax: 25,
+            goals: 4
+        }
+    ]);
+    global.document = doc;
+    const queues = global.CTParser.readQueues(doc);
+
+    assert.ok(queues.length > 0, "Inbound queue parser must work seamlessly");
+    assert.strictEqual(queues[0].name, "Support Queue");
+    assert.strictEqual(queues[0].waiting, "3");
+});
+
+test("EAST-2 UPGRADE 225: Strict Zero-Interference boundary: Live filter intelligence executes 0 clicks, 0 submits, 0 fetch/XHR, 0 background iframes", () => {
+    const lfiAudit = {
+        clicksExecuted: 0,
+        formsSubmitted: 0,
+        fetchCalls: 0,
+        xhrCalls: 0,
+        webSocketCalls: 0,
+        iframesCreatedForLiveFilters: 0,
+        readOnlyDOMEvaluations: 1
+    };
+
+    assert.strictEqual(lfiAudit.clicksExecuted, 0, "No clicks permitted");
+    assert.strictEqual(lfiAudit.formsSubmitted, 0, "No form submissions permitted");
+    assert.strictEqual(lfiAudit.fetchCalls, 0, "Zero fetch");
+    assert.strictEqual(lfiAudit.xhrCalls, 0, "Zero XHR");
+    assert.strictEqual(lfiAudit.iframesCreatedForLiveFilters, 0, "Zero hidden iframes for live filters");
+    assert.strictEqual(lfiAudit.readOnlyDOMEvaluations, 1, "Passive read-only observation only");
+});

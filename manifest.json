@@ -15,8 +15,10 @@
       "matches": [
         "https://east-2.calltools.io/manager/campaigns*",
         "https://east-2.calltools.io/manager/queues*",
+        "https://east-2.calltools.io/manager/live-filters*",
         "https://east-3.calltools.io/manager/campaigns*",
-        "https://east-3.calltools.io/manager/queues*"
+        "https://east-3.calltools.io/manager/queues*",
+        "https://east-3.calltools.io/manager/live-filters*"
       ],
       "js": [
         "src/helpers.js",

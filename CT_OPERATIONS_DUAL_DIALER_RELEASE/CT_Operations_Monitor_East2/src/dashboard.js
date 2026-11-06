@@ -3128,7 +3128,128 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
                         <button class="ct-btn ct-btn-text ct-reset-btn" type="button" title="Reset dashboard position and size" aria-label="Reset dashboard position and size">Reset</button>
                     </div>
 
+                    <!-- LIVE FILTER INTELLIGENCE SECTION -->
+                    <section class="ct-lfi-section" data-ref="lfiSection" aria-label="Live Filter Intelligence">
+                        <div class="ct-lfi-head">
+                            <div class="ct-lfi-title-group">
+                                <span class="ct-lfi-pulse-dot"></span>
+                                <strong>LIVE FILTER INTELLIGENCE</strong>
+                                <small data-ref="lfiHealthSubtitle">Monitoring inventory & verified campaign targeting</small>
+                            </div>
+                            <div class="ct-lfi-head-controls">
+                                <span class="ct-lfi-badge is-waiting" data-ref="lfiFreshnessBadge">INVENTORY: WAITING</span>
+                                <button type="button" class="ct-btn ct-lfi-toggle-btn" data-ref="lfiToggleBtn" title="Collapse or expand Live Filter Intelligence">Collapse ▴</button>
+                            </div>
+                        </div>
 
+                        <div class="ct-lfi-body" data-ref="lfiBody">
+                            <!-- A. Summary KPIs -->
+                            <div class="ct-lfi-kpi-grid" aria-label="Live Filter Summary KPIs">
+                                <div class="ct-lfi-kpi-card">
+                                    <div class="ct-lfi-kpi-label">TOTAL FILTERS</div>
+                                    <div class="ct-lfi-kpi-value" data-ref="lfiTotalFilters">—</div>
+                                    <div class="ct-lfi-kpi-sub" data-ref="lfiTotalFiltersSub">Known filter inventory</div>
+                                </div>
+                                <div class="ct-lfi-kpi-card">
+                                    <div class="ct-lfi-kpi-label">ACTIVE FILTERS</div>
+                                    <div class="ct-lfi-kpi-value" data-ref="lfiActiveFilters">—</div>
+                                    <div class="ct-lfi-kpi-sub" data-ref="lfiActiveFiltersSub">Active targeting rules</div>
+                                </div>
+                                <div class="ct-lfi-kpi-card">
+                                    <div class="ct-lfi-kpi-label">RUNNING CAMPAIGNS</div>
+                                    <div class="ct-lfi-kpi-value" data-ref="lfiRunningCampaigns">—</div>
+                                    <div class="ct-lfi-kpi-sub" data-ref="lfiRunningCampaignsSub">Active dialer campaigns</div>
+                                </div>
+                                <div class="ct-lfi-kpi-card is-highlight">
+                                    <div class="ct-lfi-kpi-label">VERIFIED ACTIVE CONFIGURATIONS</div>
+                                    <div class="ct-lfi-kpi-value" data-ref="lfiVerifiedConfigs">—</div>
+                                    <div class="ct-lfi-kpi-sub" data-ref="lfiVerifiedConfigsSub">Confirmed filter in use</div>
+                                </div>
+                            </div>
+
+                            <!-- B & C: Tables Grid -->
+                            <div class="ct-lfi-tables-grid">
+                                <!-- B. Live Filter Inventory -->
+                                <div class="ct-lfi-card">
+                                    <div class="ct-lfi-card-head">
+                                        <strong>Live Filter Inventory</strong>
+                                        <small data-ref="lfiInventoryNote">Sourced from /manager/live-filters</small>
+                                    </div>
+                                    <div class="ct-lfi-table-wrap">
+                                        <table class="ct-lfi-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>FILTER NAME</th>
+                                                    <th>STATUS</th>
+                                                    <th>CONTACTS</th>
+                                                    <th>TIMEZONE CNT</th>
+                                                    <th>DIALER</th>
+                                                    <th>LAST OBSERVED</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody data-ref="lfiInventoryTableBody">
+                                                <tr><td colspan="6" class="ct-lfi-empty">No inventory observed yet. Open /manager/live-filters in CallTools to discover filters.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- C. Campaign Assignment Matrix -->
+                                <div class="ct-lfi-card">
+                                    <div class="ct-lfi-card-head">
+                                        <strong>Campaign Assignment Matrix</strong>
+                                        <small data-ref="lfiMatrixNote">Correlated with /manager/campaigns</small>
+                                    </div>
+                                    <div class="ct-lfi-table-wrap">
+                                        <table class="ct-lfi-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>CAMPAIGN NAME</th>
+                                                    <th>ID</th>
+                                                    <th>STATE</th>
+                                                    <th>ASSIGNED LIVE FILTER</th>
+                                                    <th>VERIFICATION</th>
+                                                    <th>USAGE STATUS</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody data-ref="lfiMatrixTableBody">
+                                                <tr><td colspan="6" class="ct-lfi-empty">Waiting for campaign data…</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- D & E: History & Data Health -->
+                            <div class="ct-lfi-footer-grid">
+                                <!-- D. Verified Change History -->
+                                <div class="ct-lfi-card">
+                                    <div class="ct-lfi-card-head">
+                                        <strong>Verified Change History</strong>
+                                        <small>Confirmed via 2-cycle observation lifecycle</small>
+                                    </div>
+                                    <div class="ct-lfi-history-list" data-ref="lfiHistoryList">
+                                        <div class="ct-lfi-empty">No filter transitions detected yet.</div>
+                                    </div>
+                                </div>
+
+                                <!-- E. Data Health -->
+                                <div class="ct-lfi-card ct-lfi-health-card">
+                                    <div class="ct-lfi-card-head">
+                                        <strong>Data Health & Provenance</strong>
+                                        <span class="ct-lfi-status-pill is-neutral" data-ref="lfiDataHealthPill">OPTIMAL</span>
+                                    </div>
+                                    <div class="ct-lfi-health-details" data-ref="lfiHealthDetails">
+                                        <div class="ct-lfi-health-row"><span>Dialer Host:</span><strong data-ref="lfiHealthDialer">EAST-2</strong></div>
+                                        <div class="ct-lfi-health-row"><span>Inventory Freshness:</span><strong data-ref="lfiHealthFreshness">Waiting…</strong></div>
+                                        <div class="ct-lfi-health-row"><span>Stale Records (>7d):</span><strong data-ref="lfiHealthStale">0</strong></div>
+                                        <div class="ct-lfi-health-row"><span>Missing Verification:</span><strong data-ref="lfiHealthMissing">0</strong></div>
+                                        <div class="ct-lfi-health-row"><span>Strict Boundary:</span><strong class="ct-text-good">READ-ONLY (0 clicks, 0 fetch)</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
                     <div class="ct-focus-grid" aria-label="Outbound and inbound operating focus">
                         <section class="ct-focus-column ct-focus-outbound" aria-label="Outbound operating focus">
@@ -3303,6 +3424,29 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
             reconciledFooter: root.querySelector('[data-ref="reconciledFooter"]'),
             footerActiveTotals: root.querySelector('[data-ref="footerActiveTotals"]'),
             footerVisibleTotals: root.querySelector('[data-ref="footerVisibleTotals"]'),
+            lfiSection: root.querySelector('[data-ref="lfiSection"]'),
+            lfiHealthSubtitle: root.querySelector('[data-ref="lfiHealthSubtitle"]'),
+            lfiFreshnessBadge: root.querySelector('[data-ref="lfiFreshnessBadge"]'),
+            lfiToggleBtn: root.querySelector('[data-ref="lfiToggleBtn"]'),
+            lfiBody: root.querySelector('[data-ref="lfiBody"]'),
+            lfiTotalFilters: root.querySelector('[data-ref="lfiTotalFilters"]'),
+            lfiTotalFiltersSub: root.querySelector('[data-ref="lfiTotalFiltersSub"]'),
+            lfiActiveFilters: root.querySelector('[data-ref="lfiActiveFilters"]'),
+            lfiActiveFiltersSub: root.querySelector('[data-ref="lfiActiveFiltersSub"]'),
+            lfiRunningCampaigns: root.querySelector('[data-ref="lfiRunningCampaigns"]'),
+            lfiRunningCampaignsSub: root.querySelector('[data-ref="lfiRunningCampaignsSub"]'),
+            lfiVerifiedConfigs: root.querySelector('[data-ref="lfiVerifiedConfigs"]'),
+            lfiVerifiedConfigsSub: root.querySelector('[data-ref="lfiVerifiedConfigsSub"]'),
+            lfiInventoryNote: root.querySelector('[data-ref="lfiInventoryNote"]'),
+            lfiInventoryTableBody: root.querySelector('[data-ref="lfiInventoryTableBody"]'),
+            lfiMatrixNote: root.querySelector('[data-ref="lfiMatrixNote"]'),
+            lfiMatrixTableBody: root.querySelector('[data-ref="lfiMatrixTableBody"]'),
+            lfiHistoryList: root.querySelector('[data-ref="lfiHistoryList"]'),
+            lfiDataHealthPill: root.querySelector('[data-ref="lfiDataHealthPill"]'),
+            lfiHealthDialer: root.querySelector('[data-ref="lfiHealthDialer"]'),
+            lfiHealthFreshness: root.querySelector('[data-ref="lfiHealthFreshness"]'),
+            lfiHealthStale: root.querySelector('[data-ref="lfiHealthStale"]'),
+            lfiHealthMissing: root.querySelector('[data-ref="lfiHealthMissing"]'),
             search: root.querySelector(".ct-search input"),
             threshold: root.querySelector(".ct-threshold"),
             operatingTrigger: root.querySelector(".ct-operating-trigger"),
@@ -3539,6 +3683,23 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
             root.classList.toggle("is-panel-collapsed", state.allCollapsed);
             applyLayout(state.layout); persistLayout();
         });
+        if (refs.lfiToggleBtn) {
+            refs.lfiToggleBtn.addEventListener("click", function () {
+                const isCollapsed = refs.lfiBody ? !refs.lfiBody.hidden : false;
+                if (refs.lfiBody) refs.lfiBody.hidden = isCollapsed;
+                refs.lfiToggleBtn.textContent = isCollapsed ? "Expand ▾" : "Collapse ▴";
+                try {
+                    localStorage.setItem(PREFIX + "lfi_collapsed_v1", isCollapsed ? "1" : "0");
+                } catch (e) {}
+            });
+            try {
+                const savedCollapsed = localStorage.getItem(PREFIX + "lfi_collapsed_v1");
+                if (savedCollapsed === "1" && refs.lfiBody) {
+                    refs.lfiBody.hidden = true;
+                    refs.lfiToggleBtn.textContent = "Expand ▾";
+                }
+            } catch (e) {}
+        }
         refs.orderReset.addEventListener("click", function () {
             const sourceOrder = state.campaigns.map(function (campaign, index) { return campaignId(campaign, index); });
             state.manualOrder = defaultCampaignOrder(state.campaigns, sourceOrder);
@@ -4445,6 +4606,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
             }
         updateInboundPanel();
         updateAlerts();
+        updateLiveFilterIntelligence(stats);
         updateCampaignList(filtered);
         if (state.reorderMode) renderOrderEditor();
         syncFilterButtons();
@@ -6904,6 +7066,135 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
             if (Number.isFinite(num)) return num;
         }
         return null;
+    }
+
+    function updateLiveFilterIntelligence(stats) {
+        if (!refs.lfiSection) return;
+        let lfi = null;
+        if (intelligenceEngine && intelligenceEngine.getLiveFilterIntelligenceSummary) {
+            try {
+                lfi = intelligenceEngine.getLiveFilterIntelligenceSummary({ campaigns: state.campaigns });
+            } catch (e) {
+                console.error("Failed to get live filter intelligence summary:", e);
+            }
+        }
+        if (!lfi) return;
+
+        const summary = lfi.summary || {};
+        const inventory = lfi.inventory || [];
+        const matrix = lfi.assignmentMatrix || [];
+        const history = lfi.changeHistory || [];
+        const health = lfi.health || {};
+
+        // KPIs
+        if (refs.lfiTotalFilters) setText(refs.lfiTotalFilters, formatNumber(summary.totalFilters));
+        if (refs.lfiActiveFilters) setText(refs.lfiActiveFilters, formatNumber(summary.activeFilters));
+        if (refs.lfiRunningCampaigns) setText(refs.lfiRunningCampaigns, formatNumber(summary.runningCampaignsCount));
+        if (refs.lfiVerifiedConfigs) setText(refs.lfiVerifiedConfigs, formatNumber(summary.verifiedActiveConfigurations));
+
+        // Subtitles
+        if (refs.lfiTotalFiltersSub) setText(refs.lfiTotalFiltersSub, summary.totalContacts ? formatNumber(summary.totalContacts) + " contacts" : "Known filter inventory");
+        if (refs.lfiActiveFiltersSub) setText(refs.lfiActiveFiltersSub, summary.totalFilters ? (summary.totalFilters - summary.activeFilters) + " inactive" : "Active targeting rules");
+        if (refs.lfiRunningCampaignsSub) setText(refs.lfiRunningCampaignsSub, "Active dialer campaigns");
+        if (refs.lfiVerifiedConfigsSub) setText(refs.lfiVerifiedConfigsSub, summary.verifiedActiveConfigurations > 0 ? "Targeting verified" : "Pending verification");
+
+        // Freshness Badge
+        if (refs.lfiFreshnessBadge) {
+            if (health.hasInventory) {
+                setText(refs.lfiFreshnessBadge, "INVENTORY: " + summary.totalFilters + " FILTERS (" + health.inventoryFreshness + ")");
+                setClass(refs.lfiFreshnessBadge, "ct-lfi-badge is-live");
+            } else {
+                setText(refs.lfiFreshnessBadge, "INVENTORY: WAITING (/manager/live-filters)");
+                setClass(refs.lfiFreshnessBadge, "ct-lfi-badge is-waiting");
+            }
+        }
+
+        // Inventory Table
+        if (refs.lfiInventoryTableBody) {
+            if (inventory.length === 0) {
+                refs.lfiInventoryTableBody.innerHTML = '<tr><td colspan="6" class="ct-lfi-empty">No inventory observed yet. Open /manager/live-filters in CallTools to discover filters.</td></tr>';
+            } else {
+                refs.lfiInventoryTableBody.innerHTML = inventory.map(function (f) {
+                    const statusClass = f.status === "ACTIVE" ? "is-active" : "is-inactive";
+                    const ageStr = f.observedAt ? formatAge(Math.floor((Date.now() - f.observedAt) / 1000)) + " ago" : "—";
+                    return '<tr>' +
+                        '<td><strong>' + escapeHtml(f.name) + '</strong></td>' +
+                        '<td><span class="ct-lfi-badge ' + statusClass + '">' + escapeHtml(f.status) + '</span></td>' +
+                        '<td>' + formatNumber(f.count) + '</td>' +
+                        '<td>' + formatNumber(f.totalCount) + '</td>' +
+                        '<td>' + escapeHtml(f.dialer) + '</td>' +
+                        '<td>' + ageStr + '</td>' +
+                    '</tr>';
+                }).join("");
+            }
+        }
+
+        // Matrix Table
+        if (refs.lfiMatrixTableBody) {
+            if (matrix.length === 0) {
+                refs.lfiMatrixTableBody.innerHTML = '<tr><td colspan="6" class="ct-lfi-empty">Waiting for campaign data…</td></tr>';
+            } else {
+                refs.lfiMatrixTableBody.innerHTML = matrix.map(function (m) {
+                    const stateClass = m.state === "RUNNING" ? "is-running" : "is-idle";
+                    const usageClass = m.usageStatus === "VERIFIED ACTIVE" ? "is-verified-active" :
+                                       m.usageStatus === "UNASSIGNED" ? "is-unassigned" :
+                                       m.usageStatus === "STALE" ? "is-stale" : "is-unknown";
+                    return '<tr>' +
+                        '<td><strong>' + escapeHtml(m.campaignName) + '</strong></td>' +
+                        '<td>' + escapeHtml(m.campaignId) + '</td>' +
+                        '<td><span class="ct-lfi-badge ' + stateClass + '">' + escapeHtml(m.state) + '</span></td>' +
+                        '<td><strong>' + escapeHtml(m.assignedFilter) + '</strong></td>' +
+                        '<td><span class="ct-lfi-source">' + escapeHtml(m.verification) + '</span></td>' +
+                        '<td><span class="ct-lfi-badge ' + usageClass + '">' + escapeHtml(m.usageStatus) + '</span></td>' +
+                    '</tr>';
+                }).join("");
+            }
+        }
+
+        // History List
+        if (refs.lfiHistoryList) {
+            if (history.length === 0) {
+                refs.lfiHistoryList.innerHTML = '<div class="ct-lfi-empty">No filter transitions detected yet.</div>';
+            } else {
+                refs.lfiHistoryList.innerHTML = history.slice(0, 10).map(function (item) {
+                    return '<div class="ct-lfi-history-item">' +
+                        '<div class="ct-lfi-history-meta">' +
+                            '<span class="ct-lfi-badge is-history">' + escapeHtml(item.status || "CHANGE") + '</span>' +
+                            '<strong>' + escapeHtml(item.campaignName || item.campaignId) + '</strong>' +
+                            '<small>' + escapeHtml(item.confirmedAt || "") + '</small>' +
+                        '</div>' +
+                        '<div class="ct-lfi-history-body">' +
+                            '<span class="ct-lfi-prev">' + escapeHtml(item.previousFilter || "None") + '</span>' +
+                            '<span class="ct-lfi-arrow"> ➔ </span>' +
+                            '<span class="ct-lfi-curr">' + escapeHtml(item.currentFilter || "None") + '</span>' +
+                            ' <small class="ct-lfi-source">(' + escapeHtml(item.source || "DOM") + ')</small>' +
+                        '</div>' +
+                    '</div>';
+                }).join("");
+            }
+        }
+
+        // Data Health
+        if (refs.lfiHealthDialer) setText(refs.lfiHealthDialer, health.dialer || "—");
+        if (refs.lfiHealthFreshness) setText(refs.lfiHealthFreshness, health.inventoryFreshness || "Waiting…");
+        if (refs.lfiHealthStale) setText(refs.lfiHealthStale, String(health.staleCount || 0));
+        if (refs.lfiHealthMissing) setText(refs.lfiHealthMissing, String(health.missingVerificationCount || 0));
+
+        if (refs.lfiDataHealthPill) {
+            if (health.staleCount > 0) {
+                setText(refs.lfiDataHealthPill, "ATTENTION (STALE RECORDS)");
+                setClass(refs.lfiDataHealthPill, "ct-lfi-status-pill is-warning");
+            } else if (health.missingVerificationCount > 0) {
+                setText(refs.lfiDataHealthPill, "PENDING VERIFICATION");
+                setClass(refs.lfiDataHealthPill, "ct-lfi-status-pill is-warning");
+            } else if (health.hasInventory) {
+                setText(refs.lfiDataHealthPill, "OPTIMAL");
+                setClass(refs.lfiDataHealthPill, "ct-lfi-status-pill is-healthy");
+            } else {
+                setText(refs.lfiDataHealthPill, "AWAITING INVENTORY");
+                setClass(refs.lfiDataHealthPill, "ct-lfi-status-pill is-neutral");
+            }
+        }
     }
 
     function updateInboundPanel() {

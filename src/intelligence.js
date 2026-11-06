@@ -180,6 +180,9 @@
             this.ALERTS_KEY = this.prefix + "intelligence_alerts_v1";
             this.HISTORY_KEY = this.prefix + "intelligence_history_v1";
             this.FILTER_BASELINES_KEY = this.prefix + "intelligence_filter_baselines_v1";
+            this.LIVE_FILTERS_INVENTORY_KEY = this.prefix + "live_filters_inventory_v1";
+            this.VERIFIED_FILTERS_KEY = this.prefix + "verified_campaign_filters_v1";
+            this.CHANGE_HISTORY_KEY = this.prefix + "live_filter_change_history_v1";
 
             // In-Memory State
             this.baselines = {};
@@ -187,6 +190,7 @@
             this.pendingConfirmations = {}; // targetKey -> { count, firstDetectedAt, value, ... }
             this.activeAlerts = [];
             this.history = [];
+            this.liveFilterChangeHistory = [];
 
             this.loadState();
         }
@@ -199,6 +203,7 @@
                     this.pendingConfirmations = JSON.parse(this.storage.getItem(this.PENDING_KEY) || "{}");
                     this.activeAlerts = JSON.parse(this.storage.getItem(this.ALERTS_KEY) || "[]");
                     this.history = JSON.parse(this.storage.getItem(this.HISTORY_KEY) || "[]");
+                    this.liveFilterChangeHistory = JSON.parse(this.storage.getItem(this.CHANGE_HISTORY_KEY) || "[]");
                 } catch (e) {
                     console.error("CTDataIntelligence failed to load state from storage:", e);
                     this.baselines = {};
@@ -206,15 +211,17 @@
                     this.pendingConfirmations = {};
                     this.activeAlerts = [];
                     this.history = [];
+                    this.liveFilterChangeHistory = [];
                 }
             }
             if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
                 try {
-                    chrome.storage.local.get([this.BASELINES_KEY, this.FILTER_BASELINES_KEY, this.PENDING_KEY, this.ALERTS_KEY, this.HISTORY_KEY], (items) => {
+                    chrome.storage.local.get([this.BASELINES_KEY, this.FILTER_BASELINES_KEY, this.PENDING_KEY, this.ALERTS_KEY, this.HISTORY_KEY, this.CHANGE_HISTORY_KEY], (items) => {
                         if (items) {
                             if (items[this.BASELINES_KEY]) this.baselines = Object.assign(this.baselines, items[this.BASELINES_KEY]);
                             if (items[this.FILTER_BASELINES_KEY]) this.filterBaselines = Object.assign(this.filterBaselines, items[this.FILTER_BASELINES_KEY]);
                             if (items[this.PENDING_KEY]) this.pendingConfirmations = Object.assign(this.pendingConfirmations, items[this.PENDING_KEY]);
+                            if (Array.isArray(items[this.CHANGE_HISTORY_KEY])) this.liveFilterChangeHistory = items[this.CHANGE_HISTORY_KEY];
                             if (Array.isArray(items[this.ALERTS_KEY]) && items[this.ALERTS_KEY].length) {
                                 const currentIds = new Set(this.activeAlerts.map(a => a.id));
                                 items[this.ALERTS_KEY].forEach(a => {
@@ -237,6 +244,7 @@
                     this.storage.setItem(this.PENDING_KEY, JSON.stringify(this.pendingConfirmations));
                     this.storage.setItem(this.ALERTS_KEY, JSON.stringify(this.activeAlerts));
                     this.storage.setItem(this.HISTORY_KEY, JSON.stringify(this.history.slice(-500))); // Keep last 500 events
+                    this.storage.setItem(this.CHANGE_HISTORY_KEY, JSON.stringify(this.liveFilterChangeHistory.slice(0, 100)));
                 } catch (e) {
                     console.error("CTDataIntelligence failed to persist state:", e);
                 }
@@ -248,7 +256,8 @@
                         [this.FILTER_BASELINES_KEY]: this.filterBaselines,
                         [this.PENDING_KEY]: this.pendingConfirmations,
                         [this.ALERTS_KEY]: this.activeAlerts,
-                        [this.HISTORY_KEY]: this.history.slice(-500)
+                        [this.HISTORY_KEY]: this.history.slice(-500),
+                        [this.CHANGE_HISTORY_KEY]: this.liveFilterChangeHistory.slice(0, 100)
                     });
                 } catch (e) {}
             }
@@ -944,6 +953,25 @@
 
             this.pushActiveAlert(alertObj);
 
+            // Record into persistent live filter change history
+            const historyEntry = {
+                campaignId: cid,
+                campaignName: cName,
+                previousFilter: previousFilter,
+                currentFilter: cleanFilter,
+                status: alertStatus,
+                confirmedAt: timeStr,
+                timestamp: now,
+                source: source || "TABLE_COLUMN",
+                dialer: this.dialer,
+                severity: severity
+            };
+            if (!this.liveFilterChangeHistory) this.liveFilterChangeHistory = [];
+            this.liveFilterChangeHistory.unshift(historyEntry);
+            if (this.liveFilterChangeHistory.length > 100) {
+                this.liveFilterChangeHistory = this.liveFilterChangeHistory.slice(0, 100);
+            }
+
             // Update baseline
             baseline.filter = cleanFilter;
             baseline.status = status || "OBSERVED";
@@ -1182,6 +1210,168 @@
                 }
                 return true;
             });
+        }
+
+        /**
+         * Live Filter Intelligence Summary & Synthesis Engine
+         * Synthesizes Live Filter Inventory, Campaign Assignment Matrix,
+         * Verified Change History, and Data Health.
+         */
+        getLiveFilterIntelligenceSummary(stats = {}) {
+            const now = Date.now();
+            let inventory = { items: {}, lastObservedAt: null, totalCount: 0 };
+            let verifiedRegistry = {};
+
+            if (this.storage) {
+                try {
+                    const rawInv = this.storage.getItem(this.LIVE_FILTERS_INVENTORY_KEY);
+                    if (rawInv) inventory = JSON.parse(rawInv);
+                } catch (e) {}
+                try {
+                    const rawReg = this.storage.getItem(this.VERIFIED_FILTERS_KEY);
+                    if (rawReg) verifiedRegistry = JSON.parse(rawReg);
+                } catch (e) {}
+            }
+
+            const items = inventory.items || {};
+            const filterList = Object.values(items);
+            const totalFilters = filterList.length;
+            const activeFilters = filterList.filter(f => f.active === true || f.active === "true" || String(f.active).toLowerCase() === "true").length;
+            const totalContacts = filterList.reduce((sum, f) => sum + (Number(f.count) || 0), 0);
+
+            // Campaign evaluation
+            const campaigns = (stats && Array.isArray(stats.campaigns)) ? stats.campaigns : [];
+            let runningCampaignsCount = 0;
+            let verifiedActiveConfigs = 0;
+            let staleCount = 0;
+            let missingVerificationCount = 0;
+
+            const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+            const matrix = campaigns.map((c, idx) => {
+                const cid = String(c.id || c.__id || `campaign-${idx}`);
+                const cName = String(c.name || c.__name || `Campaign ${cid}`).trim();
+                const agents = Number(c.agents ?? c.__agents ?? 0);
+                const rawState = String(c.state || c.__state || "").trim().toUpperCase();
+                const isRunning = rawState === "ACTIVE" || rawState === "RUNNING" || agents > 0;
+                if (isRunning) runningCampaignsCount++;
+
+                // Lookup verified assignment by ID first, then name
+                let entry = null;
+                if (cid && verifiedRegistry[cid]) {
+                    entry = verifiedRegistry[cid];
+                } else if (cName) {
+                    if (verifiedRegistry[cName]) {
+                        entry = verifiedRegistry[cName];
+                    } else {
+                        for (const k of Object.keys(verifiedRegistry)) {
+                            if (verifiedRegistry[k] && verifiedRegistry[k].campaignName &&
+                                String(verifiedRegistry[k].campaignName).trim().toLowerCase() === cName.toLowerCase()) {
+                                entry = verifiedRegistry[k];
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                let assignedFilter = null;
+                let filterId = null;
+                let verification = "DOM_UNAVAILABLE";
+                let usageStatus = "UNKNOWN";
+                let observationTime = null;
+                let isStale = false;
+
+                if (entry) {
+                    observationTime = entry.timestamp || entry.observedAt || null;
+                    const age = observationTime ? (now - observationTime) : 0;
+                    isStale = age > SEVEN_DAYS_MS;
+                    if (isStale) staleCount++;
+
+                    assignedFilter = entry.liveFilter || entry.filter || null;
+                    filterId = entry.liveFilterId || entry.filterId || null;
+                    verification = entry.source === "CAMPAIGN_EDIT_FORM" ? "VERIFIED (Edit)" :
+                                   entry.source === "CAMPAIGN_EDIT_DOM" ? "VERIFIED (Edit)" :
+                                   entry.source === "ACTIVE_OVERLAY" ? "VERIFIED (Overlay)" :
+                                   (entry.source || "VERIFIED (Registry)");
+                } else if (c.liveFilter) {
+                    assignedFilter = c.liveFilter;
+                    verification = c.liveFilterSource === "ACTIVE_OVERLAY" ? "VERIFIED (Overlay)" :
+                                   c.liveFilterSource === "TABLE_COLUMN" ? "VERIFIED (Table)" :
+                                   (c.liveFilterSource || "VERIFIED");
+                    observationTime = c.liveFilterTimestamp || now;
+                }
+
+                const hasFilter = Boolean(assignedFilter && assignedFilter !== "None" && assignedFilter !== "Unassigned" && assignedFilter !== "—" && assignedFilter !== "FILTER SOURCE UNAVAILABLE");
+
+                if (isStale) {
+                    usageStatus = "STALE";
+                } else if (!hasFilter) {
+                    if (assignedFilter === "None" || assignedFilter === "Unassigned") {
+                        usageStatus = "UNASSIGNED";
+                        verification = "VERIFIED (None)";
+                    } else {
+                        usageStatus = isRunning ? "UNKNOWN" : "IDLE";
+                        if (isRunning) missingVerificationCount++;
+                    }
+                } else {
+                    if (isRunning) {
+                        usageStatus = "VERIFIED ACTIVE";
+                        verifiedActiveConfigs++;
+                    } else {
+                        usageStatus = "STANDBY";
+                    }
+                }
+
+                return {
+                    campaignId: cid,
+                    campaignName: cName,
+                    state: isRunning ? "RUNNING" : (rawState || "IDLE"),
+                    assignedFilter: hasFilter ? assignedFilter : (assignedFilter === "None" ? "None Assigned" : "Filter Unavailable"),
+                    filterId: filterId,
+                    verification: verification,
+                    usageStatus: usageStatus,
+                    lastObserved: observationTime,
+                    agents: agents,
+                    leads: c.contactCount || c.liveLeads || 0
+                };
+            });
+
+            let inventoryFreshness = "No inventory recorded";
+            if (inventory.lastObservedAt) {
+                const diffSec = Math.floor((now - inventory.lastObservedAt) / 1000);
+                if (diffSec < 60) inventoryFreshness = `Fresh (${diffSec}s ago)`;
+                else if (diffSec < 3600) inventoryFreshness = `${Math.floor(diffSec / 60)}m ago`;
+                else inventoryFreshness = `${Math.floor(diffSec / 3600)}h ago`;
+            }
+
+            return {
+                summary: {
+                    totalFilters,
+                    activeFilters,
+                    totalContacts,
+                    runningCampaignsCount,
+                    verifiedActiveConfigurations: verifiedActiveConfigs
+                },
+                inventory: filterList.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    status: (f.active === true || f.active === "true" || String(f.active).toLowerCase() === "true") ? "ACTIVE" : "INACTIVE",
+                    count: Number(f.count) || 0,
+                    totalCount: Number(f.totalCount) || Number(f.count) || 0,
+                    dialer: this.dialer,
+                    observedAt: f.observedAt
+                })),
+                assignmentMatrix: matrix,
+                changeHistory: (this.liveFilterChangeHistory || []).slice(0, 20),
+                health: {
+                    dialer: this.dialer,
+                    inventoryFreshness,
+                    lastObservedAt: inventory.lastObservedAt,
+                    staleCount,
+                    missingVerificationCount,
+                    hasInventory: totalFilters > 0
+                }
+            };
         }
     }
 

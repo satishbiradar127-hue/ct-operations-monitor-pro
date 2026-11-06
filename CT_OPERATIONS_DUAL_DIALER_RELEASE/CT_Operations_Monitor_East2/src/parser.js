@@ -914,6 +914,107 @@ window.CTParser = {
             source: filterSource,
             timestamp: Date.now()
         };
+    },
+
+    readLiveFilters(doc) {
+        const targetDoc = doc || (typeof document !== "undefined" ? document : null);
+        if (!targetDoc) return [];
+
+        let table = null;
+        const allTables = Array.from(targetDoc.querySelectorAll("table, [role='table'], mat-table"));
+        for (const t of allTables) {
+            if (t.closest && t.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], iframe")) continue;
+            const headerText = (t.innerText || t.textContent || "").toLowerCase();
+            if (headerText.includes("count") || headerText.includes("active") || headerText.includes("change log") || t.querySelector(".cdk-column-name, [class*='column-count']")) {
+                table = t;
+                break;
+            }
+        }
+
+        const selector = "tr.mat-row, tr.mat-mdc-row, mat-row, tr[mat-row], tbody tr, [role='row'].mat-row, [role='row'].mat-mdc-row";
+        let rows = [];
+        if (table) {
+            rows = Array.from(table.querySelectorAll(selector));
+        } else {
+            rows = Array.from(targetDoc.querySelectorAll(selector)).filter(function (r) {
+                return !r.closest || !r.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], iframe");
+            });
+        }
+
+        const validRows = rows.filter(function (r) {
+            return !r.closest("thead") && !r.querySelector("th") && !r.matches("tr.mat-header-row, tr.mat-mdc-header-row");
+        });
+
+        if (!validRows.length) return [];
+
+        return validRows.map((row, index) => {
+            let filterId = row.getAttribute("data-id") || row.getAttribute("data-live-filter-id") || "";
+            if (!filterId) {
+                const actionLink = row.querySelector("a[href*='/manager/live-filters/'], a[href*='/live-filters/'], button[data-id]");
+                if (actionLink) {
+                    const href = actionLink.getAttribute("href") || "";
+                    const m = href.match(/\/live-filters\/(?:edit|preview|change-logs)\/([0-9a-zA-Z_-]+)/);
+                    if (m) filterId = m[1];
+                    else if (actionLink.getAttribute("data-id")) filterId = actionLink.getAttribute("data-id");
+                }
+            }
+
+            let name = this.getByHeader ? this.getByHeader(row, ["name", "live filter", "filter name"], ["cdk-column-name", "mat-column-name", "cdk-column-filter_name"]) : null;
+            if (!name) {
+                const nameEl = row.querySelector(".cdk-column-name, [data-column='name'], a");
+                if (nameEl) name = String(nameEl.innerText || nameEl.textContent || "").trim();
+            }
+
+            let active = true;
+            const activeCell = row.querySelector(".cdk-column-active, [data-column='active'], .mat-column-active");
+            if (activeCell) {
+                const toggle = activeCell.querySelector("input[type='checkbox'], mat-slide-toggle, [role='switch']");
+                if (toggle) {
+                    active = toggle.checked || toggle.getAttribute("aria-checked") === "true" || (toggle.classList && toggle.classList.contains("mat-checked"));
+                } else {
+                    const txt = (activeCell.innerText || activeCell.textContent || "").toLowerCase().trim();
+                    if (txt === "inactive" || txt === "disabled" || txt === "no" || txt === "false") {
+                        active = false;
+                    }
+                }
+            }
+
+            let count = 0;
+            const countRaw = this.getByHeader ? this.getByHeader(row, ["count", "contacts", "contact count"], ["cdk-column-count", "mat-column-count", "cdk-column-contacts"]) : null;
+            if (countRaw != null) {
+                const parsed = parseInt(String(countRaw).replace(/[^0-9]/g, ""), 10);
+                if (!isNaN(parsed)) count = parsed;
+            } else {
+                const countCell = row.querySelector(".cdk-column-count, [data-column='count']");
+                if (countCell) {
+                    const parsed = parseInt(String(countCell.innerText || countCell.textContent || "").replace(/[^0-9]/g, ""), 10);
+                    if (!isNaN(parsed)) count = parsed;
+                }
+            }
+
+            let totalCount = count;
+            const totalCountRaw = this.getByHeader ? this.getByHeader(row, ["total", "total-count", "ignore time zone", "total count"], ["cdk-column-total-count", "cdk-column-ignore_time_zone_count", "cdk-column-total_count"]) : null;
+            if (totalCountRaw != null) {
+                const parsed = parseInt(String(totalCountRaw).replace(/[^0-9]/g, ""), 10);
+                if (!isNaN(parsed)) totalCount = parsed;
+            } else {
+                const tcCell = row.querySelector(".cdk-column-total-count, .cdk-column-ignore_time_zone_count, [data-column='total-count']");
+                if (tcCell) {
+                    const parsed = parseInt(String(tcCell.innerText || tcCell.textContent || "").replace(/[^0-9]/g, ""), 10);
+                    if (!isNaN(parsed)) totalCount = parsed;
+                }
+            }
+
+            return {
+                id: filterId || `filter-${index}`,
+                name: name || (filterId ? `Filter ${filterId}` : `Filter ${index + 1}`),
+                active: Boolean(active),
+                count: count,
+                totalCount: totalCount,
+                observedAt: Date.now(),
+                source: "LIVE_FILTERS_PAGE"
+            };
+        });
     }
 };
 

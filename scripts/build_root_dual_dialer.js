@@ -56,6 +56,7 @@ contentCode = contentCode.replace(
 contentCode = contentCode.replace('const TARGET_HOST = "east-2.calltools.io";', 'const TARGET_HOST = isEast3 ? "east-3.calltools.io" : "east-2.calltools.io";');
 contentCode = contentCode.replace('const EDITION = "EAST-2";', 'const EDITION = isEast3 ? "EAST-3" : "EAST-2";');
 contentCode = contentCode.replace('const VERIFIED_FILTERS_KEY = "ct_east2_verified_campaign_filters_v1";', 'const VERIFIED_FILTERS_KEY = isEast3 ? "ct_east3_verified_campaign_filters_v1" : "ct_east2_verified_campaign_filters_v1";');
+contentCode = contentCode.replace('const LIVE_FILTERS_INVENTORY_KEY = "ct_east2_live_filters_inventory_v1";', 'const LIVE_FILTERS_INVENTORY_KEY = isEast3 ? "ct_east3_live_filters_inventory_v1" : "ct_east2_live_filters_inventory_v1";');
 contentCode = contentCode.replace('const INBOUND_DATA_KEY = "ct_east2_last_known_queues_v1";', 'const INBOUND_DATA_KEY = isEast3 ? "ct_east3_last_known_queues_v1" : "ct_east2_last_known_queues_v1";');
 contentCode = contentCode.replace('const INBOUND_STATUS_KEY = "ct_east2_inbound_feed_status_v1";', 'const INBOUND_STATUS_KEY = isEast3 ? "ct_east3_inbound_feed_status_v1" : "ct_east2_inbound_feed_status_v1";');
 contentCode = contentCode.replace('const INBOUND_STORAGE_DATA_KEY = "ct_east2_inbound_data_v2";', 'const INBOUND_STORAGE_DATA_KEY = isEast3 ? "ct_east3_inbound_data_v2" : "ct_east2_inbound_data_v2";');
@@ -121,6 +122,10 @@ dashCode = dashCode.replace(
     '<h2>CallTools Operations <span class="ct-dialer-tag ct-dialer-east2">EAST-2</span></h2>',
     '<h2>CallTools Operations <span class="ct-dialer-tag " + (isEast3 ? "ct-dialer-east3" : "ct-dialer-east2") + "\">" + (isEast3 ? "EAST-3" : "EAST-2") + "</span></h2>'
 );
+dashCode = dashCode.replace(
+    '<strong data-ref="lfiHealthDialer">EAST-2</strong>',
+    '<strong data-ref="lfiHealthDialer">" + (isEast3 ? "EAST-3" : "EAST-2") + "</strong>'
+);
 
 fs.writeFileSync(path.join(rootSrc, "dashboard.js"), dashCode, "utf8");
 fs.writeFileSync(path.join(rootDir, "dashboard.js"), dashCode, "utf8");
@@ -143,8 +148,10 @@ const rootManifest = {
             "matches": [
                 "https://east-2.calltools.io/manager/campaigns*",
                 "https://east-2.calltools.io/manager/queues*",
+                "https://east-2.calltools.io/manager/live-filters*",
                 "https://east-3.calltools.io/manager/campaigns*",
-                "https://east-3.calltools.io/manager/queues*"
+                "https://east-3.calltools.io/manager/queues*",
+                "https://east-3.calltools.io/manager/live-filters*"
             ],
             "js": [
                 "src/helpers.js",

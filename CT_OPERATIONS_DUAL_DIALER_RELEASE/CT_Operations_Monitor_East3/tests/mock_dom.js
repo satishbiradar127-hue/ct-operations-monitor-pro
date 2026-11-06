@@ -373,9 +373,71 @@ function createCallToolsCampaignEditDOM(campaignId = "101", campaignName = "TS F
     return document;
 }
 
+function createCallToolsLiveFiltersDOM(filters = []) {
+    const document = new MockNode("document");
+    const table = new MockNode("table", { class: "mat-table mat-mdc-table cdk-table live-filters-table" });
+    document.appendChild(table);
+
+    const thead = new MockNode("thead");
+    table.appendChild(thead);
+    const headerRow = new MockNode("tr", { class: "mat-header-row mat-mdc-header-row" });
+    thead.appendChild(headerRow);
+    ["name", "active", "count", "total-count", "logs", "controls"].forEach(c => {
+        headerRow.appendChild(new MockNode("th", { class: "mat-header-cell cdk-column-" + c }, c.toUpperCase()));
+    });
+
+    const tbody = new MockNode("tbody");
+    table.appendChild(tbody);
+
+    filters.forEach((f, idx) => {
+        const tr = new MockNode("tr", {
+            class: "mat-row mat-mdc-row",
+            "data-id": String(f.id || `filter-${idx}`)
+        });
+        tbody.appendChild(tr);
+
+        // Name cell with link
+        const tdName = new MockNode("td", { class: "mat-cell cdk-column-name" });
+        const nameLink = new MockNode("a", { href: `/manager/live-filters/edit/${f.id || idx}` }, f.name || `Filter ${idx}`);
+        tdName.appendChild(nameLink);
+        tr.appendChild(tdName);
+
+        // Active cell
+        const tdActive = new MockNode("td", { class: "mat-cell cdk-column-active" });
+        if (f.activeToggle) {
+            const toggle = new MockNode("mat-slide-toggle", { class: f.active ? "mat-checked" : "" });
+            toggle.setAttribute("aria-checked", f.active ? "true" : "false");
+            tdActive.appendChild(toggle);
+        } else {
+            tdActive.innerText = f.active === false ? "Inactive" : "Active";
+        }
+        tr.appendChild(tdActive);
+
+        // Count cell
+        const tdCount = new MockNode("td", { class: "mat-cell cdk-column-count" }, String(f.count ?? 0));
+        tr.appendChild(tdCount);
+
+        // Total count cell
+        const tdTotal = new MockNode("td", { class: "mat-cell cdk-column-total-count" }, String(f.totalCount ?? f.count ?? 0));
+        tr.appendChild(tdTotal);
+
+        // Logs cell
+        const tdLogs = new MockNode("td", { class: "mat-cell cdk-column-logs" });
+        tdLogs.appendChild(new MockNode("button", {}, "View Change Log"));
+        tr.appendChild(tdLogs);
+
+        // Controls cell
+        const tdControls = new MockNode("td", { class: "mat-cell cdk-column-controls" });
+        tr.appendChild(tdControls);
+    });
+
+    return { document, table, tbody };
+}
+
 module.exports = {
     MockNode,
     createCallToolsQueuesDOM,
     createCallToolsCampaignsDOM,
-    createCallToolsCampaignEditDOM
+    createCallToolsCampaignEditDOM,
+    createCallToolsLiveFiltersDOM
 };

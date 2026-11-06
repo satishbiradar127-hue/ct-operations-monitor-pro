@@ -19,6 +19,7 @@ console.log("CT Operations Monitor (EAST-2) — Production live feed controller 
     const INBOUND_STORAGE_DATA_KEY = "ct_east2_inbound_data_v2";
     const INBOUND_STORAGE_STATUS_KEY = "ct_east2_inbound_status_v2";
     const VERIFIED_FILTERS_KEY = "ct_east2_verified_campaign_filters_v1";
+    const LIVE_FILTERS_INVENTORY_KEY = "ct_east2_live_filters_inventory_v1";
     const INBOUND_COORDINATION_MS = 5000;
     const INBOUND_HEARTBEAT_MS = 2500;
     const INBOUND_MONITOR_PARAM = "ct_inbound_monitor";
@@ -33,13 +34,54 @@ console.log("CT Operations Monitor (EAST-2) — Production live feed controller 
         if (path === "/manager/campaigns") return "campaigns";
         if (path.startsWith("/manager/campaigns/edit/")) return "campaign_edit";
         if (path === "/manager/queues") return "queues";
+        if (path === "/manager/live-filters" || path.startsWith("/manager/live-filters")) return "live_filters";
         return "other";
     }
 
     function isCampaignsPage() { return currentRoute() === "campaigns"; }
     function isCampaignEditPage() { return currentRoute() === "campaign_edit"; }
     function isQueuesPage() { return currentRoute() === "queues"; }
-    function isMonitorPage() { return isCampaignsPage() || isQueuesPage() || isCampaignEditPage(); }
+    function isLiveFiltersPage() { return currentRoute() === "live_filters"; }
+    function isMonitorPage() { return isCampaignsPage() || isQueuesPage() || isCampaignEditPage() || isLiveFiltersPage(); }
+
+    function observeLiveFiltersPage() {
+        if (!isLiveFiltersPage()) return;
+        if (!window.CTParser || !window.CTParser.readLiveFilters) return;
+        try {
+            const filters = window.CTParser.readLiveFilters(document);
+            if (filters && filters.length > 0) {
+                let inventory = {};
+                try {
+                    inventory = JSON.parse(localStorage.getItem(LIVE_FILTERS_INVENTORY_KEY) || "{}");
+                } catch (e) {}
+                if (!inventory.items) inventory.items = {};
+
+                filters.forEach(f => {
+                    const fId = String(f.id);
+                    inventory.items[fId] = {
+                        id: fId,
+                        name: f.name,
+                        active: f.active,
+                        count: f.count,
+                        totalCount: f.totalCount,
+                        observedAt: f.observedAt || Date.now(),
+                        source: "LIVE_FILTERS_PAGE"
+                    };
+                });
+                inventory.lastObservedAt = Date.now();
+                inventory.totalCount = Object.keys(inventory.items).length;
+
+                try {
+                    localStorage.setItem(LIVE_FILTERS_INVENTORY_KEY, JSON.stringify(inventory));
+                    if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                        const obj = {};
+                        obj[LIVE_FILTERS_INVENTORY_KEY] = inventory;
+                        chrome.storage.local.set(obj);
+                    }
+                } catch (e) {}
+            }
+        } catch (e) {}
+    }
 
     function observeCampaignEditForm() {
         if (!window.CTParser || !window.CTParser.readCampaignEditForm) return;
@@ -437,6 +479,10 @@ console.log("CT Operations Monitor (EAST-2) — Production live feed controller 
     // STRICTLY READ-ONLY OBSERVER: No simulated button clicks or verification timers.
     function poll() {
         if (!isMonitorPage() || !window.CTParser) return;
+        if (isLiveFiltersPage()) {
+            observeLiveFiltersPage();
+            return;
+        }
         if (isCampaignEditPage()) {
             observeCampaignEditForm();
             return;
@@ -534,6 +580,10 @@ console.log("CT Operations Monitor (EAST-2) — Production live feed controller 
         const target = document.body;
         observer = new MutationObserver(function (mutations) {
             if (!isMonitorPage()) return;
+            if (isLiveFiltersPage()) {
+                observeLiveFiltersPage();
+                return;
+            }
             if (isQueuesPage()) {
                 if (mutations.some(mutationTouchesQueueTable)) scheduleDomRead();
                 return;
