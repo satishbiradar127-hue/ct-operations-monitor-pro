@@ -156,3 +156,48 @@ The entire implementation adheres strictly to read-only guarantees:
 - **DOM Mutations:** Exactly 0 native CallTools button clicks, 0 form submits, 0 automated route changes.
 - **Isolation:** Complete namespace separation between EAST-2 (`ct_east2_*`) and EAST-3 (`ct_east3_*`).
 - **Audit Verification:** Confirmed by automated AST security scanner (`scripts/security_reaudit.js`) with 100% PASS across all 10 source modules.
+
+---
+
+## 7. Invalidation, Freshness & Identity Integrity
+
+To prevent stale or inaccurate data from misleading operators:
+1. **Strict ID-First Matching:**  
+   If a campaign table row exposes an ID attribute or edit link `a[href*="/manager/campaigns/edit/:id"]`, the parser matches exclusively on `regData[String(id)]`. It **never** falls back to matching by campaign name when an ID is present on the row.
+2. **Registry Invalidation (7-Day Limit):**  
+   Registry entries older than 7 days (`entryAge > 7 * 24 * 60 * 60 * 1000`) are automatically treated as expired/stale and discarded from hydration.
+3. **No Cached Values Marked as LIVE:**  
+   Values sourced from `VERIFIED_REGISTRY` or `CAMPAIGN_EDIT_DOM` are explicitly labeled with their provenance and timestamp (`Source: Verified Registry` or `Source: Edit Page DOM`). They are never labeled as `LIVE DOM` unless directly visible in the live table column or active overlay during the current observation cycle.
+4. **Unavailable Source Guard:**  
+   When a campaign transition to `DOM_UNAVAILABLE` occurs, the intelligence engine preserves the existing baseline and cancels pending confirmations. It **never** emits a false removal or false change alert when the observation source is simply unavailable.
+
+---
+
+## 8. Controlled Operator Real-World Acceptance Protocol
+
+To complete the real-world acceptance test in an authenticated browser without violating read-only boundaries:
+1. **Initial Baseline Establishment:**  
+   - Operator opens `https://east-3.calltools.io/manager/campaigns` in Chrome Profile 20.
+   - If `TS FRESH DATA` Live Filter is unobserved, dashboard correctly displays `FILTER SOURCE UNAVAILABLE` with `Source: DOM Unavailable`.
+2. **Controlled Inspection:**  
+   - Operator clicks the native Edit pencil icon for `TS FRESH DATA` (`/manager/campaigns/edit/:id`).
+   - `content.js` passively captures the targeting Live Filter value (e.g. `TS Fresh Leads Active`) into `ct_east3_verified_campaign_filters_v1`.
+3. **Dashboard Hydration:**  
+   - Operator returns to `/manager/campaigns`.
+   - The top header immediately updates to:
+     - Operating Campaign: `TS FRESH DATA`
+     - Badge: `Filter: TS Fresh Leads Active` (`.is-assigned`)
+     - Source: `Source: Edit Page DOM` or `Source: Verified Registry`
+     - Last observed: Time of visit
+4. **Controlled Transition (Filter A → Filter B):**  
+   - When operator is ready, operator navigates to Edit page, selects `Filter B`, and saves.
+   - Upon return to `/manager/campaigns`, on the 2nd 15-second monitoring cycle, the Action Center reports:
+     - `LIVE FILTER CHANGED — Campaign: TS FRESH DATA — From: [Filter A] — To: [Filter B]`
+     - Severity: Critical
+     - Status: `LIVE FILTER CHANGED`
+     - Confirmed At: Timestamp
+     - Source: Verified Registry / Edit Page DOM
+5. **Persistence & Reset:**  
+   - Alert persists across page refresh until the operator clicks `[✓ NOTED]`.
+
+

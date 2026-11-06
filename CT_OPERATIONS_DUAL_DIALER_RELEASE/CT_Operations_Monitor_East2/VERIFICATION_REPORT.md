@@ -1,10 +1,10 @@
 # Dedicated Verification Report — CT Operations Monitor Pro (EAST-2)
 **Edition:** EAST-2 Dedicated Production Build  
 **Version:** 11.3.3  
-**Verified On:** 2026-11-06T20:56:27.340Z  
+**Verified On:** 2026-11-06T21:48:35.234Z  
 **Target Host:** `https://east-2.calltools.io/*`  
 **Storage Namespace:** `ct_east2_*`  
-**Checksum (SHA-256):** `ff73637e046768a4a85a6aade6b00c04d2b31c027bc75d317119595ff14cf82d`
+**Checksum (SHA-256):** `cb496fdc07327e6c766fe1cb15702f9a33acb241433abd8b517a5dc6097616af`
 
 ---
 
@@ -37,6 +37,6 @@
 ## 3. Package Checksum
 
 ```
-ff73637e046768a4a85a6aade6b00c04d2b31c027bc75d317119595ff14cf82d *CT_Operations_Monitor_East2.zip
-ff73637e046768a4a85a6aade6b00c04d2b31c027bc75d317119595ff14cf82d *CT_Operations_Monitor_East2_v11.3.3.zip
+cb496fdc07327e6c766fe1cb15702f9a33acb241433abd8b517a5dc6097616af *CT_Operations_Monitor_East2.zip
+cb496fdc07327e6c766fe1cb15702f9a33acb241433abd8b517a5dc6097616af *CT_Operations_Monitor_East2_v11.3.3.zip
 ```

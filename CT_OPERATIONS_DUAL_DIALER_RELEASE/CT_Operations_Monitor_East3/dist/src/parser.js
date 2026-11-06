@@ -714,7 +714,7 @@ window.CTParser = {
                     let entry = null;
                     if (id && regData[String(id)]) {
                         entry = regData[String(id)];
-                    } else if (rawName) {
+                    } else if (!id && rawName) {
                         const cleanName = String(rawName).trim();
                         if (regData[cleanName]) {
                             entry = regData[cleanName];
@@ -728,11 +728,15 @@ window.CTParser = {
                         }
                     }
                     if (entry) {
-                        const fVal = entry.liveFilter || entry.filter;
-                        if (fVal) {
-                            rawLiveFilter = fVal;
-                            filterSource = entry.source || "VERIFIED_REGISTRY";
-                            verifiedTimestamp = entry.timestamp || null;
+                        const entryAge = entry.timestamp ? (Date.now() - entry.timestamp) : 0;
+                        const isStale = entryAge > (7 * 24 * 60 * 60 * 1000);
+                        if (!isStale) {
+                            const fVal = entry.liveFilter || entry.filter;
+                            if (fVal) {
+                                rawLiveFilter = fVal;
+                                filterSource = entry.source || "VERIFIED_REGISTRY";
+                                verifiedTimestamp = entry.timestamp || null;
+                            }
                         }
                     }
                 } catch (e) {}

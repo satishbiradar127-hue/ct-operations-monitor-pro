@@ -54,4 +54,4 @@ Or using PowerShell:
 ## 4. Package Integrity
 
 - **Zip File:** `CT_Operations_Monitor_East3_v11.3.3.zip`
-- **SHA-256:** `2d81b274ef7bd82f1fcffa29f8218521c3f1ea31f82460736b50322710b49a9b`
+- **SHA-256:** `753d5f798c63f653e27c77cf48ee17dbb01c9f46faefec31336e85ab2f350ab8`
