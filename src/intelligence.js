@@ -179,9 +179,11 @@
             this.PENDING_KEY = this.prefix + "intelligence_pending_v1";
             this.ALERTS_KEY = this.prefix + "intelligence_alerts_v1";
             this.HISTORY_KEY = this.prefix + "intelligence_history_v1";
+            this.FILTER_BASELINES_KEY = this.prefix + "intelligence_filter_baselines_v1";
 
             // In-Memory State
             this.baselines = {};
+            this.filterBaselines = {}; // cid -> { filter, status, source, updatedAt }
             this.pendingConfirmations = {}; // targetKey -> { count, firstDetectedAt, value, ... }
             this.activeAlerts = [];
             this.history = [];
@@ -193,12 +195,14 @@
             if (this.storage) {
                 try {
                     this.baselines = JSON.parse(this.storage.getItem(this.BASELINES_KEY) || "{}");
+                    this.filterBaselines = JSON.parse(this.storage.getItem(this.FILTER_BASELINES_KEY) || "{}");
                     this.pendingConfirmations = JSON.parse(this.storage.getItem(this.PENDING_KEY) || "{}");
                     this.activeAlerts = JSON.parse(this.storage.getItem(this.ALERTS_KEY) || "[]");
                     this.history = JSON.parse(this.storage.getItem(this.HISTORY_KEY) || "[]");
                 } catch (e) {
                     console.error("CTDataIntelligence failed to load state from storage:", e);
                     this.baselines = {};
+                    this.filterBaselines = {};
                     this.pendingConfirmations = {};
                     this.activeAlerts = [];
                     this.history = [];
@@ -206,9 +210,10 @@
             }
             if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
                 try {
-                    chrome.storage.local.get([this.BASELINES_KEY, this.PENDING_KEY, this.ALERTS_KEY, this.HISTORY_KEY], (items) => {
+                    chrome.storage.local.get([this.BASELINES_KEY, this.FILTER_BASELINES_KEY, this.PENDING_KEY, this.ALERTS_KEY, this.HISTORY_KEY], (items) => {
                         if (items) {
                             if (items[this.BASELINES_KEY]) this.baselines = Object.assign(this.baselines, items[this.BASELINES_KEY]);
+                            if (items[this.FILTER_BASELINES_KEY]) this.filterBaselines = Object.assign(this.filterBaselines, items[this.FILTER_BASELINES_KEY]);
                             if (items[this.PENDING_KEY]) this.pendingConfirmations = Object.assign(this.pendingConfirmations, items[this.PENDING_KEY]);
                             if (Array.isArray(items[this.ALERTS_KEY]) && items[this.ALERTS_KEY].length) {
                                 const currentIds = new Set(this.activeAlerts.map(a => a.id));
@@ -228,6 +233,7 @@
             if (this.storage) {
                 try {
                     this.storage.setItem(this.BASELINES_KEY, JSON.stringify(this.baselines));
+                    this.storage.setItem(this.FILTER_BASELINES_KEY, JSON.stringify(this.filterBaselines));
                     this.storage.setItem(this.PENDING_KEY, JSON.stringify(this.pendingConfirmations));
                     this.storage.setItem(this.ALERTS_KEY, JSON.stringify(this.activeAlerts));
                     this.storage.setItem(this.HISTORY_KEY, JSON.stringify(this.history.slice(-500))); // Keep last 500 events
@@ -239,6 +245,7 @@
                 try {
                     chrome.storage.local.set({
                         [this.BASELINES_KEY]: this.baselines,
+                        [this.FILTER_BASELINES_KEY]: this.filterBaselines,
                         [this.PENDING_KEY]: this.pendingConfirmations,
                         [this.ALERTS_KEY]: this.activeAlerts,
                         [this.HISTORY_KEY]: this.history.slice(-500)
@@ -375,6 +382,18 @@
                         });
                     }
                 }
+
+                // STAGE 3: Live Filter Change Intelligence
+                this.checkCampaignLiveFilter({
+                    cid,
+                    cName: c.name || `Campaign ${cid}`,
+                    filterVal: c.liveFilter,
+                    status: c.liveFilterStatus || (c.liveFilter ? "OBSERVED" : "FILTER SOURCE UNAVAILABLE"),
+                    source: c.liveFilterSource || "TABLE_COLUMN",
+                    confidence: c.liveFilterConfidence || (c.liveFilter ? "VERIFIED" : "UNAVAILABLE"),
+                    now,
+                    timeStr
+                });
 
                 const abnd = Number(c.abandoned ?? c.__abandoned ?? 0);
                 if (Number.isFinite(abnd)) totalAbandoned += abnd;
@@ -717,6 +736,11 @@
 
             // 1. POSITIVE CHANGE: NEW LEADS ADDED
             if (diff > 0) {
+                const pKeyReduction = `lead_reduction_${cid}`;
+                const pKeyZero = `lead_zero_${cid}`;
+                if (this.pendingConfirmations[pKeyReduction]) delete this.pendingConfirmations[pKeyReduction];
+                if (this.pendingConfirmations[pKeyZero]) delete this.pendingConfirmations[pKeyZero];
+
                 const pctStr = previousVal > 0 ? `+${Math.round((diff / previousVal) * 100)}%` : `+${diff}`;
                 const alertId = `${this.dialer}_LEADS_ADDED_${cid}_${previousVal}_${contactsVal}`;
                 this.pushActiveAlert({
@@ -807,6 +831,98 @@
             // C. Minor routine consumption (< 500 and < 10%): update rolling baseline without alert noise
             baseline.val = contactsVal;
             baseline.updatedAt = now;
+        }
+
+        /**
+         * STAGE 3: Live Filter Change Intelligence
+         * Tracks assigned live filter per campaign across observations.
+         * Generates persistent alerts on ASSIGNED, REMOVED, or CHANGED.
+         * First observation establishes baseline (no false alert).
+         * Unavailable source does NOT overwrite baseline or trigger false removal.
+         * Distinct alerts for A -> B -> A transitions.
+         */
+        checkCampaignLiveFilter({ cid, cName, filterVal, status, source, confidence, now, timeStr }) {
+            // If source is unavailable or unreadable, preserve existing baseline and do not alert
+            if (status === "FILTER SOURCE UNAVAILABLE" || filterVal === null || filterVal === undefined) {
+                return;
+            }
+
+            const cleanFilter = String(filterVal).trim();
+            if (!cleanFilter) return;
+
+            const bKey = `campaign_filter_${cid}`;
+            const baseline = this.filterBaselines[bKey];
+
+            // 1. Cold start / First observation establishes baseline without false alert
+            if (!baseline) {
+                this.filterBaselines[bKey] = {
+                    filter: cleanFilter,
+                    status: status || "OBSERVED",
+                    source: source || "TABLE_COLUMN",
+                    updatedAt: now
+                };
+                this.saveState();
+                return;
+            }
+
+            const previousFilter = baseline.filter;
+
+            // 2. Unchanged filter: do nothing
+            if (previousFilter === cleanFilter) {
+                return;
+            }
+
+            // 3. Determine transition type
+            const isPrevEmpty = !previousFilter || previousFilter === "None" || previousFilter === "Unassigned" || previousFilter === "—";
+            const isCurrEmpty = !cleanFilter || cleanFilter === "None" || cleanFilter === "Unassigned" || cleanFilter === "—";
+
+            let alertStatus = "LIVE FILTER CHANGED";
+            let severity = "critical";
+            let message = "";
+
+            if (isPrevEmpty && !isCurrEmpty) {
+                alertStatus = "LIVE FILTER ASSIGNED";
+                severity = "warning";
+                message = `LIVE FILTER ASSIGNED — Campaign: ${cName} — Filter: ${cleanFilter}`;
+            } else if (!isPrevEmpty && isCurrEmpty) {
+                alertStatus = "LIVE FILTER REMOVED";
+                severity = "critical";
+                message = `LIVE FILTER REMOVED — Campaign: ${cName} — Previous filter: ${previousFilter}`;
+            } else {
+                alertStatus = "LIVE FILTER CHANGED";
+                severity = "critical";
+                message = `LIVE FILTER CHANGED — Campaign: ${cName} — From: [${previousFilter}] — To: [${cleanFilter}]`;
+            }
+
+            const alertId = `${this.dialer}_FILTER_CHANGED_${cid}_${encodeURIComponent(previousFilter)}_${encodeURIComponent(cleanFilter)}_${now}`;
+
+            this.pushActiveAlert({
+                id: alertId,
+                dialer: this.dialer,
+                category: "LIVE_FILTER",
+                direction: "OUTBOUND",
+                targetId: cid,
+                targetName: cName,
+                metric: "Live Filter",
+                status: alertStatus,
+                previous: previousFilter,
+                current: cleanFilter,
+                source: source || "TABLE_COLUMN",
+                confidence: confidence || "VERIFIED",
+                severity: severity,
+                message: message,
+                firstDetectedAt: timeStr,
+                confirmedAt: timeStr,
+                timestamp: now,
+                acknowledged: false
+            });
+
+            // Update baseline
+            baseline.filter = cleanFilter;
+            baseline.status = status || "OBSERVED";
+            baseline.source = source || "TABLE_COLUMN";
+            baseline.updatedAt = now;
+            this.saveState();
         }
 
         /**
@@ -1001,6 +1117,13 @@
 
             this.saveState();
             return alert;
+        }
+
+        /**
+         * Dismiss active alert alias for operator acknowledgement.
+         */
+        dismissActiveAlert(alertId) {
+            return this.acknowledgeAlert(alertId);
         }
 
         /**

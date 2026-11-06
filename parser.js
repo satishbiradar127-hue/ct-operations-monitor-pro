@@ -655,6 +655,39 @@ window.CTParser = {
                 ]
             );
 
+            // Live Filter discovery (Stage 3)
+            let rawLiveFilter = this.getByHeader(
+                row,
+                ["live filter", "filter", "active filter", "assigned filter"],
+                ["cdk-column-live_filter", "cdk-column-filter", "cdk-column-campaign__live_filter", "cdk-column-campaign__filter"]
+            );
+            let filterSource = rawLiveFilter ? "TABLE_COLUMN" : "DOM_UNAVAILABLE";
+            if (!rawLiveFilter) {
+                const filterCell = row.querySelector("[data-column='live_filter'], [data-column='filter'], .cdk-column-live_filter, .cdk-column-filter, [class*='column-filter'], [class*='column-live_filter']");
+                if (filterCell) {
+                    const sel = filterCell.querySelector("select");
+                    rawLiveFilter = sel ? String(sel.value || "").trim() : String(filterCell.innerText || filterCell.textContent || "").trim();
+                    if (rawLiveFilter) filterSource = "TABLE_CELL";
+                }
+            }
+            if (!rawLiveFilter && (row.getAttribute("data-live-filter") || row.getAttribute("data-filter"))) {
+                rawLiveFilter = String(row.getAttribute("data-live-filter") || row.getAttribute("data-filter")).trim();
+                if (rawLiveFilter) filterSource = "ROW_ATTRIBUTE";
+            }
+            if (!rawLiveFilter && typeof document !== "undefined") {
+                const editForm = document.querySelector("select[name='live_filter'], mat-select[formcontrolname*='filter'], mat-select[formcontrolname*='live_filter']");
+                if (editForm && id && editForm.closest && editForm.closest(`[data-campaign-id='${id}']`)) {
+                    rawLiveFilter = String(editForm.value || editForm.innerText || editForm.textContent || "").trim();
+                    if (rawLiveFilter) filterSource = "EDIT_FORM";
+                }
+            }
+
+            const hasLiveFilter = Boolean(rawLiveFilter && String(rawLiveFilter).trim() !== "");
+            const liveFilter = hasLiveFilter ? String(rawLiveFilter).trim() : null;
+            const liveFilterStatus = hasLiveFilter ? "OBSERVED" : "FILTER SOURCE UNAVAILABLE";
+            const liveFilterSource = hasLiveFilter ? filterSource : "DOM_UNAVAILABLE";
+            const liveFilterConfidence = hasLiveFilter ? "VERIFIED" : "UNAVAILABLE";
+
             return {
                 id: id || "",
                 rowIndex: index,
@@ -678,6 +711,10 @@ window.CTParser = {
                 postCall: rawPostCall !== "" ? rawPostCall : null,
                 goals: rawGoals !== "" ? rawGoals : null,
                 sales: rawSales !== "" ? rawSales : null,
+                liveFilter: liveFilter,
+                liveFilterStatus: liveFilterStatus,
+                liveFilterSource: liveFilterSource,
+                liveFilterConfidence: liveFilterConfidence,
                 _metrics: {
                     contacts: parse(rawContacts),
                     channels: parse(rawChannels),

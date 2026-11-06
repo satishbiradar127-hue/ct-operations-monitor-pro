@@ -234,6 +234,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
         authRequired: false,
         tableMissing: false,
         parserActive: false,
+        nextMonitoringCheckIn: 15,
+        isMonitoringRefreshing: false,
+        monitoringIntervalSeconds: 15,
         runwayHistory: new Map(),
         inboundHistory: [],
         selectedCampaignIds: new Set(readJsonStorage(SELECTED_CAMPAIGNS_KEY, []))
@@ -499,7 +502,46 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
     }
     hydratePersistentAlertsFromExtensionStorage();
 
-    const freshnessTimer = setInterval(function () { updateConnectionState(Date.now()); }, 1000);
+    // Centralized 15-second Live Monitoring Scheduler (Stage 5)
+    const MONITORING_CYCLE_SECONDS = 15;
+    let secondsUntilNextMonitoring = MONITORING_CYCLE_SECONDS;
+    let isMonitoringCheckInFlight = false;
+
+    function trigger15sMonitoringRefresh(reason) {
+        if (isMonitoringCheckInFlight) return;
+        isMonitoringCheckInFlight = true;
+        state.isMonitoringRefreshing = true;
+
+        if (refs && refs.live && state.connectionState === "LIVE") {
+            setText(refs.live, "UPDATING");
+            setClass(refs.live, "ct-live is-warning");
+        }
+
+        try {
+            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT));
+            document.dispatchEvent(new CustomEvent(REQUEST_INBOUND_REFRESH_EVENT));
+        } catch (e) {}
+
+        setTimeout(function () {
+            isMonitoringCheckInFlight = false;
+            state.isMonitoringRefreshing = false;
+            updateConnectionState(Date.now());
+        }, 400);
+    }
+
+    const freshnessTimer = setInterval(function () {
+        const now = Date.now();
+        secondsUntilNextMonitoring--;
+        state.nextMonitoringCheckIn = Math.max(0, secondsUntilNextMonitoring);
+
+        if (secondsUntilNextMonitoring <= 0) {
+            secondsUntilNextMonitoring = MONITORING_CYCLE_SECONDS;
+            state.nextMonitoringCheckIn = MONITORING_CYCLE_SECONDS;
+            trigger15sMonitoringRefresh("15s-scheduler-cycle");
+        }
+
+        updateConnectionState(now);
+    }, 1000);
     const routeTimer = setInterval(function () {
         const path = window.location.pathname.replace(/\/+$/, "");
         const route = path === "/manager/queues" ? "queues" : path === "/manager/campaigns" ? "campaigns" : "other";
@@ -668,7 +710,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
 
     const onVisibilityChange = function () {
         if (document.visibilityState === "visible") {
+            secondsUntilNextMonitoring = 0;
+            state.nextMonitoringCheckIn = 0;
             hydrateInboundFromExtensionStorage();
+            trigger15sMonitoringRefresh("visibility-change-recovery");
             updateConnectionState(Date.now());
             scheduleRender();
         }
@@ -2837,6 +2882,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
             #${DASHBOARD_ID} .ct-active-focus-btn.is-operating:hover { background:rgba(34,197,94,.38) !important; color:#86efac !important; border-color:rgba(34,197,94,.75) !important; }
             #${DASHBOARD_ID} .ct-td-name b { cursor:pointer; }
             #${DASHBOARD_ID} .ct-td-name b:hover { color:#60a5fa; text-decoration:underline; }
+            #${DASHBOARD_ID} .ct-campaign-filter-badge { font-size:8.5px; font-weight:750; line-height:1.1; margin-top:2px; padding:1px 5px; border-radius:3px; display:inline-block; max-width:170px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+            #${DASHBOARD_ID} .ct-campaign-filter-badge.is-assigned { background:rgba(56,189,248,.16); color:#7dd3fc; border:1px solid rgba(56,189,248,.35); }
+            #${DASHBOARD_ID} .ct-campaign-filter-badge.is-unavailable { background:rgba(148,163,184,.1); color:#94a3b8; border:1px solid rgba(148,163,184,.2); font-style:italic; }
+            #${DASHBOARD_ID} .ct-intel-badge.is-filter-change { background:rgba(245,158,11,.22); color:#fbbf24; border:1px solid rgba(245,158,11,.45); }
             #${DASHBOARD_ID} .ct-active-empty { text-align:center; padding:18px; color:#94a3b8; font-style:italic; }
             #${DASHBOARD_ID} .ct-reconciled-footer { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; margin-top:6px; border:1px solid rgba(148,163,184,.15); border-radius:6px; background:rgba(15,23,42,.6); font-size:10.5px; color:#94a3b8; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-reconciled-footer b { color:#f1f5f9; }
@@ -4580,7 +4629,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
                 '</div>' +
                 '</div></td>' +
                 '<td class="ct-td-select"><input type="checkbox" class="ct-table-select-cb" data-campaign-id="' + escapeHtml(c.__id) + '" ' + (isSelected ? 'checked' : '') + ' aria-label="Select ' + escapeHtml(c.name) + '"></td>' +
-                '<td class="ct-td-name ct-active-name" title="' + escapeHtml(safeValue(c.name)) + ' (click to operate)"><b>' + escapeHtml(safeValue(c.name)) + '</b></td>' +
+                '<td class="ct-td-name ct-active-name" title="' + escapeHtml(safeValue(c.name)) + ' (click to operate)"><b>' + escapeHtml(safeValue(c.name)) + '</b>' +
+                '<div class="ct-campaign-filter-badge ' + (c.liveFilter ? 'is-assigned' : 'is-unavailable') + '" title="Live Filter: ' + escapeHtml(c.liveFilter || 'Source Unavailable') + '">Filter: ' + escapeHtml(c.liveFilter || 'FILTER SOURCE UNAVAILABLE') + '</div></td>' +
                 '<td class="ct-td-state"><span class="ct-active-status-tag ' + (c.__active ? 'is-live' : 'is-inactive') + '">' + (c.__active ? 'ACTIVE' : 'INACTIVE') + '</span></td>' +
                 '<td class="ct-td-agents ct-td-num" title="' + escapeHtml(agentsTitle) + '">' + escapeHtml(agentsText) + '</td>' +
                 '<td class="ct-td-waiting ct-td-num ' + escapeHtml(waitingTone) + '" title="' + escapeHtml(waitingTitle) + '">' + escapeHtml(waitingText) + '</td>' +
@@ -5145,13 +5195,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
                 subtitleText = "PARTIALLY CONNECTED · Inbound: LIVE (" + inAgeStr + ") · Outbound: " + outAgeStr;
             }
         } else if (globalState === "LIVE") {
-            badgeText = "LIVE";
-            badgeTone = "is-good";
+            badgeText = state.isMonitoringRefreshing ? "UPDATING" : "LIVE";
+            badgeTone = state.isMonitoringRefreshing ? "is-warning" : "is-good";
+            const nextStr = " · Next check: " + (state.nextMonitoringCheckIn != null ? state.nextMonitoringCheckIn : 15) + "s";
             if (isCampaigns) {
-                subtitleText = "LIVE · Observed " + outAgeStr + " (" + outTimeStr + ")" + (inboundState === "LIVE" ? " · Inbound live" : " · Inbound connecting");
+                subtitleText = "LIVE · Observed " + outAgeStr + " (" + outTimeStr + ")" + (inboundState === "LIVE" ? " · Inbound live" : " · Inbound connecting") + nextStr;
             } else {
-                subtitleText = "LIVE · Observed " + inAgeStr + " (" + inTimeStr + ")" + (outboundState === "LIVE" ? " · Outbound live" : " · Outbound connecting");
+                subtitleText = "LIVE · Observed " + inAgeStr + " (" + inTimeStr + ")" + (outboundState === "LIVE" ? " · Outbound live" : " · Outbound connecting") + nextStr;
             }
+        }
+
+        if (refs && refs.feedPoll) {
+            setText(refs.feedPoll, "15s cycle · Next in " + (state.nextMonitoringCheckIn != null ? state.nextMonitoringCheckIn : 15) + "s");
         }
 
         if (refs && refs.live) {
@@ -5970,7 +6025,11 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");
                 return !a.acknowledged && a.category !== "SALES_GOAL";
             }).map(function (alert) {
                 const sevClass = alert.severity === "critical" ? "is-critical" : alert.severity === "warning" ? "is-warning" : "is-info";
-                const badgeClass = alert.status === "INCREASE" || alert.status === "NEW LEADS ADDED" ? "is-increase" : (alert.status === "DECREASE" || alert.status === "LARGE LEAD INVENTORY REDUCTION" ? "is-decrease" : "is-integrity");
+                const badgeClass = alert.status === "INCREASE" || alert.status === "NEW LEADS ADDED" || alert.status === "LIVE FILTER ASSIGNED"
+                    ? "is-increase"
+                    : (alert.status === "DECREASE" || alert.status === "LARGE LEAD INVENTORY REDUCTION" || alert.status === "LIVE FILTER REMOVED"
+                        ? "is-decrease"
+                        : (alert.status === "LIVE FILTER CHANGED" ? "is-filter-change" : "is-integrity"));
                 const dialerClass = "ct-dialer-" + String(alert.dialer || DIALER).toLowerCase().replace(/[^a-z0-9]/g, "");
                 return '<div class="ct-intelligence-card ' + sevClass + '" data-intel-id="' + escapeHtml(alert.id) + '">' +
                     '<div class="ct-intel-card-top">' +
