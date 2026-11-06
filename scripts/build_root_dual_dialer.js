@@ -21,6 +21,10 @@ parserCode = parserCode.replace(
     'console.log("CT Operations Monitor parser loaded (EAST-2) — v11.3.3");',
     'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor parser loaded (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — v11.3.3");'
 );
+parserCode = parserCode.replace(
+    'const regKey = "ct_east2_verified_campaign_filters_v1";',
+    'const regKey = isEast3 ? "ct_east3_verified_campaign_filters_v1" : "ct_east2_verified_campaign_filters_v1";'
+);
 fs.writeFileSync(path.join(rootSrc, "parser.js"), parserCode, "utf8");
 fs.writeFileSync(path.join(rootDir, "parser.js"), parserCode, "utf8");
 
@@ -51,6 +55,7 @@ contentCode = contentCode.replace(
 );
 contentCode = contentCode.replace('const TARGET_HOST = "east-2.calltools.io";', 'const TARGET_HOST = isEast3 ? "east-3.calltools.io" : "east-2.calltools.io";');
 contentCode = contentCode.replace('const EDITION = "EAST-2";', 'const EDITION = isEast3 ? "EAST-3" : "EAST-2";');
+contentCode = contentCode.replace('const VERIFIED_FILTERS_KEY = "ct_east2_verified_campaign_filters_v1";', 'const VERIFIED_FILTERS_KEY = isEast3 ? "ct_east3_verified_campaign_filters_v1" : "ct_east2_verified_campaign_filters_v1";');
 contentCode = contentCode.replace('const INBOUND_DATA_KEY = "ct_east2_last_known_queues_v1";', 'const INBOUND_DATA_KEY = isEast3 ? "ct_east3_last_known_queues_v1" : "ct_east2_last_known_queues_v1";');
 contentCode = contentCode.replace('const INBOUND_STATUS_KEY = "ct_east2_inbound_feed_status_v1";', 'const INBOUND_STATUS_KEY = isEast3 ? "ct_east3_inbound_feed_status_v1" : "ct_east2_inbound_feed_status_v1";');
 contentCode = contentCode.replace('const INBOUND_STORAGE_DATA_KEY = "ct_east2_inbound_data_v2";', 'const INBOUND_STORAGE_DATA_KEY = isEast3 ? "ct_east3_inbound_data_v2" : "ct_east2_inbound_data_v2";');

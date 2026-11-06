@@ -19,7 +19,7 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
     const INBOUND_STATUS_KEY = isEast3 ? "ct_east3_inbound_feed_status_v1" : "ct_east2_inbound_feed_status_v1";
     const INBOUND_STORAGE_DATA_KEY = isEast3 ? "ct_east3_inbound_data_v2" : "ct_east2_inbound_data_v2";
     const INBOUND_STORAGE_STATUS_KEY = isEast3 ? "ct_east3_inbound_status_v2" : "ct_east2_inbound_status_v2";
-    const VERIFIED_FILTERS_KEY = "ct_east2_verified_campaign_filters_v1";
+    const VERIFIED_FILTERS_KEY = isEast3 ? "ct_east3_verified_campaign_filters_v1" : "ct_east2_verified_campaign_filters_v1";
     const INBOUND_COORDINATION_MS = 5000;
     const INBOUND_HEARTBEAT_MS = 2500;
     const INBOUND_MONITOR_PARAM = "ct_inbound_monitor";
@@ -52,7 +52,7 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
                     registry = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}");
                 } catch (e) {}
 
-                registry[String(editData.campaignId)] = {
+                const entry = {
                     campaignId: String(editData.campaignId),
                     campaignName: editData.campaignName,
                     liveFilter: editData.liveFilter,
@@ -60,6 +60,10 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
                     source: "CAMPAIGN_EDIT_DOM",
                     timestamp: editData.timestamp
                 };
+                registry[String(editData.campaignId)] = entry;
+                if (editData.campaignName) {
+                    registry[String(editData.campaignName).trim()] = entry;
+                }
 
                 try {
                     localStorage.setItem(VERIFIED_FILTERS_KEY, JSON.stringify(registry));

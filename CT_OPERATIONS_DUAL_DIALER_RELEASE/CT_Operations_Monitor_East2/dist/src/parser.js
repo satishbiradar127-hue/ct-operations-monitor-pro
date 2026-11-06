@@ -615,9 +615,18 @@ window.CTParser = {
             const idNode = row.querySelector(
                 '[data-campaign-id], [data-id], [data-campaignid], [data-campaign-id]'
             );
-            const id = idNode
+            let id = idNode
                 ? (idNode.getAttribute("data-campaign-id") || idNode.getAttribute("data-id") || idNode.getAttribute("data-campaignid"))
                 : (row.getAttribute("data-campaign-id") || row.getAttribute("data-id") || "");
+            if (!id) {
+                const editLink = row.querySelector("a[href*='/manager/campaigns/edit/'], a[href*='/campaigns/edit/'], button[data-id]");
+                if (editLink) {
+                    const href = editLink.getAttribute("href") || "";
+                    const m = href.match(/\/campaigns\/edit\/([a-zA-Z0-9_\-]+)/);
+                    if (m) id = m[1];
+                    else if (editLink.getAttribute("data-id")) id = editLink.getAttribute("data-id");
+                }
+            }
 
             const rawName = this.getByHeader(row, ["name"], ["cdk-column-name", "cdk-column-campaign__name"]);
             const active = this.readActiveState(row);
@@ -698,13 +707,28 @@ window.CTParser = {
             // Check verified registry if not found directly in current table row
             let verifiedTimestamp = null;
             const storageObj = (typeof localStorage !== "undefined" ? localStorage : null) || (typeof window !== "undefined" && window.localStorage ? window.localStorage : null);
-            if (!rawLiveFilter && id && storageObj) {
+            if (!rawLiveFilter && storageObj) {
                 try {
                     const regKey = "ct_east2_verified_campaign_filters_v1";
                     const regData = JSON.parse(storageObj.getItem(regKey) || "{}");
-                    if (regData && regData[String(id)]) {
-                        const entry = regData[String(id)];
-                        const fVal = entry && (entry.liveFilter || entry.filter);
+                    let entry = null;
+                    if (id && regData[String(id)]) {
+                        entry = regData[String(id)];
+                    } else if (rawName) {
+                        const cleanName = String(rawName).trim();
+                        if (regData[cleanName]) {
+                            entry = regData[cleanName];
+                        } else {
+                            for (const k of Object.keys(regData)) {
+                                if (regData[k] && regData[k].campaignName && String(regData[k].campaignName).trim().toLowerCase() === cleanName.toLowerCase()) {
+                                    entry = regData[k];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (entry) {
+                        const fVal = entry.liveFilter || entry.filter;
                         if (fVal) {
                             rawLiveFilter = fVal;
                             filterSource = entry.source || "VERIFIED_REGISTRY";

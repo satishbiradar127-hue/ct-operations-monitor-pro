@@ -51,7 +51,7 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
                     registry = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}");
                 } catch (e) {}
 
-                registry[String(editData.campaignId)] = {
+                const entry = {
                     campaignId: String(editData.campaignId),
                     campaignName: editData.campaignName,
                     liveFilter: editData.liveFilter,
@@ -59,6 +59,10 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
                     source: "CAMPAIGN_EDIT_DOM",
                     timestamp: editData.timestamp
                 };
+                registry[String(editData.campaignId)] = entry;
+                if (editData.campaignName) {
+                    registry[String(editData.campaignName).trim()] = entry;
+                }
 
                 try {
                     localStorage.setItem(VERIFIED_FILTERS_KEY, JSON.stringify(registry));

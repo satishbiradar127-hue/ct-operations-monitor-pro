@@ -4,7 +4,7 @@
 
 **Target Baseline:** v11.3.3 Production Verified Baseline  
 **Completion Date:** 2026-11-06  
-**Git Branch:** `feat/live-filter-recovery-top-header`  
+**Git Branch:** `feat/native-live-filter-intelligence-recovery`  
 **Dual-Dialer Editions:**
 1. **EAST-2:** `https://east-2.calltools.io/manager/campaigns` (namespace prefix `ct_east2_`)
 2. **EAST-3:** `https://east-3.calltools.io/manager/campaigns` (namespace prefix `ct_east3_`)
