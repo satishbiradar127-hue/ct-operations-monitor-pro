@@ -52,3 +52,4 @@ fs.writeFileSync('CT_OPERATIONS_DUAL_DIALER_RELEASE/QA_REPORTS/SHA256SUMS.txt', 
 fs.writeFileSync('CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East2/SHA256SUMS.txt', sums, 'utf8');
 fs.writeFileSync('CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East3/SHA256SUMS.txt', sums, 'utf8');
 console.log('SHA256SUMS.txt successfully updated in all directories.');
+

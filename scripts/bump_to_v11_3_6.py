@@ -28,3 +28,4 @@ with open("scripts/build_root_dual_dialer.js", "w", encoding="utf-8") as f:
 print(f"Updated scripts/build_root_dual_dialer.js to {new_v}")
 
 print("Version bump to v11.3.6 complete!")
+

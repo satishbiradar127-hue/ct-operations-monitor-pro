@@ -88,3 +88,4 @@ code = code.replace(old_refresh, new_refresh)
 with open(content_js_path, "w", encoding="utf-8") as f:
     f.write(code)
 print("Updated content.js refresh handler successfully!")
+
