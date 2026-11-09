@@ -252,3 +252,4 @@ function patchFile(relPath, fn) {
 });
 
 console.log("Adjustments applied.");
+

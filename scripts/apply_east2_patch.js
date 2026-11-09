@@ -597,3 +597,4 @@ patchFile(`${e2Dir}/src/dashboard.css`, (content) => {
 });
 
 console.log("East2 patch execution finished.");
+

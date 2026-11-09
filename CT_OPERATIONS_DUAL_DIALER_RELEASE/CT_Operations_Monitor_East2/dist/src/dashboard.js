@@ -469,6 +469,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             state.queueLastFeedHeartbeatAt = Number(payload.heartbeatAt) ? new Date(Number(payload.heartbeatAt)) : null;
         }
         if (changes && (changes[VERIFIED_FILTERS_KEY] || changes[LIVE_FILTERS_INVENTORY_KEY])) {
+            if (changes[VERIFIED_FILTERS_KEY] && changes[VERIFIED_FILTERS_KEY].newValue) {
+                const reg = changes[VERIFIED_FILTERS_KEY].newValue;
+                if (Array.isArray(state.campaigns)) {
+                    state.campaigns.forEach(function (c) {
+                        const cid = c.rawId || c.id || c.__id;
+                        const entry = (cid && reg[String(cid)]) || (c.name && reg[String(c.name).trim()]) || null;
+                        if (entry && entry.liveFilter) {
+                            c.liveFilter = entry.liveFilter;
+                            c.liveFilterSource = entry.source || "VERIFIED_REGISTRY";
+                            c.liveFilterTimestamp = entry.timestamp || null;
+                            c.liveFilterCount = entry.filterCount !== undefined ? entry.filterCount : null;
+                        }
+                    });
+                }
+            }
             scheduleRender();
         }
         if (dataChange || statusChange) scheduleRender();
@@ -4212,8 +4227,66 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             });
         }
         refs.alerts.addEventListener("click", function (event) {
-            const action = event.target.closest("[data-alert-action]");
+            const action = event.target.closest("[data-alert-action], [data-intel-action], [data-noted-id], [data-intel-noted-id]");
             if (!action) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Intelligence Alert DISMISS or FOCUS
+            if (action.dataset && action.dataset.intelAction) {
+                const intelAct = action.dataset.intelAction;
+                if (intelAct === "dismiss") {
+                    const intelId = action.dataset.intelId;
+                    const card = action.closest(".ct-intelligence-card, .ct-alert");
+                    if (card) card.remove();
+                    if (refs.alerts) refs.alerts.dataset.signature = "";
+                    if (refs.persistentGoalsContainer) refs.persistentGoalsContainer.dataset.signature = "";
+                    if (intelligenceEngine && intelId) {
+                        intelligenceEngine.dismissActiveAlert(intelId);
+                    }
+                    updateAlerts();
+                    showActionNotice("Alert dismissed until condition changes.");
+                    scheduleRender();
+                    return;
+                }
+                if (intelAct === "focus") {
+                    const target = action.dataset.target;
+                    if (target) {
+                        focusCampaign(target, false);
+                    }
+                    return;
+                }
+            }
+
+            // Persistent Goal NOTED
+            if (action.getAttribute && action.getAttribute("data-noted-id")) {
+                const notedId = action.getAttribute("data-noted-id");
+                const card = action.closest(".ct-persistent-goal-card, .ct-intelligence-card, .ct-alert");
+                if (card) card.remove();
+                if (refs.alerts) refs.alerts.dataset.signature = "";
+                if (refs.persistentGoalsContainer) refs.persistentGoalsContainer.dataset.signature = "";
+                acknowledgePersistentGoalAlert(notedId);
+                updateAlerts();
+                showActionNotice("Persistent goal alert acknowledged [NOTED].");
+                scheduleRender();
+                return;
+            }
+
+            // Intelligence Card NOTED
+            if (action.getAttribute && action.getAttribute("data-intel-noted-id")) {
+                const intelId = action.getAttribute("data-intel-noted-id");
+                const card = action.closest(".ct-intelligence-card, .ct-alert");
+                if (card) card.remove();
+                if (refs.alerts) refs.alerts.dataset.signature = "";
+                if (refs.persistentGoalsContainer) refs.persistentGoalsContainer.dataset.signature = "";
+                if (intelligenceEngine) {
+                    intelligenceEngine.acknowledgeAlert(intelId);
+                }
+                updateAlerts();
+                showActionNotice("Change intelligence alert acknowledged [NOTED].");
+                scheduleRender();
+                return;
+            }
             const alertNode = action.closest(".ct-alert");
             const conditionKey = alertNode ? alertNode.dataset.conditionKey : "";
             const alertItem = state.recentAlerts.find(function (a) { return a.conditionKey === conditionKey; });
@@ -4957,7 +5030,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                 }
 
                 // 1. Header elements
-                const isTargetingCurrent = fName && fSource !== "DOM_UNAVAILABLE" && (!fTimeMs || (Date.now() - fTimeMs) <= 120000);
+                const isTargetingCurrent = Boolean(fName && fSource !== "DOM_UNAVAILABLE" && fTimeMs && (Date.now() - fTimeMs) <= 120000);
                 if (refs.topFilterCampaign) setText(refs.topFilterCampaign, cName);
                 if (refs.topFilterDialer) setText(refs.topFilterDialer, DIALER);
                 if (refs.topFilterVerificationState) {
@@ -4965,7 +5038,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                         setText(refs.topFilterVerificationState, "TARGETING: VERIFIED");
                         setClass(refs.topFilterVerificationState, "ct-lft-verify-badge is-verified");
                     } else if (fName && fSource !== "DOM_UNAVAILABLE") {
-                        setText(refs.topFilterVerificationState, "TARGETING: STALE");
+                        const ageStr = fTimeMs ? formatAge(Math.floor((Date.now() - fTimeMs)/1000)) + " ago" : "STALE";
+                        setText(refs.topFilterVerificationState, "TARGETING: STALE (" + ageStr + ")");
                         setClass(refs.topFilterVerificationState, "ct-lft-verify-badge is-stale");
                     } else if (fName) {
                         setText(refs.topFilterVerificationState, "TARGETING: UNVERIFIED");
@@ -4993,7 +5067,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                     setClass(refs.topFilterStatus, "ct-lft-status-pill " + (fName ? "is-assigned" : "is-unassigned"));
                 }
                 if (refs.topFilterId) {
-                    setText(refs.topFilterId, fId ? "ID: " + fId : "ID: Unavailable");
+                    const cidDisplay = cId ? "#" + cId : "Unavailable";
+                    const fidDisplay = fId ? "#" + fId : "—";
+                    setText(refs.topFilterId, "Campaign ID: " + cidDisplay + " · Filter ID: " + fidDisplay);
                 }
                 if (refs.topFilterBadge) {
                     setText(refs.topFilterBadge, fName ? "Filter: " + fName : "FILTER SOURCE UNAVAILABLE");
@@ -5026,12 +5102,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                 if (refs.topFilterConfidence) {
                     if (isTargetingCurrent) {
                         setText(refs.topFilterConfidence, "VERIFIED");
+                        setClass(refs.topFilterConfidence, "ct-lft-card-primary is-verified");
                     } else if (fName && fSource !== "DOM_UNAVAILABLE") {
-                        setText(refs.topFilterConfidence, "STALE (LAST VERIFIED)");
+                        setText(refs.topFilterConfidence, "STALE (LAST OBSERVED)");
+                        setClass(refs.topFilterConfidence, "ct-lft-card-primary is-stale");
                     } else if (fName) {
                         setText(refs.topFilterConfidence, "UNVERIFIED");
+                        setClass(refs.topFilterConfidence, "ct-lft-card-primary is-unverified");
                     } else {
                         setText(refs.topFilterConfidence, "AWAITING OBSERVATION");
+                        setClass(refs.topFilterConfidence, "ct-lft-card-primary is-unavailable");
                     }
                 }
                 if (refs.topFilterVerifySource) {
@@ -5475,8 +5555,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
 
     function updateOperatingSelect(campaigns) {
         if (!refs.operatingOptions || !refs.operatingTrigger) return;
+        const rawList = Array.isArray(campaigns) && campaigns.length ? campaigns : (Array.isArray(state.campaigns) && state.campaigns.length ? state.campaigns : []);
+        const all = prepareCampaigns(rawList);
         const current = new Set((state.operatingCampaigns || []).map(function(id) { return String(id || "").trim(); }).filter(Boolean));
-        const all = Array.isArray(campaigns) && campaigns.length ? campaigns : (Array.isArray(state.campaigns) && state.campaigns.length ? state.campaigns : []);
         const signature = all.map(function (c) {
             const id = c.rawId || c.id || c.__id || campaignId(c);
             const isSel = isCampaignSelected(c, current);
@@ -5960,7 +6041,6 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
     }
 
     function clearAttentionCenter() {
-        const now = Date.now();
         state.recentAlerts.forEach(function (alertItem) {
             if (alertItem && alertItem.conditionKey) {
                 state.dismissedConditions.set(alertItem.conditionKey, alertItem.signature || alertItem.message || "");
@@ -5971,10 +6051,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
         if (intelligenceEngine && typeof intelligenceEngine.clearAllDismissibleAlerts === "function") {
             intelligenceEngine.clearAllDismissibleAlerts();
         }
-        if (refs.alerts) refs.alerts.dataset.signature = "";
-        if (refs.persistentGoalsContainer) refs.persistentGoalsContainer.dataset.signature = "";
+        if (refs.alerts) {
+            refs.alerts.dataset.signature = "";
+            refs.alerts.textContent = "";
+        }
+        if (refs.persistentGoalsContainer) {
+            refs.persistentGoalsContainer.dataset.signature = "";
+            refs.persistentGoalsContainer.textContent = "";
+        }
         updateAlerts();
-        showActionNotice("Current Action Center signals cleared until their conditions change.");
+        showActionNotice("Current Action Center signals cleared until conditions change.");
         scheduleRender();
     }
 

@@ -42,3 +42,4 @@ function patchFile(relPath, fn) {
 });
 
 console.log("Check updated.");
+

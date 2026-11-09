@@ -590,6 +590,10 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         const target = document.body;
         observer = new MutationObserver(function (mutations) {
             if (!isMonitorPage()) return;
+            if (isCampaignEditPage()) {
+                observeCampaignEditForm();
+                return;
+            }
             if (isLiveFiltersPage()) {
                 observeLiveFiltersPage();
                 return;
@@ -643,9 +647,57 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         });
         document.addEventListener("visibilitychange", function () {
             if (document.visibilityState === "visible") {
-                readAndPublish("tab-visibility-recovery", true);
+                if (isCampaignEditPage()) {
+                    observeCampaignEditForm();
+                } else if (isCampaignsPage()) {
+                    readAndPublish("tab-visibility-recovery", true);
+                }
             }
         });
+
+        // Intercept Angular SPA Navigation
+        (function interceptSpa() {
+            if (window.__CT_SPA_INTERCEPTED) return;
+            window.__CT_SPA_INTERCEPTED = true;
+            const pushStateOrig = history.pushState;
+            const replaceStateOrig = history.replaceState;
+            function onRouteTransition() {
+                window.setTimeout(function () {
+                    if (isCampaignEditPage()) {
+                        observeCampaignEditForm();
+                    } else if (isLiveFiltersPage()) {
+                        observeLiveFiltersPage();
+                    } else if (isCampaignsPage()) {
+                        readAndPublish("spa-navigation");
+                    }
+                }, 120);
+            }
+            history.pushState = function () {
+                const res = pushStateOrig.apply(this, arguments);
+                onRouteTransition();
+                return res;
+            };
+            history.replaceState = function () {
+                const res = replaceStateOrig.apply(this, arguments);
+                onRouteTransition();
+                return res;
+            };
+            window.addEventListener("popstate", onRouteTransition);
+        })();
+
+        // Cross-tab immediate storage sync
+        window.addEventListener("storage", function (e) {
+            if (e.key === VERIFIED_FILTERS_KEY && isCampaignsPage()) {
+                readAndPublish("storage-sync-verified-filter");
+            }
+        });
+        if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
+            chrome.storage.onChanged.addListener(function (changes) {
+                if (changes && changes[VERIFIED_FILTERS_KEY] && isCampaignsPage()) {
+                    readAndPublish("chrome-storage-verified-filter");
+                }
+            });
+        }
         intervalId = window.setInterval(poll, POLL_MS);
     }
 

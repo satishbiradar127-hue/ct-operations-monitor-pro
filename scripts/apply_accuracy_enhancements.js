@@ -223,3 +223,4 @@ if (dashboard.includes(extStorChange)) {
 }
 fs.writeFileSync('src/dashboard.js', dashboard, 'utf8');
 console.log('SUCCESS: All patches applied cleanly to src/');
+

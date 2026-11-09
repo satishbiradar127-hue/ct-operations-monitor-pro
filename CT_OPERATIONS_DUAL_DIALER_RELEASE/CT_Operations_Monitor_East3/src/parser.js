@@ -624,6 +624,21 @@ window.CTParser = {
                 if (/^[0-9]+$/.test(rowAttr)) id = rowAttr;
             }
             if (!id) {
+                const cb = row.querySelector("input[type='checkbox'], mat-checkbox");
+                if (cb) {
+                    const cbVal = (cb.value || cb.getAttribute("value") || cb.getAttribute("data-id") || cb.getAttribute("data-campaign-id") || "").trim();
+                    if (/^[0-9]+$/.test(cbVal) && cbVal !== "on" && cbVal !== "true") id = cbVal;
+                }
+            }
+            if (!id) {
+                const ngEls = Array.from(row.querySelectorAll("[ng-reflect-router-link], [ng-reflect-href], [ng-reflect-id]"));
+                for (const ng of ngEls) {
+                    const rLink = ng.getAttribute("ng-reflect-router-link") || ng.getAttribute("ng-reflect-href") || ng.getAttribute("ng-reflect-id") || "";
+                    const m = rLink.match(/(?:^|[,/\s])([0-9]{2,10})(?:$|[,/\s])/);
+                    if (m && m[1]) { id = m[1]; break; }
+                }
+            }
+            if (!id) {
                 const candidates = Array.from(row.querySelectorAll("a[href], button[data-id], [data-campaign-id], [data-id]"));
                 for (const el of candidates) {
                     const did = (el.getAttribute("data-campaign-id") || el.getAttribute("data-id") || el.getAttribute("data-campaignid") || "").trim();
@@ -756,14 +771,12 @@ window.CTParser = {
                             id = String(entry.campaignId).trim();
                         }
                         const entryAge = entry.timestamp ? (Date.now() - entry.timestamp) : 0;
-                        const isStale = entryAge > (7 * 24 * 60 * 60 * 1000);
-                        if (!isStale) {
-                            const fVal = entry.liveFilter || entry.filter;
-                            if (fVal) {
-                                rawLiveFilter = fVal;
-                                filterSource = entry.source || "VERIFIED_REGISTRY";
-                                verifiedTimestamp = entry.timestamp || null;
-                            }
+                        const isStale = entryAge > 120000;
+                        const fVal = entry.liveFilter || entry.filter;
+                        if (fVal) {
+                            rawLiveFilter = fVal;
+                            filterSource = isStale ? "STALE_REGISTRY" : (entry.source || "VERIFIED_REGISTRY");
+                            verifiedTimestamp = entry.timestamp || null;
                         }
                     }
                 } catch (e) {}
@@ -774,7 +787,7 @@ window.CTParser = {
             const liveFilterStatus = hasLiveFilter ? "ASSIGNED" : (rawLiveFilter === "None" || rawLiveFilter === "Unassigned" ? "NONE" : "FILTER SOURCE UNAVAILABLE");
             const liveFilterSource = hasLiveFilter ? filterSource : "DOM_UNAVAILABLE";
             const liveFilterConfidence = hasLiveFilter ? "VERIFIED" : "UNAVAILABLE";
-            const liveFilterTimestamp = verifiedTimestamp || (hasLiveFilter ? Date.now() : null);
+            const liveFilterTimestamp = verifiedTimestamp || null;
 
             return {
                 id: id || "",
@@ -1019,6 +1032,25 @@ window.CTParser = {
             }
         }
 
+        // Extract Filter ID from pencil edit link if present
+        let extractedFilterId = null;
+        try {
+            const editLinks = Array.from(targetDoc.querySelectorAll("a[href*='live-filter'], a[href*='live_filter'], [data-filter-id]"));
+            for (const el of editLinks) {
+                const href = el.getAttribute("href") || "";
+                const m = href.match(/\/live-filters?\/(?:edit\/)?([0-9]+)/i);
+                if (m && m[1]) {
+                    extractedFilterId = m[1];
+                    break;
+                }
+                const dfid = el.getAttribute("data-filter-id");
+                if (dfid && /^[0-9]+$/.test(dfid)) {
+                    extractedFilterId = dfid;
+                    break;
+                }
+            }
+        } catch (e) {}
+
         if (!campaignId && !liveFilter && !campaignName) return null;
 
         let filterCount = null;
@@ -1037,7 +1069,7 @@ window.CTParser = {
                 if (titleMatch) {
                     const full = String(titleMatch.getAttribute("title") || titleMatch.getAttribute("aria-label") || "").trim();
                     if (full && !full.endsWith("...") && !full.endsWith("…") && isValidFilterValue(full)) {
-                        cleanFilterName = full;
+                        cleanFilterName = full.replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
                     }
                 }
                 if (cleanFilterName.endsWith("...") || cleanFilterName.endsWith("…") || cleanFilterName.includes("...")) {
@@ -1048,11 +1080,29 @@ window.CTParser = {
                         if (invStorage) {
                             const invData = JSON.parse(invStorage.getItem(invKey) || "{}");
                             const items = invData.items ? Object.values(invData.items) : (Array.isArray(invData) ? invData : []);
-                            const match = items.find(f => f && f.name && f.name.toLowerCase().startsWith(prefix));
+
+                            // 1. If filterId was extracted from edit pencil link, match exact ID
+                            let match = null;
+                            if (extractedFilterId) {
+                                match = items.find(f => f && String(f.id) === String(extractedFilterId));
+                            }
+                            // 2. Score candidates by longest prefix match
+                            if (!match) {
+                                const candidates = items.filter(f => f && f.name && f.name.toLowerCase().startsWith(prefix));
+                                if (candidates.length === 1) {
+                                    match = candidates[0];
+                                } else if (candidates.length > 1) {
+                                    candidates.sort((a, b) => (b.name || "").length - (a.name || "").length);
+                                    match = candidates[0];
+                                }
+                            }
                             if (match) {
-                                cleanFilterName = match.name;
+                                cleanFilterName = match.name.replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
                                 if (filterCount === null && match.count !== undefined) {
                                     filterCount = Number(match.count);
+                                }
+                                if (!extractedFilterId && match.id) {
+                                    extractedFilterId = String(match.id);
                                 }
                             }
                         }
@@ -1067,6 +1117,7 @@ window.CTParser = {
             campaignName: campaignName || (campaignId ? `Campaign ${campaignId}` : ""),
             liveFilter: isAssigned ? cleanFilterName : null,
             rawLiveFilter: liveFilter,
+            filterId: extractedFilterId || null,
             filterCount: filterCount,
             status: isAssigned ? "ASSIGNED" : "NONE",
             source: filterSource,

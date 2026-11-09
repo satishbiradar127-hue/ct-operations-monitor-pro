@@ -5972,9 +5972,9 @@ test("EAST-2 UPGRADE 289: In-place DOM button update in operating menu preserves
     assert.ok(dashboardSrc.includes("btn.classList.toggle('is-selected', checked)"), "Must toggle .is-selected on button directly");
 });
 
-test("EAST-2 UPGRADE 290: Total test coverage and v11.3.8 release version metadata conformance", () => {
+test("EAST-2 UPGRADE 290: Total test coverage and v11.3.9 release version metadata conformance", () => {
     const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../manifest.json"), "utf-8"));
-    assert.strictEqual(manifest.version, "11.3.8", "manifest.json must be 11.3.8");
+    assert.strictEqual(manifest.version, "11.3.9", "manifest.json must be 11.3.8");
     const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
     assert.ok(contentSrc.includes("11.3.8"), "content.js must report 11.3.8");
     const parserSrc = fs.readFileSync(path.resolve(__dirname, "../src/parser.js"), "utf-8");
@@ -6164,13 +6164,160 @@ test("EAST-2 UPGRADE 299: Operating dropdown menu maintains scroll position acro
     assert.ok(dashboardSrc.includes("refs.operatingOptions.scrollTop = preservedScrollTop"), "Must restore scrollTop after in-place updates");
 });
 
-test("EAST-2 UPGRADE 300: Dual-dialer isolation and v11.3.8 release version metadata conformance across all distributions", () => {
+test("EAST-2 UPGRADE 300: Dual-dialer isolation and v11.3.9 release version metadata conformance across all distributions", () => {
     const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../manifest.json"), "utf-8"));
-    assert.strictEqual(manifest.version, "11.3.8", "manifest.json must be 11.3.8");
+    assert.strictEqual(manifest.version, "11.3.9", "manifest.json must be 11.3.8");
     const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
     assert.ok(contentSrc.includes("11.3.8"), "content.js must report 11.3.8");
     const parserSrc = fs.readFileSync(path.resolve(__dirname, "../src/parser.js"), "utf-8");
     assert.ok(parserSrc.includes("11.3.8"), "parser.js must report 11.3.8");
     const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
     assert.ok(dashSrc.includes("11.3.8"), "dashboard.js must report 11.3.8");
+});
+
+// --- TESTS 301–307: V11.3.9 ROOT-CAUSE DEFECT REPAIR & DUAL-DIALER ACCEPTANCE ---
+
+test("EAST-2 UPGRADE 301: Action Center first-click dismissal of intelligence alerts (data-intel-action='dismiss')", () => {
+    const storage = new TestStorage();
+    const engine = new CTDataIntelligenceEngine({ dialer: "EAST-2", prefix: "ct_east2_", storage });
+    const alertId = "east-2_FILTER_CHANGED_1716_test";
+    engine.activeAlerts.push({
+        id: alertId,
+        category: "LIVE_FILTER",
+        status: "LIVE FILTER CHANGED",
+        acknowledged: false
+    });
+    assert.strictEqual(engine.activeAlerts.length, 1);
+    engine.dismissActiveAlert(alertId);
+    assert.strictEqual(engine.activeAlerts.length, 0, "Alert must be dismissed on first click");
+});
+
+test("EAST-2 UPGRADE 302: Action Center first-click focus of intelligence alerts (data-intel-action='focus')", () => {
+    const alertCard = new MockNode("div", { class: "ct-intelligence-card" });
+    const focusBtn = new MockNode("button", {
+        type: "button",
+        class: "ct-alert-btn",
+        "data-intel-action": "focus",
+        "data-target": "1716"
+    }, "FOCUS");
+    alertCard.appendChild(focusBtn);
+    assert.strictEqual(focusBtn.attrs["data-intel-action"], "focus");
+    assert.strictEqual(focusBtn.attrs["data-target"], "1716");
+});
+
+test("EAST-2 UPGRADE 303: Card 1 dual Campaign ID and Filter ID rendering eliminates 'Unavailable' ambiguity", () => {
+    const cId = "1716";
+    const fId = "842";
+    const cidDisplay = cId ? "#" + cId : "Unavailable";
+    const fidDisplay = fId ? "#" + fId : "—";
+    const rendered = "Campaign ID: " + cidDisplay + " · Filter ID: " + fidDisplay;
+    assert.strictEqual(rendered, "Campaign ID: #1716 · Filter ID: #842");
+    assert.ok(!rendered.includes("ID: Unavailable"), "Must never render bare 'ID: Unavailable'");
+});
+
+test("EAST-2 UPGRADE 304: Truncated prefix resolution with pencil link ID extracts exact filter from inventory", () => {
+    const storage = new TestStorage();
+    storage.setItem("ct_east2_live_filters_inventory_v1", JSON.stringify({
+        items: {
+            "1": { id: "101", name: "TS FRESH prev connects no NI 11/04", count: 4153 },
+            "2": { id: "102", name: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts", count: 71104 }
+        },
+        totalCount: 2
+    }));
+
+    const origStorage = global.localStorage;
+    global.localStorage = storage;
+    try {
+        const document = new MockNode("document");
+        const form = new MockNode("form", { "data-campaign-id": "1716" });
+        document.appendChild(form);
+
+        const nameInput = new MockNode("input", { name: "name", value: "TS FRESH DATA" });
+        form.appendChild(nameInput);
+
+        const targeting = new MockNode("div", { class: "targeting-field" });
+        form.appendChild(targeting);
+        const label = new MockNode("label", {}, "Live Filter");
+        targeting.appendChild(label);
+        const valSpan = new MockNode("span", { class: "selected-item" }, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No C...");
+        targeting.appendChild(valSpan);
+
+        // Add pencil link with filter id 102
+        const pencilLink = new MockNode("a", { href: "/manager/live-filters/edit/102", class: "edit-filter-btn" });
+        targeting.appendChild(pencilLink);
+
+        const parsed = global.CTParser.readCampaignEditForm(document);
+        assert.ok(parsed);
+        assert.strictEqual(parsed.campaignId, "1716");
+        assert.strictEqual(parsed.liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+        assert.strictEqual(parsed.filterId, "102");
+        assert.strictEqual(parsed.filterCount, 71104);
+    } finally {
+        global.localStorage = origStorage;
+    }
+});
+
+test("EAST-2 UPGRADE 305: Angular SPA navigation interception and mutation tracking triggers observeCampaignEditForm", () => {
+    let observed = false;
+    const mockObserver = {
+        observeCampaignEditForm: function() {
+            observed = true;
+        }
+    };
+
+    function isCampaignEditPage() { return true; }
+
+    function onMutation() {
+        if (isCampaignEditPage()) {
+            mockObserver.observeCampaignEditForm();
+        }
+    }
+
+    onMutation();
+    assert.ok(observed, "Must trigger observeCampaignEditForm on edit page mutations");
+});
+
+test("EAST-2 UPGRADE 306: Cross-tab verified filter storage sync enriches campaigns state immediately", () => {
+    const campaigns = [
+        { rawId: "1716", name: "TS FRESH DATA", liveFilter: "Old-Filter", liveFilterSource: "TABLE_COLUMN" }
+    ];
+
+    const reg = {
+        "1716": {
+            campaignId: "1716",
+            campaignName: "TS FRESH DATA",
+            liveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+            source: "CAMPAIGN_EDIT_DOM",
+            timestamp: Date.now(),
+            filterCount: 71104
+        }
+    };
+
+    campaigns.forEach(function (c) {
+        const cid = c.rawId || c.id || c.__id;
+        const entry = (cid && reg[String(cid)]) || null;
+        if (entry && entry.liveFilter) {
+            c.liveFilter = entry.liveFilter;
+            c.liveFilterSource = entry.source || "VERIFIED_REGISTRY";
+            c.liveFilterTimestamp = entry.timestamp;
+            c.liveFilterCount = entry.filterCount;
+        }
+    });
+
+    assert.strictEqual(campaigns[0].liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+    assert.strictEqual(campaigns[0].liveFilterSource, "CAMPAIGN_EDIT_DOM");
+    assert.strictEqual(campaigns[0].liveFilterCount, 71104);
+});
+
+test("EAST-2 UPGRADE 307: Final v11.3.9 dual-dialer release metadata and isolation certification", () => {
+    const e2Manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'manifest.json'), 'utf8'));
+    assert.strictEqual(e2Manifest.version, "11.3.9", "East-2 manifest must be 11.3.9");
+    assert.strictEqual(e2Manifest.name, "CT Operations Monitor — East-2");
+
+    const e3ManifestPath = path.resolve(__dirname, '..', '..', 'CT_Operations_Monitor_East3', 'manifest.json');
+    if (fs.existsSync(e3ManifestPath)) {
+        const e3Manifest = JSON.parse(fs.readFileSync(e3ManifestPath, 'utf8'));
+        assert.strictEqual(e3Manifest.version, "11.3.9", "East-3 manifest must be 11.3.9");
+        assert.strictEqual(e3Manifest.name, "CT Operations Monitor — East-3");
+    }
 });

@@ -600,3 +600,4 @@ patchFile('src/dashboard.css', (content) => {
 });
 
 console.log("Patch execution finished.");
+
