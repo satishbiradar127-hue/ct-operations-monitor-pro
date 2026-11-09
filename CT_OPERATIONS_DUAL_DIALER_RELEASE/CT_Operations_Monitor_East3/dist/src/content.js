@@ -1,4 +1,4 @@
-console.log("CT Operations Monitor (EAST-3) — Production live feed controller v11.3.4");
+console.log("CT Operations Monitor (EAST-3) — Production live feed controller v11.3.5");
 
 (function () {
     "use strict";
@@ -520,7 +520,7 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
 
     function mutationTouchesCampaignTable(mutation) {
         if (!mutation) return false;
-        const dashboard = document.querySelector("#ct-operations-dashboard, #ct-operations-dashboard-east3, #ct-operations-dashboard-east2, [id^='ct-operations-dashboard']");
+        const dashboard = document.querySelector("#ct-operations-dashboard, #ct-operations-dashboard-east3, #ct-operations-dashboard-east3, [id^='ct-operations-dashboard']");
         if (dashboard && mutation.target && dashboard.contains(mutation.target)) return false;
 
         if (mutation.type === "childList") {
@@ -547,7 +547,7 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
 
     function mutationTouchesQueueTable(mutation) {
         if (!mutation) return false;
-        const dashboard = document.querySelector("#ct-operations-dashboard, #ct-operations-dashboard-east3, #ct-operations-dashboard-east2, [id^='ct-operations-dashboard']");
+        const dashboard = document.querySelector("#ct-operations-dashboard, #ct-operations-dashboard-east3, #ct-operations-dashboard-east3, [id^='ct-operations-dashboard']");
         if (dashboard && mutation.target && dashboard.contains(mutation.target)) return false;
         const target = mutation.target;
         const rowFromTarget = target && target.closest ? target.closest("tr.mat-row, tr.mat-mdc-row, tbody tr") : null;

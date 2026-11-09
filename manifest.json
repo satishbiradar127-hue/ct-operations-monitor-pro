@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CT Operations Monitor — Dual-Dialer (East-2 / East-3)",
-  "version": "11.3.4",
+  "version": "11.3.5",
   "description": "CallTools Operations Monitor Pro — unified outbound Campaigns + inbound Queue command center with persistent Sales/Goals alerts, native Queue DOM bridge, and CT Data Change Intelligence Engine.",
   "permissions": [
     "storage"

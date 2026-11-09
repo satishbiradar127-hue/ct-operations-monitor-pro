@@ -1,4 +1,4 @@
-console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
+console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.5");
 
 (function () {
     "use strict";
@@ -2972,7 +2972,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
                 <header class="ct-summary">
                     <div class="ct-row">
                         <div class="ct-title">
-                            <h2>CallTools Operations <span class="ct-dialer-tag ct-dialer-east2">EAST-3</span></h2>
+                            <h2>CallTools Operations <span class="ct-dialer-tag ct-dialer-east3">EAST-3</span></h2>
                             <span class="ct-updated">Waiting for verified CallTools data</span>
                         </div>
                         <div class="ct-summary-controls">
@@ -3160,6 +3160,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
                                     <div class="ct-lfi-kpi-sub" data-ref="lfiActiveFiltersSub">Active targeting rules</div>
                                 </div>
                                 <div class="ct-lfi-kpi-card">
+                                    <div class="ct-lfi-kpi-label">INACTIVE FILTERS</div>
+                                    <div class="ct-lfi-kpi-value" data-ref="lfiInactiveFilters">—</div>
+                                    <div class="ct-lfi-kpi-sub" data-ref="lfiInactiveFiltersSub">Dormant / disabled rules</div>
+                                </div>
+                                <div class="ct-lfi-kpi-card">
+                                    <div class="ct-lfi-kpi-label">AVAILABLE CONTACTS</div>
+                                    <div class="ct-lfi-kpi-value" data-ref="lfiAvailableContacts">—</div>
+                                    <div class="ct-lfi-kpi-sub" data-ref="lfiAvailableContactsSub">Contacts in matching filters</div>
+                                </div>
+                                <div class="ct-lfi-kpi-card">
                                     <div class="ct-lfi-kpi-label">RUNNING CAMPAIGNS</div>
                                     <div class="ct-lfi-kpi-value" data-ref="lfiRunningCampaigns">—</div>
                                     <div class="ct-lfi-kpi-sub" data-ref="lfiRunningCampaignsSub">Active dialer campaigns</div>
@@ -3184,15 +3194,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
                                             <thead>
                                                 <tr>
                                                     <th>FILTER NAME</th>
-                                                    <th>STATUS</th>
-                                                    <th>CONTACTS</th>
-                                                    <th>TIMEZONE CNT</th>
+                                                    <th>ACTIVE STATUS</th>
+                                                    <th>AVAILABLE CONTACTS</th>
+                                                    <th>TOTAL MATCHING CONTACTS</th>
                                                     <th>DIALER</th>
                                                     <th>LAST OBSERVED</th>
+                                                    <th>FRESHNESS</th>
                                                 </tr>
                                             </thead>
                                             <tbody data-ref="lfiInventoryTableBody">
-                                                <tr><td colspan="6" class="ct-lfi-empty">No inventory observed yet. Open /manager/live-filters in CallTools to discover filters.</td></tr>
+                                                <tr><td colspan="7" class="ct-lfi-empty">No inventory observed yet. Open /manager/live-filters in CallTools to discover filters.</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -3213,15 +3224,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
                                                     <th>STATE</th>
                                                     <th>AGENTS</th>
                                                     <th>CAMPAIGN LEAD POOL</th>
-                                                    <th>ASSIGNED FILTER</th>
+                                                    <th>ASSIGNED LIVE FILTER</th>
                                                     <th>FILTER COUNT</th>
-                                                    <th>VERIFICATION</th>
+                                                    <th>VERIFICATION SOURCE</th>
                                                     <th>LAST VERIFIED</th>
                                                     <th>FRESHNESS</th>
+                                                    <th>USAGE STATUS</th>
                                                 </tr>
                                             </thead>
                                             <tbody data-ref="lfiMatrixTableBody">
-                                                <tr><td colspan="6" class="ct-lfi-empty">Waiting for campaign data…</td></tr>
+                                                <tr><td colspan="11" class="ct-lfi-empty">Waiting for campaign data…</td></tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -3444,6 +3456,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
             lfiTotalFiltersSub: root.querySelector('[data-ref="lfiTotalFiltersSub"]'),
             lfiActiveFilters: root.querySelector('[data-ref="lfiActiveFilters"]'),
             lfiActiveFiltersSub: root.querySelector('[data-ref="lfiActiveFiltersSub"]'),
+                lfiInactiveFilters: root.querySelector('[data-ref="lfiInactiveFilters"]'),
+                lfiInactiveFiltersSub: root.querySelector('[data-ref="lfiInactiveFiltersSub"]'),
+                lfiAvailableContacts: root.querySelector('[data-ref="lfiAvailableContacts"]'),
+                lfiAvailableContactsSub: root.querySelector('[data-ref="lfiAvailableContactsSub"]'),
             lfiRunningCampaigns: root.querySelector('[data-ref="lfiRunningCampaigns"]'),
             lfiRunningCampaignsSub: root.querySelector('[data-ref="lfiRunningCampaignsSub"]'),
             lfiVerifiedConfigs: root.querySelector('[data-ref="lfiVerifiedConfigs"]'),
@@ -6402,7 +6418,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
                         (alert.message ? '<div class="ct-intel-msg-row">' + escapeHtml(alert.message) + '</div>' : '') +
                     '</div>' +
                     '<div class="ct-goal-card-actions">' +
-                        '<button type="button" class="ct-btn ct-btn-noted" data-intel-noted-id="' + escapeHtml(alert.id) + '" title="Acknowledge this change">✓ NOTED</button>' +
+                        '<span class="ct-intel-auto-tag" title="Updates automatically with live CallTools observations">AUTO-UPDATING</span>' +
                     '</div>' +
                 '</div>';
             }).join("");
@@ -6420,10 +6436,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
                         '<div class="ct-goal-target-name"><strong>' + escapeHtml(alert.targetName) + '</strong></div>' +
                         '<div class="ct-goal-stat-row">' +
                             '<span class="ct-goal-metric-label">' + escapeHtml(alert.metric) + ':</span>' +
-                            '<span class="ct-goal-count-prev">' + alert.previous + '</span>' +
+                            '<span class="ct-goal-count-prev">' + formatNumber(alert.previous) + '</span>' +
                             '<span class="ct-goal-arrow">→</span>' +
-                            '<span class="ct-goal-count-curr">' + alert.current + '</span>' +
-                            '<span class="ct-goal-increase">(+' + alert.increase + ')</span>' +
+                            '<span class="ct-goal-count-curr">' + formatNumber(alert.current) + '</span>' +
+                            '<span class="ct-goal-increase">(+' + formatNumber(alert.increase) + ')</span>' +
                         '</div>' +
                     '</div>' +
                     '<div class="ct-goal-card-actions">' +
@@ -7211,15 +7227,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
         const history = lfi.changeHistory || [];
         const health = lfi.health || {};
 
-        // KPIs
+        // KPIs (6 Separated Cards)
         if (refs.lfiTotalFilters) setText(refs.lfiTotalFilters, formatNumber(summary.totalFilters));
         if (refs.lfiActiveFilters) setText(refs.lfiActiveFilters, formatNumber(summary.activeFilters));
+        const inactiveFilters = (summary.totalFilters !== null && summary.activeFilters !== null) ? Math.max(0, summary.totalFilters - summary.activeFilters) : null;
+        if (refs.lfiInactiveFilters) setText(refs.lfiInactiveFilters, formatNumber(inactiveFilters));
+        const availContacts = summary.availableContacts !== undefined && summary.availableContacts !== null ? summary.availableContacts : summary.totalContacts;
+        if (refs.lfiAvailableContacts) setText(refs.lfiAvailableContacts, formatNumber(availContacts));
         if (refs.lfiRunningCampaigns) setText(refs.lfiRunningCampaigns, formatNumber(summary.runningCampaignsCount));
         if (refs.lfiVerifiedConfigs) setText(refs.lfiVerifiedConfigs, formatNumber(summary.verifiedActiveConfigurations));
 
         // Subtitles
-        if (refs.lfiTotalFiltersSub) setText(refs.lfiTotalFiltersSub, summary.totalContacts ? formatNumber(summary.totalContacts) + " contacts" : "Known filter inventory");
-        if (refs.lfiActiveFiltersSub) setText(refs.lfiActiveFiltersSub, summary.totalFilters ? (summary.totalFilters - summary.activeFilters) + " inactive" : "Active targeting rules");
+        if (refs.lfiTotalFiltersSub) setText(refs.lfiTotalFiltersSub, "Known filter inventory");
+        if (refs.lfiActiveFiltersSub) setText(refs.lfiActiveFiltersSub, "Active targeting rules");
+        if (refs.lfiInactiveFiltersSub) setText(refs.lfiInactiveFiltersSub, "Dormant / disabled rules");
+        if (refs.lfiAvailableContactsSub) setText(refs.lfiAvailableContactsSub, "Contacts in matching filters");
         if (refs.lfiRunningCampaignsSub) setText(refs.lfiRunningCampaignsSub, "Active dialer campaigns");
         if (refs.lfiVerifiedConfigsSub) setText(refs.lfiVerifiedConfigsSub, summary.verifiedActiveConfigurations > 0 ? "Targeting verified" : "Pending verification");
 
@@ -7237,18 +7259,22 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
         // Inventory Table
         if (refs.lfiInventoryTableBody) {
             if (inventory.length === 0) {
-                refs.lfiInventoryTableBody.innerHTML = '<tr><td colspan="6" class="ct-lfi-empty">No inventory observed yet. Open /manager/live-filters in CallTools to discover filters.</td></tr>';
+                refs.lfiInventoryTableBody.innerHTML = '<tr><td colspan="7" class="ct-lfi-empty">No inventory observed yet. Open /manager/live-filters in CallTools to discover filters.</td></tr>';
             } else {
                 refs.lfiInventoryTableBody.innerHTML = inventory.map(function (f) {
                     const statusClass = f.status === "ACTIVE" ? "is-active" : "is-inactive";
-                    const ageStr = f.observedAt ? formatAge(Math.floor((Date.now() - f.observedAt) / 1000)) + " ago" : "—";
+                    const ageSec = f.observedAt ? Math.max(0, Math.floor((Date.now() - f.observedAt) / 1000)) : null;
+                    const timeStr = f.observedAt ? new Date(f.observedAt).toLocaleTimeString() : "—";
+                    const freshClass = ageSec !== null ? (ageSec < 15 ? "is-live" : ageSec <= 60 ? "is-recent" : "is-stale") : "is-waiting";
+                    const freshLabel = ageSec !== null ? (ageSec < 15 ? "LIVE (" + ageSec + "s ago)" : ageSec <= 60 ? "RECENT (" + formatAge(ageSec) + " ago)" : "STALE (" + formatAge(ageSec) + " ago)") : "NOT OBSERVED";
                     return '<tr>' +
-                        '<td><strong>' + escapeHtml(f.name) + '</strong></td>' +
+                        '<td title="' + escapeHtml(f.name) + '"><strong>' + escapeHtml(f.name) + '</strong></td>' +
                         '<td><span class="ct-lfi-badge ' + statusClass + '">' + escapeHtml(f.status) + '</span></td>' +
-                        '<td>' + formatNumber(f.count) + '</td>' +
-                        '<td>' + formatNumber(f.totalCount) + '</td>' +
+                        '<td style="text-align:right;">' + formatNumber(f.count) + '</td>' +
+                        '<td style="text-align:right;">' + formatNumber(f.totalCount) + '</td>' +
                         '<td>' + escapeHtml(f.dialer) + '</td>' +
-                        '<td>' + ageStr + '</td>' +
+                        '<td>' + escapeHtml(timeStr) + '</td>' +
+                        '<td><span class="ct-lfi-badge ' + freshClass + '">' + escapeHtml(freshLabel) + '</span></td>' +
                     '</tr>';
                 }).join("");
             }
@@ -7257,7 +7283,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
         // Matrix Table
         if (refs.lfiMatrixTableBody) {
             if (matrix.length === 0) {
-                refs.lfiMatrixTableBody.innerHTML = '<tr><td colspan="10" class="ct-lfi-empty">Waiting for campaign data…</td></tr>';
+                refs.lfiMatrixTableBody.innerHTML = '<tr><td colspan="11" class="ct-lfi-empty">Waiting for campaign data…</td></tr>';
             } else {
                 refs.lfiMatrixTableBody.innerHTML = matrix.map(function (m) {
                     const stateClass = m.state === "RUNNING" ? "is-running" : "is-idle";
@@ -7270,16 +7296,17 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
                                        m.freshness === "STALE" ? "STALE (" + formatAge(m.ageSec) + " ago)" : "NOT OBSERVED";
 
                     return '<tr>' +
-                        '<td><strong>' + escapeHtml(m.campaignName) + '</strong></td>' +
+                        '<td title="' + escapeHtml(m.campaignName) + '"><strong>' + escapeHtml(m.campaignName) + '</strong></td>' +
                         '<td>' + (m.rawId ? escapeHtml(m.rawId) : '<span class="ct-campaign-id-badge is-unverified">Awaiting ID</span>') + '</td>' +
                         '<td><span class="ct-lfi-badge ' + stateClass + '">' + escapeHtml(m.state) + '</span></td>' +
-                        '<td>' + formatNumber(m.agents) + '</td>' +
-                        '<td><span class="ct-lfi-lead-pool" title="Campaign callable lead pool in active dialer queue">' + (m.campaignLeadPool !== "UNAVAILABLE" ? formatNumber(m.campaignLeadPool) : "—") + '</span> <small class="ct-pool-tag">Callable</small></td>' +
-                        '<td><strong>' + escapeHtml(m.assignedFilter) + '</strong></td>' +
-                        '<td>' + (m.filterCount !== null ? '<span class="ct-lfi-filter-count" title="Filter-matching contacts from targeting snapshot">' + formatNumber(m.filterCount) + '</span>' : '<span class="ct-lfi-empty-val">—</span>') + '</td>' +
+                        '<td style="text-align:right;">' + formatNumber(m.agents) + '</td>' +
+                        '<td style="text-align:right;"><span class="ct-lfi-lead-pool" title="Campaign callable lead pool in active dialer queue">' + (m.campaignLeadPool !== "UNAVAILABLE" ? formatNumber(m.campaignLeadPool) : "—") + '</span> <small class="ct-pool-tag">Callable</small></td>' +
+                        '<td title="' + escapeHtml(m.assignedFilter || "None") + '"><strong>' + escapeHtml(m.assignedFilter || "None") + '</strong></td>' +
+                        '<td style="text-align:right;">' + (m.filterCount !== null ? '<span class="ct-lfi-filter-count" title="Filter-matching contacts from targeting snapshot">' + formatNumber(m.filterCount) + '</span>' : '<span class="ct-lfi-empty-val">—</span>') + '</td>' +
                         '<td><span class="ct-lfi-source">' + escapeHtml(m.verification) + '</span></td>' +
                         '<td>' + escapeHtml(m.lastObservedTimeStr || "—") + '</td>' +
                         '<td><span class="ct-lfi-badge ' + freshClass + '">' + escapeHtml(freshLabel) + '</span></td>' +
+                        '<td><span class="ct-lfi-badge ' + usageClass + '">' + escapeHtml(m.usageStatus) + '</span></td>' +
                     '</tr>';
                 }).join("");
             }
@@ -7291,17 +7318,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-3) v11.3.4");
                 refs.lfiHistoryList.innerHTML = '<div class="ct-lfi-empty">No filter transitions detected yet.</div>';
             } else {
                 refs.lfiHistoryList.innerHTML = history.slice(0, 10).map(function (item) {
+                    const prevCountStr = item.previousCount !== undefined && item.previousCount !== null ? ' (' + formatNumber(item.previousCount) + ')' : '';
+                    const currCountStr = item.currentCount !== undefined && item.currentCount !== null ? ' (' + formatNumber(item.currentCount) + ')' : '';
                     return '<div class="ct-lfi-history-item">' +
                         '<div class="ct-lfi-history-meta">' +
-                            '<span class="ct-lfi-badge is-history">' + escapeHtml(item.status || "CHANGE") + '</span>' +
+                            '<span class="ct-lfi-badge is-history">' + escapeHtml(item.status || "VERIFIED CHANGE") + '</span>' +
                             '<strong>' + escapeHtml(item.campaignName || item.campaignId) + '</strong>' +
-                            '<small>' + escapeHtml(item.confirmedAt || "") + '</small>' +
+                            '<small class="ct-lfi-history-time">' + escapeHtml(item.confirmedAt || (item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : "")) + '</small>' +
                         '</div>' +
                         '<div class="ct-lfi-history-body">' +
-                            '<span class="ct-lfi-prev">' + escapeHtml(item.previousFilter || "None") + '</span>' +
-                            '<span class="ct-lfi-arrow"> ➔ </span>' +
-                            '<span class="ct-lfi-curr">' + escapeHtml(item.currentFilter || "None") + '</span>' +
-                            ' <small class="ct-lfi-source">(' + escapeHtml(item.source || "DOM") + ')</small>' +
+                            '<div class="ct-lfi-transition">' +
+                                '<span class="ct-lfi-prev">' + escapeHtml(item.previousFilter || "None") + prevCountStr + '</span>' +
+                                '<span class="ct-lfi-arrow"> ➔ </span>' +
+                                '<span class="ct-lfi-curr">' + escapeHtml(item.currentFilter || "None") + currCountStr + '</span>' +
+                            '</div>' +
+                            '<small class="ct-lfi-source">Evidence: ' + escapeHtml(item.source || "CONFIRMED OBSERVATION") + '</small>' +
                         '</div>' +
                     '</div>';
                 }).join("");

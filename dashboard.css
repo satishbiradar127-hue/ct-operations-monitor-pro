@@ -411,8 +411,8 @@
 }
 .ct-lfi-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
     margin-bottom: 14px;
 }
 .ct-lfi-kpi-card {
@@ -789,6 +789,104 @@
     color: var(--ct-muted);
 }
 
+/* === ULTRA-PREMIUM COMMAND CENTER REFINEMENTS === */
+.ct-intel-auto-tag {
+    display: inline-block;
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #64748b;
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.ct-lfi-transition {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.ct-lfi-prev {
+    color: #94a3b8;
+}
+.ct-lfi-curr {
+    color: #38bdf8;
+    font-weight: 750;
+}
+.ct-lfi-arrow {
+    color: #34d399;
+    font-weight: 800;
+}
+
+.ct-lfi-table-wrap {
+    max-height: 290px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(11, 17, 32, 0.6);
+}
+.ct-lfi-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #0f172a !important;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+.ct-lfi-table tbody tr {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    transition: background 0.15s ease;
+}
+.ct-lfi-table tbody tr:nth-child(even) {
+    background: rgba(30, 41, 59, 0.25);
+}
+.ct-lfi-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+.ct-lfi-table tbody td {
+    padding: 6px 10px;
+    font-size: 11px;
+    vertical-align: middle;
+    color: #e2e8f0;
+}
+
+.ct-lfi-badge.is-verified-active {
+    background: rgba(34, 197, 94, 0.15) !important;
+    color: #4ade80 !important;
+    border: 1px solid rgba(34, 197, 94, 0.3) !important;
+}
+.ct-lfi-badge.is-unassigned {
+    background: rgba(148, 163, 184, 0.12) !important;
+    color: #94a3b8 !important;
+    border: 1px solid rgba(148, 163, 184, 0.25) !important;
+}
+.ct-lfi-badge.is-unknown {
+    background: rgba(245, 158, 11, 0.12) !important;
+    color: #fbbf24 !important;
+    border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+@media (max-width: 1300px) {
+    .ct-lfi-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+@media (max-width: 800px) {
+    .ct-lfi-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
 
 /* CT Operations Monitor (EAST-3) Styles */
 /* Base injected styles are dynamically scoped to #ct-operations-dashboard-east3 */
@@ -802,7 +900,7 @@
     vertical-align: middle;
     letter-spacing: .06em;
 }
-.ct-dialer-east2 {
+.ct-dialer-east3 {
     background: #0284c7;
     color: #ffffff;
     border: 1px solid #38bdf8;
@@ -1203,8 +1301,8 @@
 }
 .ct-lfi-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
     margin-bottom: 14px;
 }
 .ct-lfi-kpi-card {
@@ -1451,7 +1549,7 @@
     animation: ct-spin 0.75s linear infinite;
     display: inline-block;
 }
-.ct-dialer-tag.ct-dialer-east2 {
+.ct-dialer-tag.ct-dialer-east3 {
     background: #1d4ed8 !important;
     color: #eff6ff !important;
     border: 1px solid #3b82f6 !important;
@@ -1579,4 +1677,102 @@
 }
 .ct-lfi-empty-val {
     color: var(--ct-muted);
+}
+
+/* === ULTRA-PREMIUM COMMAND CENTER REFINEMENTS === */
+.ct-intel-auto-tag {
+    display: inline-block;
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #64748b;
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.ct-lfi-transition {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.ct-lfi-prev {
+    color: #94a3b8;
+}
+.ct-lfi-curr {
+    color: #38bdf8;
+    font-weight: 750;
+}
+.ct-lfi-arrow {
+    color: #34d399;
+    font-weight: 800;
+}
+
+.ct-lfi-table-wrap {
+    max-height: 290px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(11, 17, 32, 0.6);
+}
+.ct-lfi-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #0f172a !important;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+.ct-lfi-table tbody tr {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    transition: background 0.15s ease;
+}
+.ct-lfi-table tbody tr:nth-child(even) {
+    background: rgba(30, 41, 59, 0.25);
+}
+.ct-lfi-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+.ct-lfi-table tbody td {
+    padding: 6px 10px;
+    font-size: 11px;
+    vertical-align: middle;
+    color: #e2e8f0;
+}
+
+.ct-lfi-badge.is-verified-active {
+    background: rgba(34, 197, 94, 0.15) !important;
+    color: #4ade80 !important;
+    border: 1px solid rgba(34, 197, 94, 0.3) !important;
+}
+.ct-lfi-badge.is-unassigned {
+    background: rgba(148, 163, 184, 0.12) !important;
+    color: #94a3b8 !important;
+    border: 1px solid rgba(148, 163, 184, 0.25) !important;
+}
+.ct-lfi-badge.is-unknown {
+    background: rgba(245, 158, 11, 0.12) !important;
+    color: #fbbf24 !important;
+    border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+@media (max-width: 1300px) {
+    .ct-lfi-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+}
+@media (max-width: 800px) {
+    .ct-lfi-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
 }

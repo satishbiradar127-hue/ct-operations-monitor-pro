@@ -240,3 +240,4 @@ def append_tests(test_file, code, marker):
 marker = "UPGRADE 236: Forensic Discrepancy Resolution"
 append_tests("CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East2/tests/suite.test.js", test_code_e2, marker)
 append_tests("CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East3/tests/suite.test.js", test_code_e3, marker)
+

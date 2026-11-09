@@ -115,3 +115,4 @@ for tp in test_paths:
         print(f"Updated UPGRADE 243 in {tp}")
 
 print("Done patching.")
+

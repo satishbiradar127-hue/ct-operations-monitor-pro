@@ -1,5 +1,5 @@
 const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");
-console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.4");
+console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.5");
 
 (function () {
     "use strict";

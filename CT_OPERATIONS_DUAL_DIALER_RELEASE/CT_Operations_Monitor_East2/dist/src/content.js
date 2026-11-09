@@ -1,4 +1,4 @@
-console.log("CT Operations Monitor (EAST-2) — Production live feed controller v11.3.4");
+console.log("CT Operations Monitor (EAST-2) — Production live feed controller v11.3.5");
 
 (function () {
     "use strict";

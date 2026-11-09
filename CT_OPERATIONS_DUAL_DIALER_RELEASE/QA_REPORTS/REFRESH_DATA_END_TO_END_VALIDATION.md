@@ -165,3 +165,4 @@ During all 20 refresh cycles and end-to-end tests:
 - Background hidden iframes injected: **0**
 - Fetch / XHR / WebSocket requests made to CallTools servers: **0**
 - Security Compliance: **100% Read-Only Compliant**.
+

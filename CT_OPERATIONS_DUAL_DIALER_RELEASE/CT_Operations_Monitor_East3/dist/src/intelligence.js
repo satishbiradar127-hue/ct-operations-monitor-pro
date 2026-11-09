@@ -91,18 +91,8 @@
             confirmationsRequired: 2,
             description: "Agent staffing drop"
         },
-        outbound_failed_calls: {
-            direction: "OUTBOUND",
-            metric: "Failed Call Volume",
-            minBaseline: 10,
-            increaseAbs: 35,      // Spike of 35 failed attempts
-            increasePct: 0.40,
-            decreaseAbs: null,
-            decreasePct: null,
-            severity: "critical",
-            confirmationsRequired: 2,
-            description: "Telephony carrier or trunk failure anomalies"
-        },
+        // outbound_failed_calls disabled at rule-generation level per alert policy
+
 
         // --- INBOUND METRICS ---
         inbound_active_queues: {
@@ -200,7 +190,7 @@
                     this.baselines = JSON.parse(this.storage.getItem(this.BASELINES_KEY) || "{}");
                     this.filterBaselines = JSON.parse(this.storage.getItem(this.FILTER_BASELINES_KEY) || "{}");
                     this.pendingConfirmations = JSON.parse(this.storage.getItem(this.PENDING_KEY) || "{}");
-                    this.activeAlerts = JSON.parse(this.storage.getItem(this.ALERTS_KEY) || "[]");
+                    this.activeAlerts = (JSON.parse(this.storage.getItem(this.ALERTS_KEY) || "[]") || []).filter(a => a && a.metric !== "Failed Call Volume" && a.profileKey !== "outbound_failed_calls");
                     this.history = JSON.parse(this.storage.getItem(this.HISTORY_KEY) || "[]");
                     this.liveFilterChangeHistory = JSON.parse(this.storage.getItem(this.CHANGE_HISTORY_KEY) || "[]");
                 } catch (e) {
@@ -502,7 +492,8 @@
             this.evaluateOperationalMetric("outbound_wait_time", worstWait, "OUTBOUND", "ALL", "Worst Wait Delay", now, timeStr);
             this.evaluateOperationalMetric("outbound_callers_waiting", totalWaiting, "OUTBOUND", "ALL", "Callers Waiting", now, timeStr);
             this.evaluateOperationalMetric("outbound_agents_logged_in", totalAgents, "OUTBOUND", "ALL", "Total Agents Logged In", now, timeStr);
-            this.evaluateOperationalMetric("outbound_failed_calls", totalFailed, "OUTBOUND", "ALL", "Failed Call Volume", now, timeStr);
+            // Failed-call volume alert disabled per alert policy
+            // this.evaluateOperationalMetric("outbound_failed_calls", totalFailed, "OUTBOUND", "ALL", "Failed Call Volume", now, timeStr);
         }
 
         evaluateInbound(queues, now, timeStr) {
@@ -606,6 +597,8 @@
          * Distinguishes sudden increase vs sudden decrease vs counter reset.
          */
         evaluateOperationalMetric(profileKey, currentValue, direction, targetId, targetName, now, timeStr) {
+            // Rule-level disablement: failed-call volume alerts are strictly disabled
+            if (profileKey === "outbound_failed_calls" || profileKey === "failed_calls") return;
             const profile = METRIC_THRESHOLDS[profileKey];
             if (!profile || !Number.isFinite(currentValue)) return;
 
@@ -1164,6 +1157,9 @@
         }
 
         pushActiveAlert(alertObj) {
+            if (!alertObj || alertObj.metric === "Failed Call Volume" || alertObj.profileKey === "outbound_failed_calls") {
+                return; // Suppressed at rule generation level
+            }
             // Duplicate Suppression: check if alert with same target and metric is already active
             const exists = this.activeAlerts.some(a => a.id === alertObj.id || (
                 a.targetId === alertObj.targetId && 
@@ -1422,10 +1418,13 @@
                 else inventoryFreshness = `${Math.floor(diffSec / 3600)}h ago`;
             }
 
+            const inactiveFilters = (totalFilters !== null && activeFilters !== null) ? Math.max(0, totalFilters - activeFilters) : null;
             return {
                 summary: {
                     totalFilters,
                     activeFilters,
+                    inactiveFilters,
+                    availableContacts: totalContacts,
                     totalContacts,
                     runningCampaignsCount,
                     verifiedActiveConfigurations: verifiedActiveConfigs

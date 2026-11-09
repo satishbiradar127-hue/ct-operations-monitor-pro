@@ -123,3 +123,4 @@ This Canonical Metric Dictionary provides unambiguous, authoritative definitions
 ```
 
 This dictionary is the definitive design authority for all versions and builds of CT Operations Monitor Pro.
+
