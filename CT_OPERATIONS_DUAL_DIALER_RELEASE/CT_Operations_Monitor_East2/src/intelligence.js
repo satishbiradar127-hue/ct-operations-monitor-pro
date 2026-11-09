@@ -262,6 +262,35 @@
             }
         }
 
+        updateVerifiedCampaignFilter(campaignId, campaignName, filterName, source = "CAMPAIGN_EDIT_DOM", timestamp = Date.now(), filterCount = null) {
+            if (!campaignId) return;
+            try {
+                let registry = {};
+                if (this.storage) {
+                    const raw = this.storage.getItem(this.VERIFIED_FILTERS_KEY);
+                    if (raw) registry = JSON.parse(raw);
+                }
+                registry[String(campaignId)] = {
+                    campaignId: String(campaignId),
+                    campaignName: campaignName || "",
+                    liveFilter: filterName || "",
+                    cleanFilterName: filterName ? String(filterName).replace(/\s*\(Count:\s*[\d,]+\)/i, "").trim() : "",
+                    filterCount: filterCount,
+                    status: filterName ? "ASSIGNED" : "NO_FILTER",
+                    source: source,
+                    timestamp: timestamp
+                };
+                if (this.storage) {
+                    this.storage.setItem(this.VERIFIED_FILTERS_KEY, JSON.stringify(registry));
+                }
+                if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                    chrome.storage.local.set({ [this.VERIFIED_FILTERS_KEY]: registry });
+                }
+            } catch (e) {
+                console.error("Failed to update verified campaign filter:", e);
+            }
+        }
+
         /**
          * Checks whether the current time falls within a legitimate daily reset window (23:55 to 00:15)
          */
@@ -1282,6 +1311,8 @@
                 }
 
                 let assignedFilter = null;
+                let rawFilter = null;
+                let filterCount = null;
                 let filterId = null;
                 let verification = "DOM_UNAVAILABLE";
                 let usageStatus = "UNKNOWN";
@@ -1294,14 +1325,31 @@
                     isStale = age > SEVEN_DAYS_MS;
                     if (isStale) staleCount++;
 
+                    rawFilter = entry.rawLiveFilter || entry.liveFilter || entry.filter || null;
                     assignedFilter = entry.liveFilter || entry.filter || null;
+                    filterCount = entry.filterCount !== undefined ? entry.filterCount : null;
+
+                    if (filterCount === null && rawFilter) {
+                        const mCount = String(rawFilter).match(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*([0-9,]+)\s*[\)\]]/i);
+                        if (mCount && mCount[1]) {
+                            filterCount = Number(mCount[1].replace(/,/g, ""));
+                            assignedFilter = String(rawFilter).replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
+                        }
+                    }
+
                     filterId = entry.liveFilterId || entry.filterId || null;
                     verification = entry.source === "CAMPAIGN_EDIT_FORM" ? "VERIFIED (Edit)" :
                                    entry.source === "CAMPAIGN_EDIT_DOM" ? "VERIFIED (Edit)" :
                                    entry.source === "ACTIVE_OVERLAY" ? "VERIFIED (Overlay)" :
                                    (entry.source || "VERIFIED (Registry)");
                 } else if (c.liveFilter) {
+                    rawFilter = c.liveFilter;
                     assignedFilter = c.liveFilter;
+                    const mCount = String(assignedFilter).match(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*([0-9,]+)\s*[\)\]]/i);
+                    if (mCount && mCount[1]) {
+                        filterCount = Number(mCount[1].replace(/,/g, ""));
+                        assignedFilter = String(assignedFilter).replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
+                    }
                     verification = c.liveFilterSource === "ACTIVE_OVERLAY" ? "VERIFIED (Overlay)" :
                                    c.liveFilterSource === "TABLE_COLUMN" ? "VERIFIED (Table)" :
                                    (c.liveFilterSource || "VERIFIED");
@@ -1334,19 +1382,33 @@
                                  (c.contacts !== undefined && c.contacts !== null && c.contacts !== "" && !isNaN(Number(c.contacts))) ? Number(c.contacts) :
                                  (c.contactCount !== undefined ? c.contactCount : null);
 
+                const ageSec = observationTime ? Math.max(0, Math.floor((now - observationTime) / 1000)) : null;
+                let freshness = "UNOBSERVED";
+                if (observationTime) {
+                    if (isStale || ageSec > 60) freshness = "STALE";
+                    else if (ageSec <= 15) freshness = "LIVE";
+                    else freshness = "RECENT";
+                }
+
                 return {
                     campaignId: displayId,
                     rawId: realId,
                     campaignName: cName,
                     state: isRunning ? (agents > 0 ? "RUNNING" : "ACTIVE") : (isActiveBool ? "ACTIVE" : (rawState || "IDLE")),
+                    agents: agents,
+                    campaignLeadPool: leadsVal !== null ? leadsVal : "UNAVAILABLE",
                     assignedFilter: hasFilter ? assignedFilter : (assignedFilter === "None" ? "None Assigned" : "Filter Unavailable"),
-                    filterId: filterId,
+                    rawAssignedFilter: rawFilter,
+                    filterCount: filterCount,
+                    filterCountSource: filterCount !== null ? "TARGETING_SNAPSHOT" : "UNAVAILABLE",
                     leadList: c.leadList || "UNAVAILABLE",
                     verification: !realId && verification.startsWith("DOM_UNAVAILABLE") ? "UNVERIFIED_DOM (Awaiting ID)" : verification,
                     usageStatus: usageStatus,
                     lastObserved: observationTime,
+                    lastObservedTimeStr: observationTime ? new Date(observationTime).toLocaleTimeString() : "—",
+                    freshness: freshness,
+                    ageSec: ageSec,
                     lastRefill: "Not exposed by available source",
-                    agents: agents,
                     leads: leadsVal !== null ? leadsVal : "UNAVAILABLE",
                     dialer: this.dialer
                 };

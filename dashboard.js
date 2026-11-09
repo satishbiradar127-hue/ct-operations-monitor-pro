@@ -2987,13 +2987,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
 
                     <div class="ct-top-live-filter-strip" data-ref="topLiveFilterStrip">
                         <div class="ct-tlf-left">
-                            <span class="ct-tlf-tag">LIVE FILTER</span>
+                            <span class="ct-tlf-tag">LIVE FILTER TARGETING</span>
                             <span class="ct-tlf-campaign" data-ref="topFilterCampaign">—</span>
                             <span class="ct-tlf-badge is-unavailable" data-ref="topFilterBadge">FILTER SOURCE UNAVAILABLE</span>
+                            <span class="ct-tlf-metric ct-tlf-pool" data-ref="topFilterPool">Campaign Pool: —</span>
+                            <span class="ct-tlf-metric ct-tlf-match" data-ref="topFilterMatch">Filter Count: —</span>
                         </div>
                         <div class="ct-tlf-right">
                             <span class="ct-tlf-source" data-ref="topFilterSource">Source: DOM Unavailable</span>
                             <span class="ct-tlf-observed" data-ref="topFilterObserved">Last observed: Awaiting DOM</span>
+                            <span class="ct-tlf-freshness" data-ref="topFilterFreshness">Targeting: —</span>
                             <span class="ct-tlf-change" data-ref="topFilterChange">Last change: None recorded</span>
                         </div>
                     </div>
@@ -3206,12 +3209,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
                                         <table class="ct-lfi-table">
                                             <thead>
                                                 <tr>
-                                                    <th>CAMPAIGN NAME</th>
-                                                    <th>ID</th>
+                                                    <th>CAMPAIGN</th>
+                                                    <th>CAMPAIGN ID</th>
                                                     <th>STATE</th>
-                                                    <th>ASSIGNED LIVE FILTER</th>
+                                                    <th>AGENTS</th>
+                                                    <th>CAMPAIGN LEAD POOL</th>
+                                                    <th>ASSIGNED FILTER</th>
+                                                    <th>FILTER COUNT</th>
                                                     <th>VERIFICATION</th>
-                                                    <th>USAGE STATUS</th>
+                                                    <th>LAST VERIFIED</th>
+                                                    <th>FRESHNESS</th>
                                                 </tr>
                                             </thead>
                                             <tbody data-ref="lfiMatrixTableBody">
@@ -3417,6 +3424,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
             topFilterSource: root.querySelector('[data-ref="topFilterSource"]'),
             topFilterObserved: root.querySelector('[data-ref="topFilterObserved"]'),
             topFilterChange: root.querySelector('[data-ref="topFilterChange"]'),
+            topFilterPool: root.querySelector('[data-ref="topFilterPool"]'),
+            topFilterMatch: root.querySelector('[data-ref="topFilterMatch"]'),
+            topFilterFreshness: root.querySelector('[data-ref="topFilterFreshness"]'),
             activeCommandSummary: root.querySelector('[data-ref="activeCommandSummary"]'),
             activeSummaryCount: root.querySelector('[data-ref="activeSummaryCount"]'),
             activeSummaryBadge: root.querySelector('[data-ref="activeSummaryBadge"]'),
@@ -4744,10 +4754,26 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
 
             if (targetCamp) {
                 const cName = safeValue(targetCamp.name, "Campaign " + (targetCamp.id || ""));
-                const fName = targetCamp.liveFilter || null;
-                const fStatus = targetCamp.liveFilterStatus || (fName ? "ASSIGNED" : "FILTER SOURCE UNAVAILABLE");
+                let fRaw = targetCamp.liveFilter || null;
+                let fName = fRaw;
+                let fCount = targetCamp.liveFilterCount !== undefined ? targetCamp.liveFilterCount : null;
+
+                if (fRaw) {
+                    const mCount = String(fRaw).match(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*([0-9,]+)\s*[\)\]]/i);
+                    if (mCount && mCount[1]) {
+                        fCount = Number(mCount[1].replace(/,/g, ""));
+                        fName = String(fRaw).replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
+                    }
+                }
+
+                const pool = (targetCamp.contacts !== undefined && targetCamp.contacts !== null)
+                    ? (typeof targetCamp.contacts === "object" ? targetCamp.contacts.value : targetCamp.contacts)
+                    : (targetCamp.__contacts || null);
+
                 const fSource = targetCamp.liveFilterSource || "DOM_UNAVAILABLE";
                 const fTime = targetCamp.liveFilterTimestamp ? new Date(targetCamp.liveFilterTimestamp).toLocaleTimeString() : (fName ? new Date().toLocaleTimeString() : "Awaiting DOM");
+                const fTimeMs = targetCamp.liveFilterTimestamp || null;
+                const targetingFreshness = evaluateFreshness(fTimeMs, Date.now());
 
                 let lastChangeText = "None recorded";
                 if (intelligenceEngine && intelligenceEngine.history) {
@@ -4763,21 +4789,39 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
                 if (fName) {
                     setText(refs.topFilterBadge, "Filter: " + fName);
                     setClass(refs.topFilterBadge, "ct-tlf-badge is-assigned");
+                    if (refs.topFilterPool) setText(refs.topFilterPool, pool !== null ? "Campaign Pool: " + formatNumber(pool) + " (Live Queue)" : "Campaign Pool: —");
+                    if (refs.topFilterMatch) setText(refs.topFilterMatch, fCount !== null ? "Filter Matches: " + formatNumber(fCount) + " (Targeting Snapshot)" : "Filter Matches: —");
                     if (refs.topFilterSource) setText(refs.topFilterSource, "Source: " + (fSource === "TABLE_COLUMN" ? "Campaigns Table" : fSource === "CAMPAIGN_EDIT_DOM" ? "Edit Page DOM" : fSource === "VERIFIED_REGISTRY" ? "Verified Registry" : fSource));
-                    if (refs.topFilterObserved) setText(refs.topFilterObserved, "Last observed: " + fTime);
+                    if (refs.topFilterObserved) setText(refs.topFilterObserved, "Targeting verified: " + fTime);
+                    if (refs.topFilterFreshness) {
+                        setText(refs.topFilterFreshness, "Targeting: " + targetingFreshness.label);
+                        setClass(refs.topFilterFreshness, "ct-tlf-freshness " + targetingFreshness.className);
+                    }
                 } else {
                     setText(refs.topFilterBadge, "FILTER SOURCE UNAVAILABLE");
                     setClass(refs.topFilterBadge, "ct-tlf-badge is-unavailable");
+                    if (refs.topFilterPool) setText(refs.topFilterPool, pool !== null ? "Campaign Pool: " + formatNumber(pool) + " (Live Queue)" : "Campaign Pool: —");
+                    if (refs.topFilterMatch) setText(refs.topFilterMatch, "Filter Matches: —");
                     if (refs.topFilterSource) setText(refs.topFilterSource, "Source: DOM Unavailable");
                     if (refs.topFilterObserved) setText(refs.topFilterObserved, "Last observed: Awaiting DOM source");
+                    if (refs.topFilterFreshness) {
+                        setText(refs.topFilterFreshness, "Targeting: NOT OBSERVED");
+                        setClass(refs.topFilterFreshness, "ct-tlf-freshness is-waiting");
+                    }
                 }
                 if (refs.topFilterChange) setText(refs.topFilterChange, "Last change: " + lastChangeText);
             } else {
                 setText(refs.topFilterCampaign, "—");
                 setText(refs.topFilterBadge, "FILTER SOURCE UNAVAILABLE");
                 setClass(refs.topFilterBadge, "ct-tlf-badge is-unavailable");
+                if (refs.topFilterPool) setText(refs.topFilterPool, "Campaign Pool: —");
+                if (refs.topFilterMatch) setText(refs.topFilterMatch, "Filter Matches: —");
                 if (refs.topFilterSource) setText(refs.topFilterSource, "Source: DOM Unavailable");
                 if (refs.topFilterObserved) setText(refs.topFilterObserved, "Last observed: Awaiting DOM");
+                if (refs.topFilterFreshness) {
+                    setText(refs.topFilterFreshness, "Targeting: NOT OBSERVED");
+                    setClass(refs.topFilterFreshness, "ct-tlf-freshness is-waiting");
+                }
                 if (refs.topFilterChange) setText(refs.topFilterChange, "Last change: None recorded");
             }
         }
@@ -5401,6 +5445,51 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
         if (outboundState === "CONNECTING" || inboundState === "CONNECTING") return "CONNECTING";
         if (outboundState === "WAITING" || inboundState === "WAITING") return "WAITING";
         return "INITIALIZING";
+    }
+
+        function evaluateFreshness(observedAt, now) {
+        now = now || Date.now();
+        if (!observedAt) {
+            return {
+                status: "NOT_OBSERVED",
+                label: "NOT OBSERVED",
+                ageSec: null,
+                ageStr: "never",
+                timeStr: "—",
+                className: "is-waiting"
+            };
+        }
+        const ageSec = Math.max(0, Math.floor((now - observedAt) / 1000));
+        const timeStr = new Date(observedAt).toLocaleTimeString();
+        const ageStr = formatAge(ageSec);
+        if (ageSec < 15) {
+            return {
+                status: "LIVE",
+                label: "LIVE (" + ageStr + " ago)",
+                ageSec: ageSec,
+                ageStr: ageStr,
+                timeStr: timeStr,
+                className: "is-live"
+            };
+        }
+        if (ageSec <= 60) {
+            return {
+                status: "RECENT",
+                label: "RECENT (" + ageStr + " ago)",
+                ageSec: ageSec,
+                ageStr: ageStr,
+                timeStr: timeStr,
+                className: "is-recent"
+            };
+        }
+        return {
+            status: "STALE",
+            label: "STALE (" + ageStr + " ago)",
+            ageSec: ageSec,
+            ageStr: ageStr,
+            timeStr: timeStr,
+            className: "is-stale"
+        };
     }
 
     function updateConnectionState(now) {
@@ -7169,20 +7258,29 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
         // Matrix Table
         if (refs.lfiMatrixTableBody) {
             if (matrix.length === 0) {
-                refs.lfiMatrixTableBody.innerHTML = '<tr><td colspan="6" class="ct-lfi-empty">Waiting for campaign data…</td></tr>';
+                refs.lfiMatrixTableBody.innerHTML = '<tr><td colspan="10" class="ct-lfi-empty">Waiting for campaign data…</td></tr>';
             } else {
                 refs.lfiMatrixTableBody.innerHTML = matrix.map(function (m) {
                     const stateClass = m.state === "RUNNING" ? "is-running" : "is-idle";
                     const usageClass = m.usageStatus === "VERIFIED ACTIVE" ? "is-verified-active" :
                                        m.usageStatus === "UNASSIGNED" ? "is-unassigned" :
                                        m.usageStatus === "STALE" ? "is-stale" : "is-unknown";
+                    const freshClass = m.freshness === "LIVE" ? "is-live" : m.freshness === "RECENT" ? "is-recent" : m.freshness === "STALE" ? "is-stale" : "is-waiting";
+                    const freshLabel = m.freshness === "LIVE" ? "LIVE (" + (m.ageSec || 0) + "s ago)" :
+                                       m.freshness === "RECENT" ? "RECENT (" + formatAge(m.ageSec) + " ago)" :
+                                       m.freshness === "STALE" ? "STALE (" + formatAge(m.ageSec) + " ago)" : "NOT OBSERVED";
+
                     return '<tr>' +
                         '<td><strong>' + escapeHtml(m.campaignName) + '</strong></td>' +
-                        '<td>' + escapeHtml(m.campaignId) + '</td>' +
+                        '<td>' + (m.rawId ? escapeHtml(m.rawId) : '<span class="ct-campaign-id-badge is-unverified">Awaiting ID</span>') + '</td>' +
                         '<td><span class="ct-lfi-badge ' + stateClass + '">' + escapeHtml(m.state) + '</span></td>' +
+                        '<td>' + formatNumber(m.agents) + '</td>' +
+                        '<td><span class="ct-lfi-lead-pool" title="Campaign callable lead pool in active dialer queue">' + (m.campaignLeadPool !== "UNAVAILABLE" ? formatNumber(m.campaignLeadPool) : "—") + '</span> <small class="ct-pool-tag">Callable</small></td>' +
                         '<td><strong>' + escapeHtml(m.assignedFilter) + '</strong></td>' +
+                        '<td>' + (m.filterCount !== null ? '<span class="ct-lfi-filter-count" title="Filter-matching contacts from targeting snapshot">' + formatNumber(m.filterCount) + '</span>' : '<span class="ct-lfi-empty-val">—</span>') + '</td>' +
                         '<td><span class="ct-lfi-source">' + escapeHtml(m.verification) + '</span></td>' +
-                        '<td><span class="ct-lfi-badge ' + usageClass + '">' + escapeHtml(m.usageStatus) + '</span></td>' +
+                        '<td>' + escapeHtml(m.lastObservedTimeStr || "—") + '</td>' +
+                        '<td><span class="ct-lfi-badge ' + freshClass + '">' + escapeHtml(freshLabel) + '</span></td>' +
                     '</tr>';
                 }).join("");
             }

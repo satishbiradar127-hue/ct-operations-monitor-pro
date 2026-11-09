@@ -98,6 +98,8 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
                     campaignId: String(editData.campaignId),
                     campaignName: editData.campaignName,
                     liveFilter: editData.liveFilter,
+                    rawLiveFilter: editData.rawLiveFilter,
+                    filterCount: editData.filterCount,
                     status: editData.status,
                     source: "CAMPAIGN_EDIT_DOM",
                     timestamp: editData.timestamp

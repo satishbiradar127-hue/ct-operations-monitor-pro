@@ -97,6 +97,8 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
                     campaignId: String(editData.campaignId),
                     campaignName: editData.campaignName,
                     liveFilter: editData.liveFilter,
+                    rawLiveFilter: editData.rawLiveFilter,
+                    filterCount: editData.filterCount,
                     status: editData.status,
                     source: "CAMPAIGN_EDIT_DOM",
                     timestamp: editData.timestamp

@@ -931,11 +931,23 @@ window.CTParser = {
 
         if (!campaignId && !liveFilter && !campaignName) return null;
 
-        const isAssigned = Boolean(liveFilter && liveFilter !== "None" && liveFilter !== "Unassigned");
+        let filterCount = null;
+        let cleanFilterName = liveFilter;
+        if (liveFilter) {
+            const mCount = liveFilter.match(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*([0-9,]+)\s*[\)\]]/i);
+            if (mCount && mCount[1]) {
+                filterCount = Number(mCount[1].replace(/,/g, ""));
+                cleanFilterName = liveFilter.replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
+            }
+        }
+
+        const isAssigned = Boolean(cleanFilterName && cleanFilterName !== "None" && cleanFilterName !== "Unassigned");
         return {
             campaignId: campaignId || "unknown",
             campaignName: campaignName || (campaignId ? `Campaign ${campaignId}` : ""),
-            liveFilter: isAssigned ? liveFilter : null,
+            liveFilter: isAssigned ? cleanFilterName : null,
+            rawLiveFilter: liveFilter,
+            filterCount: filterCount,
             status: isAssigned ? "ASSIGNED" : "NONE",
             source: filterSource,
             timestamp: Date.now()
