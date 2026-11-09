@@ -47,3 +47,4 @@ with open("scripts/build_root_dual_dialer.js", "w", encoding="utf-8", newline="\
     f.write(code)
 
 print("Updated scripts/build_root_dual_dialer.js successfully.")
+

@@ -749,6 +749,9 @@ window.CTParser = {
                         }
                     }
                     if (entry) {
+                        if (!id && entry.campaignId && /^[0-9]+$/.test(String(entry.campaignId).trim())) {
+                            id = String(entry.campaignId).trim();
+                        }
                         const entryAge = entry.timestamp ? (Date.now() - entry.timestamp) : 0;
                         const isStale = entryAge > (7 * 24 * 60 * 60 * 1000);
                         if (!isStale) {

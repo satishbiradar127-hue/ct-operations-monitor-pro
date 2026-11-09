@@ -1382,6 +1382,14 @@
                 })),
                 assignmentMatrix: matrix,
                 changeHistory: (this.liveFilterChangeHistory || []).slice(0, 20),
+                leadListDetails: matrix.map(m => ({
+                    campaignName: m.campaignName,
+                    campaignId: m.campaignId,
+                    leadList: m.leadList !== "UNAVAILABLE" ? m.leadList : "Not exposed by available source",
+                    contactPool: m.leads,
+                    nativeRefillStatus: "Native refill time: Not available from permitted source",
+                    observationTime: m.lastObserved
+                })),
                 health: {
                     dialer: this.dialer,
                     inventoryFreshness,

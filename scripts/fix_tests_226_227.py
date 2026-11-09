@@ -229,3 +229,4 @@ test("__DTAG__ UPGRADE 235: Complete dual-dialer namespace and event isolation",
         f.write(c)
 
     print(f"Updated {dialer}/tests/suite.test.js with tests 226-235.")
+

@@ -57,3 +57,4 @@ for dialer in ["East2", "East3"]:
         print(f"Added getRefreshHistory and recordRefreshResult to {dialer}/intelligence.js")
     else:
         print(f"Target not found in {dialer}/intelligence.js")
+

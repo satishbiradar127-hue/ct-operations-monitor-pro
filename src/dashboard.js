@@ -3626,8 +3626,53 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
         };
         document.addEventListener("click", operatingOutsideClickHandler);
         document.addEventListener("keydown", operatingEscapeHandler);
+
+        document.addEventListener(REFRESH_RESULT_EVENT, function (event) {
+            state.isRefreshing = false;
+            if (refs.refresh) {
+                refs.refresh.classList.remove("is-refreshing");
+                refs.refresh.textContent = "↻ Refresh Data";
+            }
+            if (refs.headerRefresh) {
+                refs.headerRefresh.classList.remove("is-refreshing");
+            }
+            const detail = event.detail || {};
+            if (intelligenceEngine && intelligenceEngine.recordRefreshResult) {
+                intelligenceEngine.recordRefreshResult(detail);
+            }
+            state.lastRefreshedAt = detail.completedAt || Date.now();
+            const recordsText = detail.recordsRead !== undefined ? detail.recordsRead + " records" : "data";
+            let noticeMsg = "Refreshed " + recordsText + " from " + (detail.source || "CallTools");
+            if (detail.unavailableSources && detail.unavailableSources.length > 0) {
+                noticeMsg += " (Unavailable: " + detail.unavailableSources.join(", ") + ")";
+            }
+            showActionNotice(noticeMsg);
+            updateConnectionState(Date.now());
+            scheduleRender();
+        });
         const requestRefresh = function () {
+            if (state.isRefreshing) return;
+            state.isRefreshing = true;
+            if (refs.refresh) {
+                refs.refresh.classList.add("is-refreshing");
+                refs.refresh.textContent = "↻ Refreshing…";
+            }
+            if (refs.headerRefresh) {
+                refs.headerRefresh.classList.add("is-refreshing");
+            }
             document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT));
+            setTimeout(function () {
+                if (state.isRefreshing) {
+                    state.isRefreshing = false;
+                    if (refs.refresh) {
+                        refs.refresh.classList.remove("is-refreshing");
+                        refs.refresh.textContent = "↻ Refresh Data";
+                    }
+                    if (refs.headerRefresh) {
+                        refs.headerRefresh.classList.remove("is-refreshing");
+                    }
+                }
+            }, 5000);
         };
                 if (refs.inboundSettingsBtn && refs.inboundSettingsMenu) {
             refs.inboundSettingsBtn.addEventListener("click", function (e) {
@@ -5413,7 +5458,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
                 subtitleText = "PARTIALLY CONNECTED · Inbound: LIVE (" + inAgeStr + ") · Outbound: " + outAgeStr;
             }
         } else if (globalState === "LIVE") {
-            badgeText = state.isMonitoringRefreshing ? "UPDATING" : "LIVE";
+            badgeText = state.isMonitoringRefreshing ? "UPDATING" : "LIVE OBSERVED";
             badgeTone = state.isMonitoringRefreshing ? "is-warning" : "is-good";
             const nextStr = " · Next check: " + (state.nextMonitoringCheckIn != null ? state.nextMonitoringCheckIn : 15) + "s";
             if (isCampaigns) {
