@@ -1,6 +1,11 @@
-with open('CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East2/tests/suite.test.js', encoding='utf-8') as f:
-    lines = f.readlines()
+const { execSync } = require('child_process');
 
-for i, l in enumerate(lines):
-    if 'failed' in l.lower() and ('test(' in l or 'assert' in l or 'engine.' in l):
-        print(f'{i+1}: {l.strip()[:100]}')
+try {
+    const res = execSync('node CT_OPERATIONS_DUAL_DIALER_RELEASE/CT_Operations_Monitor_East3/tests/suite.test.js', { encoding: 'utf8' });
+    console.log('SUCCESS! All tests passed.');
+} catch (err) {
+    const lines = err.stdout.split('\n');
+    const fails = lines.filter(l => l.includes('✖') || l.includes('AssertionError') || l.includes('test at'));
+    console.log('FAILURES:');
+    console.log(fails.join('\n'));
+}

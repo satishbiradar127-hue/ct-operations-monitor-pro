@@ -1,5 +1,5 @@
 const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");
-console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.5");
+console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.6");
 
 (function () {
     "use strict";
@@ -674,27 +674,40 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
         let failureReason = null;
         let unavailableSources = [];
 
+        const sourceDetails = {};
         if (route === "campaigns") {
             publishFeedStatus("VERIFYING", { reason: "Manual campaign feed re-check requested", route: "campaigns" });
             readAndPublish("manual-campaign-refresh", true);
             const campaigns = window.CTParser && window.CTParser.readCampaigns ? window.CTParser.readCampaigns() : [];
             recordsRead = campaigns.length;
-            unavailableSources = ["/manager/live-filters"];
+            sourceDetails.campaigns = { status: campaigns.length > 0 ? "SUCCESS" : "EMPTY", count: campaigns.length, timestamp: now };
+            unavailableSources = ["Live Filter Inventory (requires navigation to /manager/live-filters)"];
+
+            // Also refresh Inbound feed if iframe bridge is embedded on page
+            const inboundFrame = document.querySelector("#ct-inbound-bridge, iframe[data-ct-inbound]");
+            if (inboundFrame && inboundFrame.contentWindow) {
+                try {
+                    inboundFrame.contentWindow.postMessage({ type: isEast3 ? "CT_EAST_3_REFRESH_INBOUND_FEED" : "CT_EAST_2_REFRESH_INBOUND_FEED" }, window.location.origin);
+                    sourceDetails.inboundBridge = "REFRESH_DISPATCHED";
+                } catch (e) {}
+            }
         } else if (route === "live_filters") {
             observeLiveFiltersPage();
             const filters = window.CTParser && window.CTParser.readLiveFilters ? window.CTParser.readLiveFilters(document) : [];
             recordsRead = filters.length;
-            unavailableSources = ["/manager/campaigns"];
+            sourceDetails.liveFilters = { status: filters.length > 0 ? "SUCCESS" : "EMPTY", count: filters.length, timestamp: now };
+            unavailableSources = ["Campaigns Table (requires navigation to /manager/campaigns)"];
         } else if (route === "queues") {
             publishFeedStatus("VERIFYING", { reason: "Manual queue feed re-check requested", route: "queues" });
             readAndPublish("manual-queue-refresh-check", true);
             const queues = window.CTParser && window.CTParser.readQueues ? window.CTParser.readQueues() : [];
             recordsRead = queues.length;
-            unavailableSources = ["/manager/campaigns", "/manager/live-filters"];
+            sourceDetails.queues = { status: queues.length > 0 ? "SUCCESS" : "EMPTY", count: queues.length, timestamp: now };
+            unavailableSources = ["Campaigns Table (requires navigation to /manager/campaigns)", "Live Filter Inventory (requires navigation to /manager/live-filters)"];
         } else {
             result = "PARTIAL";
             failureReason = "Current page (" + route + ") does not contain primary operational tables";
-            unavailableSources = ["/manager/campaigns", "/manager/live-filters", "/manager/queues"];
+            unavailableSources = ["Campaigns Table", "Live Filter Inventory", "Queues Table"];
         }
 
         const detail = {
@@ -704,7 +717,8 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
             result: result,
             recordsRead: recordsRead,
             failureReason: failureReason,
-            unavailableSources: unavailableSources
+            unavailableSources: unavailableSources,
+            sourceDetails: sourceDetails
         };
 
         document.dispatchEvent(new CustomEvent(isEast3 ? "CT_EAST_3_REFRESH_RESULT" : "CT_EAST_2_REFRESH_RESULT", { detail: detail }));

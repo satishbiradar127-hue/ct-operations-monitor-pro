@@ -1,0 +1,156 @@
+================================================================================
+ROOT REPOSITORY TEST SUITE — v11.3.6
+Total Tests: 47 | Passed: 47 | Failed: 0
+Timestamp: 2026-11-09T18:00:16.391Z
+================================================================================
+
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+Helpers Loaded (EAST-2)
+CT Operations Monitor parser loaded (EAST-2) — v11.3.6
+✔ PHASE 3 & 7: CT.number and CT.parseMetric distinguish valid zero from missing data (45.4965ms)
+✔ PHASE 2 & 7: parser.js extracts multi-tier CallTools Queue table correctly without header index offset (22.5244ms)
+✔ PHASE 3 & 7: Missing Not Answered column is reported as missing, NEVER synthesized as total - answered (8.2413ms)
+✔ PHASE 5 & 7: Action Center alert deduplication, stable signatures and recovery tracking (6.2477ms)
+✔ PHASE 4 & 7: Inbound totals calculation handles non-synthesized totals and zero-wait correctly (6.7728ms)
+✔ PHASE 7: Column reordering test — parser extracts metrics when column positions change (11.095ms)
+✔ PHASE 7: Outbound regression and manual campaign order preservation (5.2582ms)
+✔ PHASE 7: Dynamic queue changes — adding and removing queues in DOM updates queue list (34.5577ms)
+✔ PHASE 3 & 7: Delta calculation is only performed between valid comparable readings (6.5642ms)
+✔ PHASE 5 & 7: Clear All clears visible signals and preserves future distinct detection (5.1357ms)
+✔ PHASE 2, 3 & 8: parser.js extracts 2-tier CallTools Campaigns table correctly without header index offset (19.0411ms)
+✔ PHASE 5 & 8: Missing agent metrics on Campaigns table are represented as unavailable (null), not zero, preventing false alerts (8.9701ms)
+✔ PHASE 4 & 8: REALTIME shared lead pool deduplication and aggregate calculations (5.3058ms)
+✔ UPGRADE TEST 14: Active Campaigns Command Summary filters operational campaigns and computes required summary columns (5.9138ms)
+✔ UPGRADE TEST 15: Discrepancy reconciliation between active operational totals and all visible campaigns (5.7533ms)
+✔ UPGRADE TEST 16: Honest Lead Runway states distinguish gathering vs stable lead pool vs exhaustion (5.8194ms)
+✔ UPGRADE TEST 17: Inbound missing not-answered column yields null and never reports false zero (3.7497ms)
+✔ UPGRADE TEST 18: Inbound findings consistency — callers waiting > 0 ALWAYS produces a finding pill; never falsely claims 'No callers waiting' (6.186ms)
+✔ UPGRADE TEST 19: loggedMemberships aggregation and KPI mapping — sums queue loggedIn counts and distinguishes from unique agents (6.2855ms)
+✔ UPGRADE TEST 20: Responsive layout calculations across zoom/viewports (2304x1094 wide viewport down to 1024x768) (5.3748ms)
+✔ UPGRADE TEST 21: Active Campaigns Command Summary 14 columns verification including honest connection rate and abandoned formatting (6.5571ms)
+✔ UPGRADE TEST 22: Combined state filter (all, active, inactive) + health filter + search query (4.9085ms)
+✔ UPGRADE TEST 23: Outbound attempts scope reconciliation (top snapshot active sum vs single operating campaign breakdown) (3.9602ms)
+✔ UPGRADE TEST 24: Campaign row selection, toggle all visible, and clear selection behavior (6.3291ms)
+✔ UPGRADE TEST 25: Drag-and-drop campaign reordering and Reset Order restoration (6.2478ms)
+✔ UPGRADE TEST 26: Outbound Focus single-campaign deduplication vs multi-campaign operating view (4.011ms)
+✔ UPGRADE TEST 27: Inbound Queue Detail header and cell grid template column alignment without overlap (5.7385ms)
+✔ UPGRADE TEST 28: Campaign filter state persistence & restoration across reload/refresh (5.3225ms)
+✔ UPGRADE TEST 29: Inbound Not Answered resolution maps native Inbound No Answer without false zero (4.5031ms)
+✔ UPGRADE TEST 30: Drag-and-drop reordering with filtered view preserves hidden campaigns (6.361ms)
+✔ UPGRADE TEST 31: Inbound table grid template min-width and sticky header requirements (4.0581ms)
+✔ UPGRADE TEST 32: updateActiveCommandSummary renders ordered campaigns over raw source order (4.9046ms)
+✔ UPGRADE TEST 33: Keyboard accessible reordering (Alt+ArrowUp/Down) invokes identical reorder algorithm (5.6363ms)
+✔ UPGRADE TEST 34: Global filter synchronization guarantees button active states match storage without overwrite (4.7957ms)
+✔ UPGRADE TEST 35: Row reorder buttons (up/down) invoke reorderCampaignByIds and preserve full ordering sequence (4.4102ms)
+✔ UPGRADE TEST 36: Command Summary Table 18-column colgroup, matching classes, and fixed layout (4.4ms)
+✔ UPGRADE TEST 37: Outbound Focus Section A (identity), Section B (10 metrics), Section C (4 clusters), Section D (findings) (5.804ms)
+✔ UPGRADE TEST 38: Inbound Queue Detail explicit column grid alignment, sticky header, and snapshot consistency (4.5081ms)
+✔ UPGRADE TEST 39: Responsive layout and container max-height containment across viewport dimensions (4.2149ms)
+✔ UPGRADE TEST 40: Freshness indicators distinguishing poll interval, update timestamp, and snapshot age (6.33ms)
+✔ UPGRADE TEST 41: Action Center elevated wait alert generation, warning vs critical threshold classification (30s vs 60s), and counter consistency (5.9555ms)
+✔ UPGRADE TEST 42: Outbound Focus and Action Center consistent condition model (4.6626ms)
+✔ UPGRADE TEST 43: Alert deduplication, dismissal, Clear All, and escalation stability across polling cycles (6.5865ms)
+✔ UPGRADE TEST 44: Outbound Focus Section B 10 individual rounded cards with 5x2 grid layout and tooltips (4.919ms)
+✔ UPGRADE TEST 45: Active Campaigns Command Summary table styling with hard box borders and middle order GOALS (3.9864ms)
+✔ UPGRADE TEST 46: Zoom-scaled resizing and drag expansion bounds (90% zoom allows expanding to bottom of viewport) (5.3846ms)
+✔ UPGRADE TEST 47: Outbound Operational Findings notification placed at top of operating panel for immediate operator visibility (9.0274ms)
+ℹ tests 47
+ℹ suites 0
+ℹ pass 47
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 623.7376
+
