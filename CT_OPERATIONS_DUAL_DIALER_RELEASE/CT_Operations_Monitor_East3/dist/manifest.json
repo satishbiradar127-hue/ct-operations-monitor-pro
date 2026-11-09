@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CT Operations Monitor \u2014 East-3",
-  "version": "11.3.7",
-  "description": "CallTools Operations Monitor Pro (East-3 Edition) \u2014 unified outbound Campaigns + inbound Queue command center with persistent Sales/Goals alerts, native Queue DOM bridge, and East-3 host isolation. Includes CT Data Change Intelligence Engine.",
+  "name": "CT Operations Monitor — East-3",
+  "version": "11.3.8",
+  "description": "CallTools Operations Monitor Pro (East-3 Edition) — unified outbound Campaigns + inbound Queue command center with persistent Sales/Goals alerts, native Queue DOM bridge, and East-3 host isolation. Includes CT Data Change Intelligence Engine.",
   "permissions": [
     "storage"
   ],

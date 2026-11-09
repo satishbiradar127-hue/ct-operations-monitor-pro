@@ -1,6 +1,6 @@
 {
   "name": "ct-operations-monitor-pro",
-  "version": "11.1.53",
+  "version": "11.3.8",
   "description": "CallTools Operations Monitor Pro — unified outbound Campaigns + inbound Queue command center",
   "scripts": {
     "test": "node --test tests/suite.test.js",

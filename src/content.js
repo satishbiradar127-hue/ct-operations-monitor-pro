@@ -1,5 +1,5 @@
 const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");
-console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.7");
+console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.8");
 
 (function () {
     "use strict";
@@ -88,7 +88,7 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
         if (!window.CTParser || !window.CTParser.readCampaignEditForm) return;
         try {
             const editData = window.CTParser.readCampaignEditForm(document);
-            if (editData && editData.campaignId && editData.campaignId !== "unknown") {
+            if (editData && editData.campaignId && editData.campaignId !== "unknown" && editData.liveFilter) {
                 let registry = {};
                 try {
                     registry = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}");
@@ -430,6 +430,15 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
                 return;
             }
 
+            if (route === "campaign_edit") {
+                observeCampaignEditForm();
+                return;
+            }
+            if (route === "live_filters") {
+                observeLiveFiltersPage();
+                return;
+            }
+
             // Queues page
             const queues = window.CTParser.readQueues ? window.CTParser.readQueues() : [];
             const queueTableNode = window.CTParser.findQueueTable ? window.CTParser.findQueueTable() : document.querySelector("table, mat-table");
@@ -492,7 +501,6 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
         }
         const now = Date.now();
         if (isCampaignsPage()) {
-            observeCampaignEditForm();
             if (now - lastInboundCoordinationAt >= INBOUND_COORDINATION_MS) {
                 lastInboundCoordinationAt = now;
                 ensureInboundFeedMonitor();
@@ -620,6 +628,10 @@ console.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") —
             ensureInboundFeedMonitor();
         } else if (isQueuesPage()) {
             teardownInboundIframe();
+        } else if (isCampaignEditPage()) {
+            observeCampaignEditForm();
+        } else if (isLiveFiltersPage()) {
+            observeLiveFiltersPage();
         }
         if (isBackgroundInboundMonitor()) {
             persistInboundFeedStatus("VERIFYING", 0, Date.now());

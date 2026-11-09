@@ -1,4 +1,4 @@
-console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
+console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ") v11.3.8");
 
 (function () {
     "use strict";
@@ -67,6 +67,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
     const PERSISTENT_GOAL_ALERTS_KEY = PREFIX + "persistent_goal_alerts_v1";
     const ACKNOWLEDGED_GOAL_ALERTS_KEY = PREFIX + "acknowledged_goal_alerts_v1";
     const INBOUND_SETTINGS_KEY = PREFIX + "inbound_settings_v1";
+    const VERIFIED_FILTERS_KEY = "ct_east2_verified_campaign_filters_v1";
+    const LIVE_FILTERS_INVENTORY_KEY = "ct_east2_live_filters_inventory_v1";
 
     function readPersistentGoalBaselines() {
         try {
@@ -466,6 +468,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
             state.queueFeedStatus = String(payload.status || "WAITING").toUpperCase();
             state.queueLastFeedHeartbeatAt = Number(payload.heartbeatAt) ? new Date(Number(payload.heartbeatAt)) : null;
         }
+        if (changes && (changes[VERIFIED_FILTERS_KEY] || changes[LIVE_FILTERS_INVENTORY_KEY])) {
+            scheduleRender();
+        }
         if (dataChange || statusChange) scheduleRender();
     }
 
@@ -677,6 +682,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
 
     const onStorage = function (event) {
         if (!event || !event.key) return;
+        if (event.key === VERIFIED_FILTERS_KEY || event.key === LIVE_FILTERS_INVENTORY_KEY) {
+            scheduleRender();
+            return;
+        }
         if (event.key === INBOUND_DATA_KEY && event.newValue) {
             try {
                 const payload = JSON.parse(event.newValue);
@@ -2972,7 +2981,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
                 <header class="ct-summary">
                     <div class="ct-row">
                         <div class="ct-title">
-                            <h2>CallTools Operations <span class="ct-dialer-tag ct-dialer-east2">EAST-2</span></h2>
+                            <h2>CallTools Operations <span class="ct-dialer-tag " + ("ct-dialer-east2") + "">" + ("EAST-2") + "</span></h2>
                             <span class="ct-updated">Waiting for verified CallTools data</span>
                         </div>
                         <div class="ct-summary-controls">
@@ -3180,7 +3189,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
                                 <span class="ct-operating-trigger-text">Select campaign(s)</span><span class="ct-operating-trigger-count">0</span><span class="ct-operating-trigger-arrow">▾</span>
                             </button>
                             <div class="ct-operating-menu" data-ref="operatingMenu" hidden>
-                                <div class="ct-operating-menu-head"><strong>Select Operating Campaigns</strong><button type="button" data-operating-action="clear">Clear</button></div>
+                                <div class="ct-operating-menu-head"><strong>Select Operating Campaigns</strong><div class="ct-operating-menu-actions"><button type="button" class="ct-btn-sm" data-operating-action="all">All</button><button type="button" class="ct-btn-sm" data-operating-action="clear">Clear</button></div></div>
                                 <div class="ct-operating-options" role="listbox" aria-multiselectable="true"></div>
                                 <div class="ct-operating-menu-foot">Tick one or more campaigns. Your selections remain active until you change them.</div>
                             </div>
@@ -3656,6 +3665,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
         });
         refs.operatingMenu.addEventListener("click", function (event) {
             event.stopPropagation();
+            const selectAll = event.target.closest('[data-operating-action="all"]');
+            if (selectAll) {
+                event.preventDefault();
+                const all = state.campaigns || [];
+                const allIds = all.map(function(c) {
+                    return c.rawId ? String(c.rawId) : c.id ? String(c.id) : c.__id ? String(c.__id) : String(c.name || "").trim().toLowerCase();
+                }).filter(Boolean);
+                writeOperatingCampaigns(allIds);
+                addCurrentStateAlerts(state.campaigns);
+                showActionNotice("All visible campaigns selected.");
+                updateOperatingSelect(state.campaigns);
+                scheduleRender();
+                return;
+            }
             const clear = event.target.closest('[data-operating-action="clear"]');
             if (clear) {
                 event.preventDefault();
@@ -4934,17 +4957,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
                 }
 
                 // 1. Header elements
+                const isTargetingCurrent = fName && fSource !== "DOM_UNAVAILABLE" && (!fTimeMs || (Date.now() - fTimeMs) <= 120000);
                 if (refs.topFilterCampaign) setText(refs.topFilterCampaign, cName);
                 if (refs.topFilterDialer) setText(refs.topFilterDialer, DIALER);
                 if (refs.topFilterVerificationState) {
-                    if (fName && fSource !== "DOM_UNAVAILABLE") {
+                    if (isTargetingCurrent) {
                         setText(refs.topFilterVerificationState, "TARGETING: VERIFIED");
                         setClass(refs.topFilterVerificationState, "ct-lft-verify-badge is-verified");
+                    } else if (fName && fSource !== "DOM_UNAVAILABLE") {
+                        setText(refs.topFilterVerificationState, "TARGETING: STALE");
+                        setClass(refs.topFilterVerificationState, "ct-lft-verify-badge is-stale");
                     } else if (fName) {
                         setText(refs.topFilterVerificationState, "TARGETING: UNVERIFIED");
                         setClass(refs.topFilterVerificationState, "ct-lft-verify-badge is-unverified");
                     } else {
-                        setText(refs.topFilterVerificationState, "TARGETING: UNAVAILABLE");
+                        setText(refs.topFilterVerificationState, "TARGETING: AWAITING OBSERVATION");
                         setClass(refs.topFilterVerificationState, "ct-lft-verify-badge is-unavailable");
                     }
                 }
@@ -4997,7 +5024,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
 
                 // 6. Card 5: Targeting Verification
                 if (refs.topFilterConfidence) {
-                    setText(refs.topFilterConfidence, (fName && fSource !== "DOM_UNAVAILABLE") ? "VERIFIED" : (fName ? "UNVERIFIED" : "UNAVAILABLE"));
+                    if (isTargetingCurrent) {
+                        setText(refs.topFilterConfidence, "VERIFIED");
+                    } else if (fName && fSource !== "DOM_UNAVAILABLE") {
+                        setText(refs.topFilterConfidence, "STALE (LAST VERIFIED)");
+                    } else if (fName) {
+                        setText(refs.topFilterConfidence, "UNVERIFIED");
+                    } else {
+                        setText(refs.topFilterConfidence, "AWAITING OBSERVATION");
+                    }
                 }
                 if (refs.topFilterVerifySource) {
                     setText(refs.topFilterVerifySource, fSource === "TABLE_COLUMN" ? "Campaigns Table" : fSource === "CAMPAIGN_EDIT_DOM" ? "Edit Page DOM" : fSource === "VERIFIED_REGISTRY" ? "Verified Registry" : "DOM Unavailable");
@@ -5146,7 +5181,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
                 : "No outbound attempts recorded today";
             const connectRateClass = c.__outbound > 0 ? (connectRate >= 3 ? "is-good" : connectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
 
-                const isOperating = (state.operatingCampaigns || []).includes(c.__id);
+                const isOperating = isCampaignSelected(c, new Set((state.operatingCampaigns || []).map(function(id) { return String(id || "").trim(); }).filter(Boolean)));
                 const focusBtnClass = "ct-active-focus-btn" + (isOperating ? " is-operating" : "");
                 const focusBtnText = isOperating ? "Operating ✓" : "Focus";
                 const focusBtnTitle = isOperating ? "Operating campaign (click to toggle)" : "Click to select and operate " + escapeHtml(c.name);
@@ -5449,6 +5484,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
         }).join("||") + "::" + Array.from(current).sort().join(",");
 
         if (refs.operatingOptions.dataset.signature !== signature) {
+            const preservedScrollTop = refs.operatingOptions.scrollTop;
             const existingButtons = Array.from(refs.operatingOptions.querySelectorAll('.ct-operating-option'));
             const canUpdateInPlace = existingButtons.length === all.length && existingButtons.every(function(btn, idx) {
                 const c = all[idx];
@@ -5478,6 +5514,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
                 }).join("");
             }
             refs.operatingOptions.dataset.signature = signature;
+            if (preservedScrollTop > 0) refs.operatingOptions.scrollTop = preservedScrollTop;
         }
         const selectedCampaigns = all.filter(function (c) { return isCampaignSelected(c, current); });
         const selectedNames = selectedCampaigns.map(function (c) { return safeValue(c.name, "Campaign"); });
@@ -5876,15 +5913,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
             if (!alreadySelected) {
                 next.add(primaryId);
                 showActionNotice(safeValue(match.name) + " selected as operating campaign.");
-            } else if (next.size > 1) {
+            } else {
                 if (match.rawId) next.delete(String(match.rawId));
                 if (match.id) next.delete(String(match.id));
                 if (match.__id) next.delete(String(match.__id));
                 if (match.name) next.delete(String(match.name).trim().toLowerCase());
                 next.delete(primaryId);
                 showActionNotice(safeValue(match.name) + " removed from operating set.");
-            } else {
-                showActionNotice(safeValue(match.name) + " is operating.");
             }
             writeOperatingCampaigns(Array.from(next));
             addCurrentStateAlerts(state.campaigns);
@@ -7570,8 +7605,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
                 refs.lfiMatrixTableBody.innerHTML = matrix.map(function (m) {
                     const stateClass = m.state === "RUNNING" ? "is-running" : "is-idle";
                     const usageClass = m.usageStatus === "VERIFIED ACTIVE" ? "is-verified-active" :
-                                       m.usageStatus === "UNASSIGNED" ? "is-unassigned" :
-                                       m.usageStatus === "STALE" ? "is-stale" : "is-unknown";
+                                       (m.usageStatus === "STALE" || m.usageStatus === "STALE (ACTIVE)") ? "is-stale" :
+                                       m.usageStatus === "UNASSIGNED" ? "is-unassigned" : "is-unknown";
                     const freshClass = m.freshness === "LIVE" ? "is-live" : m.freshness === "RECENT" ? "is-recent" : m.freshness === "STALE" ? "is-stale" : "is-waiting";
                     const freshLabel = m.freshness === "LIVE" ? "LIVE (" + (m.ageSec || 0) + "s ago)" :
                                        m.freshness === "RECENT" ? "RECENT (" + formatAge(m.ageSec) + " ago)" :

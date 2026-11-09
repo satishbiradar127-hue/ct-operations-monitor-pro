@@ -1,5 +1,5 @@
 // ===============================================================================
-// CT DATA CHANGE INTELLIGENCE ENGINE (v11.3.7)
+// CT DATA CHANGE INTELLIGENCE ENGINE (v11.3.8)
 // Independent Bidirectional Metric Anomaly & Event Detection Engine
 // Strictly Read-Only DOM Observation & Persistent Multi-Dialer Intelligence
 // ===============================================================================
@@ -1342,7 +1342,8 @@
                 if (entry) {
                     observationTime = entry.timestamp || entry.observedAt || null;
                     const age = observationTime ? (now - observationTime) : 0;
-                    isStale = age > SEVEN_DAYS_MS;
+                    const FRESHNESS_WINDOW_MS = 120 * 1000; // 120 seconds freshness window
+                    isStale = age > FRESHNESS_WINDOW_MS;
                     if (isStale) staleCount++;
 
                     rawFilter = entry.rawLiveFilter || entry.liveFilter || entry.filter || null;
@@ -1405,8 +1406,8 @@
                 const ageSec = observationTime ? Math.max(0, Math.floor((now - observationTime) / 1000)) : null;
                 let freshness = "UNOBSERVED";
                 if (observationTime) {
-                    if (isStale || ageSec > 60) freshness = "STALE";
-                    else if (ageSec <= 15) freshness = "LIVE";
+                    if (isStale || ageSec > 120) freshness = "STALE";
+                    else if (ageSec <= 30) freshness = "LIVE";
                     else freshness = "RECENT";
                 }
 
