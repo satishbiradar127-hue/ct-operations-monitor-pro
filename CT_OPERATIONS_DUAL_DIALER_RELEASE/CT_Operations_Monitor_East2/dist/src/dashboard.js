@@ -1,4 +1,4 @@
-console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
+console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");
 
 (function () {
     "use strict";
@@ -3299,23 +3299,6 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Data Health & Provenance (Reflowed Full-Width) -->
-                            <div class="ct-lfi-footer-grid ct-lfi-health-only">
-                                <div class="ct-lfi-card ct-lfi-health-card">
-                                    <div class="ct-lfi-card-head">
-                                        <strong>Data Health & Provenance</strong>
-                                        <span class="ct-lfi-status-pill is-neutral" data-ref="lfiDataHealthPill">OPTIMAL</span>
-                                    </div>
-                                    <div class="ct-lfi-health-details" data-ref="lfiHealthDetails">
-                                        <div class="ct-lfi-health-row"><span>Dialer Host:</span><strong data-ref="lfiHealthDialer">EAST-2</strong></div>
-                                        <div class="ct-lfi-health-row"><span>Inventory Freshness:</span><strong data-ref="lfiHealthFreshness">Waiting…</strong></div>
-                                        <div class="ct-lfi-health-row"><span>Stale Records (>7d):</span><strong data-ref="lfiHealthStale">0</strong></div>
-                                        <div class="ct-lfi-health-row"><span>Missing Verification:</span><strong data-ref="lfiHealthMissing">0</strong></div>
-                                        <div class="ct-lfi-health-row"><span>Strict Boundary:</span><strong class="ct-text-good">READ-ONLY (0 clicks, 0 fetch)</strong></div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </section>
 
@@ -3529,11 +3512,6 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
             lfiMatrixNote: root.querySelector('[data-ref="lfiMatrixNote"]'),
             lfiMatrixTableBody: root.querySelector('[data-ref="lfiMatrixTableBody"]'),
             lfiHistoryList: root.querySelector('[data-ref="lfiHistoryList"]'),
-            lfiDataHealthPill: root.querySelector('[data-ref="lfiDataHealthPill"]'),
-            lfiHealthDialer: root.querySelector('[data-ref="lfiHealthDialer"]'),
-            lfiHealthFreshness: root.querySelector('[data-ref="lfiHealthFreshness"]'),
-            lfiHealthStale: root.querySelector('[data-ref="lfiHealthStale"]'),
-            lfiHealthMissing: root.querySelector('[data-ref="lfiHealthMissing"]'),
             search: root.querySelector(".ct-search input"),
             threshold: root.querySelector(".ct-threshold"),
             operatingTrigger: root.querySelector(".ct-operating-trigger"),
@@ -3694,32 +3672,41 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
             const id = option.getAttribute('data-operating-id');
             const next = new Set((state.operatingCampaigns || []).map(function(v) { return String(v || "").trim(); }).filter(Boolean));
             let adding = true;
-            if (next.has(id)) {
-                next.delete(id);
-                adding = false;
+            const all = state.campaigns || [];
+            const targetCampaign = all.find(function(c) {
+                const cid = c.rawId || c.id || c.__id || campaignId(c);
+                return (cid && cid === id) || (c.name && String(c.name).trim().toLowerCase() === id.toLowerCase());
+            });
+            const canonicalId = targetCampaign ? (targetCampaign.rawId ? String(targetCampaign.rawId) : targetCampaign.id ? String(targetCampaign.id) : targetCampaign.__id ? String(targetCampaign.__id) : String(targetCampaign.name || "").trim().toLowerCase()) : id;
+            if (targetCampaign) {
+                if (isCampaignSelected(targetCampaign, next)) {
+                    if (targetCampaign.rawId) next.delete(String(targetCampaign.rawId));
+                    if (targetCampaign.id) next.delete(String(targetCampaign.id));
+                    if (targetCampaign.__id) next.delete(String(targetCampaign.__id));
+                    if (targetCampaign.name) next.delete(String(targetCampaign.name).trim().toLowerCase());
+                    next.delete(canonicalId);
+                    next.delete(id);
+                    adding = false;
+                } else {
+                    next.add(canonicalId);
+                    adding = true;
+                }
             } else {
-                const all = state.campaigns || [];
-                const targetCampaign = all.find(function(c, i) {
-                    const cid = c.rawId || c.id || c.__id || campaignId(c, i);
-                    return cid === id || String(c.name || "").trim().toLowerCase() === id.toLowerCase();
-                });
-                if (targetCampaign) {
-                    if (isCampaignSelected(targetCampaign, next)) {
-                        if (targetCampaign.rawId) next.delete(String(targetCampaign.rawId));
-                        if (targetCampaign.id) next.delete(String(targetCampaign.id));
-                        if (targetCampaign.__id) next.delete(String(targetCampaign.__id));
-                        if (targetCampaign.name) next.delete(String(targetCampaign.name).trim().toLowerCase());
-                        adding = false;
-                    } else {
-                        next.add(id);
-                    }
+                if (next.has(id)) {
+                    next.delete(id);
+                    adding = false;
                 } else {
                     next.add(id);
+                    adding = true;
                 }
             }
+            option.classList.toggle("is-selected", adding);
+            option.setAttribute("aria-selected", String(adding));
+            const check = option.querySelector(".ct-operating-check");
+            if (check) check.textContent = adding ? "✓" : "";
             writeOperatingCampaigns(Array.from(next));
             addCurrentStateAlerts(state.campaigns);
-            showActionNotice(adding ? "Campaign added to operating set." : "Campaign removed from operating set.");
+            showActionNotice(adding ? (targetCampaign ? safeValue(targetCampaign.name) : "Campaign") + " added to operating set." : (targetCampaign ? safeValue(targetCampaign.name) : "Campaign") + " removed from operating set.");
             updateOperatingSelect(state.campaigns);
             scheduleRender();
         });
@@ -3901,7 +3888,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
                 if (btn) {
                     event.preventDefault();
                     event.stopPropagation();
+                    const card = btn.closest(".ct-persistent-goal-card");
+                    if (card) card.remove();
+                    if (refs.persistentGoalsContainer) refs.persistentGoalsContainer.dataset.signature = "";
                     acknowledgePersistentGoalAlert(btn.getAttribute("data-noted-id"));
+                    updateAlerts();
+                    showActionNotice("Persistent goal alert acknowledged [NOTED].");
                     return;
                 }
                 const intelActionBtn = event.target.closest("[data-intel-action]");
@@ -3911,11 +3903,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
                     const action = intelActionBtn.dataset.intelAction;
                     if (action === "dismiss") {
                         const intelId = intelActionBtn.dataset.intelId;
+                        const card = intelActionBtn.closest(".ct-intelligence-card");
+                        if (card) card.remove();
+                        if (refs.persistentGoalsContainer) refs.persistentGoalsContainer.dataset.signature = "";
                         if (intelligenceEngine && intelId) {
                             intelligenceEngine.acknowledgeAlert(intelId);
-                            scheduleRender();
-                            showActionNotice("Alert dismissed until condition changes.");
                         }
+                        updateAlerts();
+                        showActionNotice("Alert dismissed until condition changes.");
+                        scheduleRender();
                     } else if (action === "focus") {
                         const target = intelActionBtn.dataset.target;
                         if (target) {
@@ -3925,12 +3921,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
                     return;
                 }
                 const intelBtn = event.target.closest("[data-intel-noted-id]");
-                if (intelBtn && intelligenceEngine) {
+                if (intelBtn) {
                     event.preventDefault();
                     event.stopPropagation();
-                    intelligenceEngine.acknowledgeAlert(intelBtn.getAttribute("data-intel-noted-id"));
-                    scheduleRender();
+                    const card = intelBtn.closest(".ct-intelligence-card");
+                    if (card) card.remove();
+                    if (refs.persistentGoalsContainer) refs.persistentGoalsContainer.dataset.signature = "";
+                    if (intelligenceEngine) {
+                        intelligenceEngine.acknowledgeAlert(intelBtn.getAttribute("data-intel-noted-id"));
+                    }
+                    updateAlerts();
                     showActionNotice("Change intelligence alert acknowledged [NOTED].");
+                    scheduleRender();
                     return;
                 }
             });
@@ -5440,25 +5442,44 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
         if (!refs.operatingOptions || !refs.operatingTrigger) return;
         const current = new Set((state.operatingCampaigns || []).map(function(id) { return String(id || "").trim(); }).filter(Boolean));
         const all = Array.isArray(campaigns) && campaigns.length ? campaigns : (Array.isArray(state.campaigns) && state.campaigns.length ? state.campaigns : []);
-        const signature = all.map(function (c, i) {
-            const id = c.rawId || c.id || c.__id || campaignId(c, i);
-            const isSel = isCampaignSelected(c, current, i);
+        const signature = all.map(function (c) {
+            const id = c.rawId || c.id || c.__id || campaignId(c);
+            const isSel = isCampaignSelected(c, current);
             return [id, c.name || "", c.__active === true ? 1 : c.__active === false ? 0 : -1, numberValue(c.__loggedIn), isSel ? 1 : 0].join("|");
         }).join("||") + "::" + Array.from(current).sort().join(",");
+
         if (refs.operatingOptions.dataset.signature !== signature) {
-            refs.operatingOptions.innerHTML = all.map(function (c, i) {
-                const id = c.rawId || c.id || c.__id || campaignId(c, i);
-                const checked = isCampaignSelected(c, current, i);
-                const active = c.__active === true ? "LIVE" : c.__active === false ? "INACTIVE" : "CHECK";
-                const nativeIdBadge = (c.rawId || c.id) ? '<span class="ct-operating-option-id">#' + escapeHtml(c.rawId || c.id) + '</span>' : '';
-                return '<button type="button" class="ct-operating-option' + (checked ? ' is-selected' : '') + '" role="option" aria-selected="' + checked + '" data-operating-id="' + escapeHtml(id) + '">' +
-                    '<span class="ct-operating-check" aria-hidden="true">' + (checked ? '✓' : '') + '</span>' +
-                    '<span class="ct-operating-option-main"><b>' + escapeHtml(safeValue(c.name, "Unnamed Campaign")) + '</b> ' + nativeIdBadge + '<small>' + active + ' · ' + formatNumber(c.__loggedIn) + ' agents</small></span>' +
-                    '</button>';
-            }).join("");
+            const existingButtons = Array.from(refs.operatingOptions.querySelectorAll('.ct-operating-option'));
+            const canUpdateInPlace = existingButtons.length === all.length && existingButtons.every(function(btn, idx) {
+                const c = all[idx];
+                const id = c.rawId || c.id || c.__id || campaignId(c);
+                return btn.getAttribute('data-operating-id') === String(id);
+            });
+
+            if (canUpdateInPlace) {
+                existingButtons.forEach(function(btn, idx) {
+                    const c = all[idx];
+                    const checked = isCampaignSelected(c, current);
+                    btn.classList.toggle('is-selected', checked);
+                    btn.setAttribute('aria-selected', String(checked));
+                    const checkSpan = btn.querySelector('.ct-operating-check');
+                    if (checkSpan) checkSpan.textContent = checked ? '✓' : '';
+                });
+            } else {
+                refs.operatingOptions.innerHTML = all.map(function (c) {
+                    const id = c.rawId || c.id || c.__id || campaignId(c);
+                    const checked = isCampaignSelected(c, current);
+                    const active = c.__active === true ? "LIVE" : c.__active === false ? "INACTIVE" : "CHECK";
+                    const nativeIdBadge = (c.rawId || c.id) ? '<span class="ct-operating-option-id">#' + escapeHtml(c.rawId || c.id) + '</span>' : '';
+                    return '<button type="button" class="ct-operating-option' + (checked ? ' is-selected' : '') + '" role="option" aria-selected="' + checked + '" data-operating-id="' + escapeHtml(id) + '">' +
+                        '<span class="ct-operating-check" aria-hidden="true">' + (checked ? '✓' : '') + '</span>' +
+                        '<span class="ct-operating-option-main"><b>' + escapeHtml(safeValue(c.name, "Unnamed Campaign")) + '</b> ' + nativeIdBadge + '<small>' + active + ' · ' + formatNumber(c.__loggedIn) + ' agents</small></span>' +
+                        '</button>';
+                }).join("");
+            }
             refs.operatingOptions.dataset.signature = signature;
         }
-        const selectedCampaigns = all.filter(function (c, i) { return isCampaignSelected(c, current, i); });
+        const selectedCampaigns = all.filter(function (c) { return isCampaignSelected(c, current); });
         const selectedNames = selectedCampaigns.map(function (c) { return safeValue(c.name, "Campaign"); });
         const selectedCount = selectedCampaigns.length || current.size;
         setText(refs.operatingTriggerText, selectedCount === 0 ? "Select campaign(s)" : selectedNames.length === 1 ? selectedNames[0] : selectedCount + " campaigns selected");
@@ -5840,12 +5861,11 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
     function focusCampaign(identifier, setOperating) {
         const raw = String(identifier || "").trim().toLowerCase();
         const prepared = prepareCampaigns(state.campaigns);
-        const match = prepared.find(function(c, i){
+        const match = prepared.find(function(c){
             return (c.__id && String(c.__id).trim().toLowerCase() === raw) ||
                    (c.id && String(c.id).trim().toLowerCase() === raw) ||
                    (c.rawId && String(c.rawId).trim().toLowerCase() === raw) ||
-                   (c.name && String(c.name).trim().toLowerCase() === raw) ||
-                   ("campaign-" + i === raw);
+                   (c.name && String(c.name).trim().toLowerCase() === raw);
         });
         if (!match) return;
         const primaryId = match.rawId || match.id || match.__id || String(match.name || "").trim().toLowerCase();
@@ -5913,7 +5933,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
         });
         persistDismissedConditions();
         state.recentAlerts = [];
+        if (intelligenceEngine && typeof intelligenceEngine.clearAllDismissibleAlerts === "function") {
+            intelligenceEngine.clearAllDismissibleAlerts();
+        }
         if (refs.alerts) refs.alerts.dataset.signature = "";
+        if (refs.persistentGoalsContainer) refs.persistentGoalsContainer.dataset.signature = "";
+        updateAlerts();
         showActionNotice("Current Action Center signals cleared until their conditions change.");
         scheduleRender();
     }
@@ -6669,10 +6694,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
                 '</div>';
             }).join("");
 
-            refs.persistentGoalsContainer.innerHTML = activeIntelCards + activeGoalCards;
+            const persistentSig = activeIntelCards + "::" + activeGoalCards;
+            if (refs.persistentGoalsContainer.dataset.signature !== persistentSig) {
+                refs.persistentGoalsContainer.innerHTML = activeIntelCards + activeGoalCards;
+                refs.persistentGoalsContainer.dataset.signature = persistentSig;
+            }
         }
-        setText(refs.alertSubtitle, alerts.length ? "Immediate operator actions" : "Live monitoring · no intervention required");
-        if (refs.alertCount) setText(refs.alertCount, alerts.length + (alerts.length === 1 ? " ACTIVE SIGNAL" : " ACTIVE SIGNALS"));
+        const unackIntelCount = (intelligenceEngine ? intelligenceEngine.activeAlerts : []).filter(function (a) {
+            return !a.acknowledged && a.category !== "SALES_GOAL";
+        }).length;
+        const totalActiveSignals = alerts.length + unackIntelCount + (state.persistentGoalAlerts || []).filter(function (a) {
+            return !state.acknowledgedGoalAlerts.has(a.id);
+        }).length;
+        setText(refs.alertSubtitle, totalActiveSignals ? "Immediate operator actions" : "Live monitoring · no intervention required");
+        if (refs.alertCount) setText(refs.alertCount, totalActiveSignals + (totalActiveSignals === 1 ? " ACTIVE SIGNAL" : " ACTIVE SIGNALS"));
         const signature = alerts.map(function (a) { return [a.conditionKey, a.severity, a.message, a.action].join("|"); }).join("::");
         if (signature === refs.alerts.dataset.signature) return;
         refs.alerts.dataset.signature = signature;
@@ -7390,24 +7425,28 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
         return map;
     }
 
-    function isCampaignSelected(campaign, selectedSet, index) {
+    function isCampaignSelected(campaign, selectedSet) {
         if (!campaign || !selectedSet || !(selectedSet instanceof Set) || selectedSet.size === 0) return false;
         if (campaign.rawId && selectedSet.has(String(campaign.rawId).trim())) return true;
         if (campaign.id && selectedSet.has(String(campaign.id).trim())) return true;
         if (campaign.__id && selectedSet.has(String(campaign.__id).trim())) return true;
         const name = String(campaign.name || "").trim().toLowerCase();
         if (name && selectedSet.has(name)) return true;
-        if (typeof index === "number" && selectedSet.has("campaign-" + index)) return true;
+        for (const item of selectedSet) {
+            if (name && item.toLowerCase() === name) return true;
+            if (campaign.rawId && item === String(campaign.rawId).trim()) return true;
+            if (campaign.id && item === String(campaign.id).trim()) return true;
+        }
         return false;
     }
 
-    function campaignId(campaign, index) {
+    function campaignId(campaign) {
         if (campaign) {
             const rawId = campaign.rawId || campaign.id;
             if (rawId && String(rawId).trim()) {
                 return String(rawId).trim();
             }
-            if (campaign.__id && String(campaign.__id).trim()) {
+            if (campaign.__id && String(campaign.__id).trim() && !String(campaign.__id).startsWith("campaign-")) {
                 return String(campaign.__id).trim();
             }
             const name = String(campaign.name || "").trim();
@@ -7415,7 +7454,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
                 return name.toLowerCase();
             }
         }
-        return typeof index === "number" ? ("campaign-" + index) : "campaign-unknown";
+        return "";
     }
 
     function utilizationPercent(loggedIn, onCall) {
@@ -7557,27 +7596,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");
 
 // Verified Change History removed from dashboard per directive
 
-        // Data Health
-        if (refs.lfiHealthDialer) setText(refs.lfiHealthDialer, health.dialer || "—");
-        if (refs.lfiHealthFreshness) setText(refs.lfiHealthFreshness, health.inventoryFreshness || "Waiting…");
-        if (refs.lfiHealthStale) setText(refs.lfiHealthStale, String(health.staleCount || 0));
-        if (refs.lfiHealthMissing) setText(refs.lfiHealthMissing, String(health.missingVerificationCount || 0));
-
-        if (refs.lfiDataHealthPill) {
-            if (health.staleCount > 0) {
-                setText(refs.lfiDataHealthPill, "ATTENTION (STALE RECORDS)");
-                setClass(refs.lfiDataHealthPill, "ct-lfi-status-pill is-warning");
-            } else if (health.missingVerificationCount > 0) {
-                setText(refs.lfiDataHealthPill, "PENDING VERIFICATION");
-                setClass(refs.lfiDataHealthPill, "ct-lfi-status-pill is-warning");
-            } else if (health.hasInventory) {
-                setText(refs.lfiDataHealthPill, "OPTIMAL");
-                setClass(refs.lfiDataHealthPill, "ct-lfi-status-pill is-healthy");
-            } else {
-                setText(refs.lfiDataHealthPill, "AWAITING INVENTORY");
-                setClass(refs.lfiDataHealthPill, "ct-lfi-status-pill is-neutral");
-            }
-        }
+        // Data Health section removed from dashboard per directive
     }
 
     function updateInboundPanel() {

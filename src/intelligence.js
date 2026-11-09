@@ -1,5 +1,5 @@
 // ===============================================================================
-// CT DATA CHANGE INTELLIGENCE ENGINE (v11.3.0)
+// CT DATA CHANGE INTELLIGENCE ENGINE (v11.3.7)
 // Independent Bidirectional Metric Anomaly & Event Detection Engine
 // Strictly Read-Only DOM Observation & Persistent Multi-Dialer Intelligence
 // ===============================================================================
@@ -1208,11 +1208,34 @@
         }
 
         /**
+         * Clears all currently dismissible (non-goal) active alerts.
+         * Moves them to acknowledged archive and removes them from active display.
+         * Preserves SALES_GOAL alerts which strictly require manual [NOTED].
+         */
+        clearAllDismissibleAlerts() {
+            const nowTime = new Date().toLocaleTimeString();
+            const dismissible = this.activeAlerts.filter(a => a.category !== "SALES_GOAL");
+            dismissible.forEach(alert => {
+                alert.acknowledged = true;
+                alert.acknowledgedAt = nowTime;
+                const hist = this.history.find(h => h.id === alert.id);
+                if (hist) {
+                    hist.acknowledged = true;
+                    hist.acknowledgedAt = nowTime;
+                }
+            });
+            // Keep only unacknowledged SALES_GOAL alerts
+            this.activeAlerts = this.activeAlerts.filter(a => a.category === "SALES_GOAL" && !a.acknowledged);
+            this.saveState();
+            return this.activeAlerts;
+        }
+
+        /**
          * Clears transient non-persistent alerts.
          * In strict compliance with Rule 7, ALL Intelligence Alerts remain active until NOTED!
          */
         clearActionCenterPreservingIntelligence() {
-            // Intelligence alerts are NEVER auto-dismissed by Clear All.
+            // Backward-compatible method: preserves active intelligence alerts
             return this.activeAlerts;
         }
 

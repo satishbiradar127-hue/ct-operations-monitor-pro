@@ -1,4 +1,4 @@
-console.log("CT Operations Monitor parser loaded (EAST-3) — v11.3.6");
+console.log("CT Operations Monitor parser loaded (EAST-3) — v11.3.7");
 
 const CT_ACTIVE_IMAGE_STATE_CACHE = new Map();
 

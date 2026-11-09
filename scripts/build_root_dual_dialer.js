@@ -18,8 +18,8 @@ fs.copyFileSync(path.join(e2Dir, "helpers.js"), path.join(rootDir, "helpers.js")
 // 2. Parser
 let parserCode = fs.readFileSync(path.join(e2Dir, "parser.js"), "utf8");
 parserCode = parserCode.replace(
-    'console.log("CT Operations Monitor parser loaded (EAST-2) — v11.3.6");',
-    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor parser loaded (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — v11.3.6");'
+    'console.log("CT Operations Monitor parser loaded (EAST-2) — v11.3.7");',
+    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor parser loaded (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — v11.3.7");'
 );
 parserCode = parserCode.replace(
     'const regKey = "ct_east2_verified_campaign_filters_v1";',
@@ -50,8 +50,8 @@ fs.writeFileSync(path.join(rootDir, "dashboard.css"), combinedCss, "utf8");
 // 5. Content.js: Dynamic host & event resolution
 let contentCode = fs.readFileSync(path.join(e2Dir, "content.js"), "utf8");
 contentCode = contentCode.replace(
-    'console.log("CT Operations Monitor (EAST-2) — Production live feed controller v11.3.6");',
-    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.6");'
+    'console.log("CT Operations Monitor (EAST-2) — Production live feed controller v11.3.7");',
+    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.7");'
 );
 contentCode = contentCode.replace('const TARGET_HOST = "east-2.calltools.io";', 'const TARGET_HOST = isEast3 ? "east-3.calltools.io" : "east-2.calltools.io";');
 contentCode = contentCode.replace('const EDITION = "EAST-2";', 'const EDITION = isEast3 ? "EAST-3" : "EAST-2";');
@@ -79,8 +79,8 @@ fs.writeFileSync(path.join(rootDir, "content.js"), contentCode, "utf8");
 // 6. Dashboard.js: Dynamic host, namespace & event resolution
 let dashCode = fs.readFileSync(path.join(e2Dir, "dashboard.js"), "utf8");
 dashCode = dashCode.replace(
-    'console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.6");',
-    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAST-3" : "EAST-2") + ") v11.3.6");'
+    'console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.7");',
+    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAST-3" : "EAST-2") + ") v11.3.7");'
 );
 dashCode = dashCode.replace('const TARGET_HOST = "east-2.calltools.io";', 'const TARGET_HOST = isEast3 ? "east-3.calltools.io" : "east-2.calltools.io";');
 dashCode = dashCode.replace('const EDITION = "EAST-2";', 'const EDITION = isEast3 ? "EAST-3" : "EAST-2";');
@@ -136,7 +136,7 @@ fs.writeFileSync(path.join(rootDir, "dashboard.js"), dashCode, "utf8");
 const rootManifest = {
     "manifest_version": 3,
     "name": "CT Operations Monitor — Dual-Dialer (East-2 / East-3)",
-    "version": "11.3.6",
+    "version": "11.3.7",
     "description": "CallTools Operations Monitor Pro — unified outbound Campaigns + inbound Queue command center with persistent Sales/Goals alerts, native Queue DOM bridge, and CT Data Change Intelligence Engine.",
     "permissions": [
         "storage"
@@ -171,4 +171,4 @@ const rootManifest = {
 };
 fs.writeFileSync(path.join(rootDir, "manifest.json"), JSON.stringify(rootManifest, null, 2), "utf8");
 
-console.log("Root workspace successfully built with v11.3.6 Dual-Dialer support!");
+console.log("Root workspace successfully built with v11.3.7 Dual-Dialer support!");

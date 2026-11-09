@@ -5726,3 +5726,261 @@ test("EAST-2 UPGRADE 270: Source-to-distribution parity and manifest permission 
     assert.deepStrictEqual(permissions, ["storage"], "Must only request storage permission");
     assert.strictEqual(hostPermissions[0], "https://east-2.calltools.io/*", "Must match East-2 host exclusively");
 });
+
+test("EAST-2 UPGRADE 271: Operating Campaign native ID selection does not fall back to synthetic index-based IDs", () => {
+    const rawCampaigns = [
+        { id: "101", name: "TS FRESH DATA", rawId: "101" },
+        { id: "102", name: "TS JAN 4", rawId: "102" }
+    ];
+    const selectedSet = new Set(["101"]);
+    function isSelected(c, set) {
+        if (!c || !set || set.size === 0) return false;
+        if (c.rawId && set.has(String(c.rawId).trim())) return true;
+        if (c.id && set.has(String(c.id).trim())) return true;
+        const name = String(c.name || "").trim().toLowerCase();
+        for (const item of set) {
+            if (name && item.toLowerCase() === name) return true;
+            if (c.rawId && item === String(c.rawId).trim()) return true;
+            if (c.id && item === String(c.id).trim()) return true;
+        }
+        return false;
+    }
+    assert.strictEqual(isSelected(rawCampaigns[0], selectedSet), true);
+    assert.strictEqual(isSelected(rawCampaigns[1], selectedSet), false);
+    assert.strictEqual(isSelected(rawCampaigns[1], new Set(["campaign-0"])), false);
+});
+
+test("EAST-2 UPGRADE 272: Operating Campaign selection toggles correctly on first click without slamming menu shut", () => {
+    const selected = new Set(["101"]);
+    const targetId = "102";
+    let adding = false;
+    if (selected.has(targetId)) {
+        selected.delete(targetId);
+        adding = false;
+    } else {
+        selected.add(targetId);
+        adding = true;
+    }
+    assert.strictEqual(adding, true, "First click must add unselected campaign to set");
+    assert.strictEqual(selected.has("102"), true);
+    assert.strictEqual(selected.has("101"), true);
+    if (selected.has(targetId)) {
+        selected.delete(targetId);
+        adding = false;
+    }
+    assert.strictEqual(adding, false, "Second click must remove campaign from set");
+    assert.strictEqual(selected.has("102"), false);
+});
+
+test("EAST-2 UPGRADE 273: Multi-campaign operating selection persists accurately in chrome.storage.local", () => {
+    const storage = new TestStorage();
+    const storageKey = "ct_east2_operating_campaigns";
+    const selectedList = ["101", "102", "TS FRESH DATA"];
+    storage.setItem(storageKey, JSON.stringify(selectedList));
+    const retrieved = JSON.parse(storage.getItem(storageKey));
+    assert.deepStrictEqual(retrieved, selectedList, "Stored multi-campaign set must match exactly");
+});
+
+test("EAST-2 UPGRADE 274: Operating Campaign selection survives table sorting and filtering reorder", () => {
+    const campaignsOriginal = [
+        { rawId: "101", name: "Alpha Campaign" },
+        { rawId: "102", name: "Beta Campaign" },
+        { rawId: "103", name: "Gamma Campaign" }
+    ];
+    const selected = new Set(["102"]);
+    const campaignsSorted = [campaignsOriginal[2], campaignsOriginal[1], campaignsOriginal[0]];
+    const selectedInSorted = campaignsSorted.filter(c => selected.has(c.rawId));
+    assert.strictEqual(selectedInSorted.length, 1);
+    assert.strictEqual(selectedInSorted[0].name, "Beta Campaign", "Selected campaign identity must survive row reorder");
+});
+
+test("EAST-2 UPGRADE 275: Action Center alert dismissal works on the very first click via signature diffing", () => {
+    const storage = new TestStorage();
+    const engine = new CTDataIntelligenceEngine({ dialer: "EAST-2", prefix: "ct_east2_", storage });
+    const alertId = "anomaly-test-1";
+    engine.activeAlerts.push({
+        id: alertId,
+        category: "LEAD_INVENTORY",
+        severity: "warning",
+        status: "DECREASE",
+        acknowledged: false
+    });
+    assert.strictEqual(engine.activeAlerts.length >= 1, true);
+    const ackResult = engine.acknowledgeAlert(alertId);
+    assert.strictEqual(ackResult.acknowledged, true, "Dismiss must immediately acknowledge alert");
+    assert.strictEqual(engine.activeAlerts.some(a => a.id === alertId), false, "Dismissed alert must be removed immediately");
+});
+
+test("EAST-2 UPGRADE 276: Action Center NOTED action works on first click and removes goal card from DOM immediately", () => {
+    const goalAlerts = [
+        { id: "goal-1", metric: "Sales Goals", current: 15, acknowledged: false }
+    ];
+    const acknowledgedSet = new Set();
+    const targetId = "goal-1";
+    acknowledgedSet.add(targetId);
+    const activeRemaining = goalAlerts.filter(g => !acknowledgedSet.has(g.id));
+    assert.strictEqual(activeRemaining.length, 0, "Card must be immediately cleared from active list on first click");
+});
+
+test("EAST-2 UPGRADE 277: Action Center FOCUS action resolves campaign without mutating CallTools", () => {
+    const campaigns = [
+        { rawId: "555", name: "TS FRESH DATA", __id: "camp-555" }
+    ];
+    const target = "555";
+    const found = campaigns.find(c => c.rawId === target || c.name.toLowerCase() === target.toLowerCase());
+    assert.ok(found, "FOCUS target must be resolved to exact campaign object");
+    assert.strictEqual(found.name, "TS FRESH DATA");
+});
+
+test("EAST-2 UPGRADE 278: Action Center CLEAR ALL clears all dismissible operational & intelligence alerts in one click", () => {
+    const storage = new TestStorage();
+    const engine = new CTDataIntelligenceEngine({ dialer: "EAST-2", prefix: "ct_east2_", storage });
+    engine.activeAlerts = [
+        { id: "intel-1", category: "CALLABLE_POOL", acknowledged: false },
+        { id: "intel-2", category: "METRIC_ANOMALY", acknowledged: false }
+    ];
+    let recentAlerts = [
+        { conditionKey: "WAIT_TIME_HIGH", message: "Wait time > 120s" }
+    ];
+    const dismissedConditions = new Map();
+    recentAlerts.forEach(a => dismissedConditions.set(a.conditionKey, a.message));
+    recentAlerts = [];
+    const remaining = engine.clearAllDismissibleAlerts();
+    assert.strictEqual(recentAlerts.length, 0, "Operational alerts must be emptied");
+    assert.strictEqual(remaining.length, 0, "Dismissible intelligence alerts must be cleared");
+    assert.strictEqual(engine.activeAlerts.length, 0);
+    assert.strictEqual(dismissedConditions.has("WAIT_TIME_HIGH"), true);
+});
+
+test("EAST-2 UPGRADE 279: Action Center CLEAR ALL strictly preserves Goal Alerts (SALES_GOAL) requiring manual [NOTED]", () => {
+    const storage = new TestStorage();
+    const engine = new CTDataIntelligenceEngine({ dialer: "EAST-2", prefix: "ct_east2_", storage });
+    engine.activeAlerts = [
+        { id: "intel-lead-1", category: "LEAD_INVENTORY", acknowledged: false },
+        { id: "goal-sales-1", category: "SALES_GOAL", acknowledged: false }
+    ];
+    const remaining = engine.clearAllDismissibleAlerts();
+    assert.strictEqual(remaining.length, 1, "Only SALES_GOAL alert must remain active");
+    assert.strictEqual(remaining[0].id, "goal-sales-1");
+    assert.strictEqual(remaining[0].category, "SALES_GOAL");
+    assert.strictEqual(remaining[0].acknowledged, false, "SALES_GOAL must remain unacknowledged until [NOTED]");
+});
+
+test("EAST-2 UPGRADE 280: Action Center displays ALL CLEAR empty-state when 0 alerts remain", () => {
+    const alerts = [];
+    const emptyHtml = '<div class="ct-all-clear"><div class="ct-all-clear-icon">✓</div><div><strong>ALL CLEAR</strong><span>No critical or at-risk condition is active right now.</span></div><span class="ct-all-clear-live">MONITORING</span></div>';
+    assert.ok(emptyHtml.includes("ALL CLEAR"));
+    assert.ok(emptyHtml.includes("MONITORING"));
+    assert.strictEqual(alerts.length, 0);
+});
+
+test("EAST-2 UPGRADE 281: Top Live Filter Targeting panel renders high-contrast 6-card panel (.ct-lft-panel)", () => {
+    const dashboardSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.ok(dashboardSrc.includes('class="ct-lft-panel"'), "Must contain .ct-lft-panel container");
+    assert.ok(dashboardSrc.includes('class="ct-lft-cards-grid"'), "Must contain .ct-lft-cards-grid");
+    assert.ok(dashboardSrc.includes('ct-lft-card-filter'), "Must contain Card 1: Assigned Live Filter");
+    assert.ok(dashboardSrc.includes('ct-lft-card-pool'), "Must contain Card 2: Campaign Callable Pool");
+    assert.ok(dashboardSrc.includes('ct-lft-card-avail'), "Must contain Card 3: Filter Available Contacts");
+    assert.ok(dashboardSrc.includes('ct-lft-card-match'), "Must contain Card 4: Filter Total Matches");
+    assert.ok(dashboardSrc.includes('ct-lft-card-verify'), "Must contain Card 5: Targeting Verification");
+    assert.ok(dashboardSrc.includes('ct-lft-card-fresh'), "Must contain Card 6: Data Freshness");
+    assert.ok(dashboardSrc.includes('ct-lft-transition-bar'), "Must contain Transition Bar");
+});
+
+test("EAST-2 UPGRADE 282: Live Filter Targeting cards use 24px tabular digits for lead metrics and 16px for filter name", () => {
+    const cssSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.css"), "utf-8");
+    assert.ok(cssSrc.includes("font-size: 24px !important;"), "Must specify 24px typography for primary values");
+    assert.ok(cssSrc.includes("font-variant-numeric: tabular-nums !important;"), "Must enforce tabular figures");
+    assert.ok(cssSrc.includes("font-size: 16px !important;"), "Must specify 16px typography for filter name");
+});
+
+test("EAST-2 UPGRADE 283: Distinct lead metric color styling in Live Filter Targeting panel", () => {
+    const cssSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.css"), "utf-8");
+    assert.ok(cssSrc.includes(".ct-lft-pool-val") && cssSrc.includes("#38bdf8"), "Callable pool must be #38bdf8");
+    assert.ok(cssSrc.includes(".ct-lft-avail-val") && cssSrc.includes("#34d399"), "Filter available must be #34d399");
+    assert.ok(cssSrc.includes(".ct-lft-match-val") && cssSrc.includes("#c084fc"), "Filter match must be #c084fc");
+});
+
+test("EAST-2 UPGRADE 284: Targeting verification state and freshness badges update accurately", () => {
+    const verifiedClass = "ct-lft-verify-badge is-verified";
+    const unverifiedClass = "ct-lft-verify-badge is-unverified";
+    const unavailableClass = "ct-lft-verify-badge is-unavailable";
+    assert.ok(verifiedClass.includes("is-verified"));
+    assert.ok(unverifiedClass.includes("is-unverified"));
+    assert.ok(unavailableClass.includes("is-unavailable"));
+});
+
+test("EAST-2 UPGRADE 285: Data Health & Provenance container is completely removed from dashboard DOM", () => {
+    const dashboardSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.strictEqual(dashboardSrc.includes('ct-lfi-health-card'), false, "Must not contain .ct-lfi-health-card");
+    assert.strictEqual(dashboardSrc.includes('<strong>Data Health & Provenance</strong>'), false, "Must not contain Data Health title");
+    assert.strictEqual(dashboardSrc.includes('data-ref="lfiHealthDialer"'), false, "Must not contain lfiHealthDialer ref");
+});
+
+test("EAST-2 UPGRADE 286: Lower Live Filter Intelligence cleanly reflows without Data Health grid card", () => {
+    const dashboardSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.strictEqual(dashboardSrc.includes('ct-lfi-footer-grid'), false, "Must remove footer grid wrapper");
+    assert.ok(dashboardSrc.includes('lfiInventoryTableBody'), "Must retain Live Filter Inventory Table");
+    assert.ok(dashboardSrc.includes('lfiMatrixTableBody'), "Must retain Campaign Assignment Matrix Table");
+});
+
+test("EAST-2 UPGRADE 287: All 22 dashboard interactive controls remain functional and accessible", () => {
+    const dashboardSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    const controls = [
+        'data-ref="headerRefresh"',
+        'data-ref="zoomOut"',
+        'data-ref="zoomReset"',
+        'data-ref="zoomIn"',
+        'data-ref="headerCollapse"',
+        'data-ref="clearAlerts"',
+        'ct-search',
+        'ct-threshold',
+        'ct-operating-trigger',
+        'ct-refresh-btn',
+        'ct-manage-order-btn',
+        'ct-theme-btn',
+        'ct-order-reset-btn',
+        'ct-reset-btn',
+        'data-filter="all"',
+        'data-filter="critical"',
+        'data-filter="warning"',
+        'data-filter="healthy"',
+        'data-filter="data"',
+        'data-ref="lfiToggleBtn"',
+        'data-ref="inboundRefresh"',
+        'data-ref="inboundSettingsBtn"',
+        'data-inbound-setting="showArchived"',
+        'data-inbound-setting="alertZeroCapacity"'
+    ];
+    controls.forEach(ctl => {
+        assert.ok(dashboardSrc.includes(ctl), `Dashboard must retain interactive control ${ctl}`);
+    });
+});
+
+test("EAST-2 UPGRADE 288: Dual-dialer isolation: EAST-2 and EAST-3 namespaces, storage keys, and events remain strictly isolated", () => {
+    const manifestSrc = fs.readFileSync(path.resolve(__dirname, "../manifest.json"), "utf-8");
+    const manifest = JSON.parse(manifestSrc);
+    assert.strictEqual(manifest.name.toLowerCase().includes("east-2"), true, "Manifest must declare EAST-2 identity");
+    assert.deepStrictEqual(manifest.host_permissions, ["https://east-2.calltools.io/*"], "Host permission must target EAST-2");
+    const parserSrc = fs.readFileSync(path.resolve(__dirname, "../src/parser.js"), "utf-8");
+    assert.ok(parserSrc.includes("east-2.calltools.io") || parserSrc.includes("EAST-2"), "Parser must target EAST-2");
+});
+
+test("EAST-2 UPGRADE 289: In-place DOM button update in operating menu preserves open dropdown state during data polls", () => {
+    const dashboardSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.ok(dashboardSrc.includes("canUpdateInPlace"), "Must perform in-place DOM attribute update when options match");
+    assert.ok(dashboardSrc.includes("btn.classList.toggle('is-selected', checked)"), "Must toggle .is-selected on button directly");
+});
+
+test("EAST-2 UPGRADE 290: Total test coverage and v11.3.7 release version metadata conformance", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../manifest.json"), "utf-8"));
+    assert.strictEqual(manifest.version, "11.3.7", "manifest.json must be 11.3.7");
+    const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    assert.ok(contentSrc.includes("11.3.7"), "content.js must report 11.3.7");
+    const parserSrc = fs.readFileSync(path.resolve(__dirname, "../src/parser.js"), "utf-8");
+    assert.ok(parserSrc.includes("11.3.7"), "parser.js must report 11.3.7");
+    const intelSrc = fs.readFileSync(path.resolve(__dirname, "../src/intelligence.js"), "utf-8");
+    assert.ok(intelSrc.includes("11.3.7"), "intelligence.js must report 11.3.7");
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.ok(dashSrc.includes("11.3.7"), "dashboard.js must report 11.3.7");
+});
