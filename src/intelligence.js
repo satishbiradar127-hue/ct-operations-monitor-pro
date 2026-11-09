@@ -1235,9 +1235,10 @@
 
             const items = inventory.items || {};
             const filterList = Object.values(items);
-            const totalFilters = filterList.length;
-            const activeFilters = filterList.filter(f => f.active === true || f.active === "true" || String(f.active).toLowerCase() === "true").length;
-            const totalContacts = filterList.reduce((sum, f) => sum + (Number(f.count) || 0), 0);
+            const hasInventory = filterList.length > 0 && Boolean(inventory.lastObservedAt);
+            const totalFilters = hasInventory ? filterList.length : null;
+            const activeFilters = hasInventory ? filterList.filter(f => f.active === true || f.active === "true" || String(f.active).toLowerCase() === "true").length : null;
+            const totalContacts = hasInventory ? filterList.reduce((sum, f) => sum + (Number(f.count) || 0), 0) : null;
 
             // Campaign evaluation
             const campaigns = (stats && Array.isArray(stats.campaigns)) ? stats.campaigns : [];
@@ -1249,17 +1250,24 @@
             const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
             const matrix = campaigns.map((c, idx) => {
-                const cid = String(c.id || c.__id || `campaign-${idx}`);
-                const cName = String(c.name || c.__name || `Campaign ${cid}`).trim();
-                const agents = Number(c.agents ?? c.__agents ?? 0);
+                // Strict Real ID: Never fabricate synthetic campaign-0
+                const realId = (c.id && String(c.id).trim() !== "") ? String(c.id).trim() :
+                               (c.rawId && String(c.rawId).trim() !== "") ? String(c.rawId).trim() :
+                               (c.__id && !String(c.__id).startsWith("campaign-") ? String(c.__id).trim() : null);
+                const displayId = realId || "Awaiting ID";
+                const cName = String(c.name || c.__name || (realId ? `Campaign ${realId}` : "Unnamed Campaign")).trim();
+
+                // Robust running state calculation
+                const agents = Number(c.loggedIn ?? c.__loggedIn ?? c._metrics?.loggedIn?.value ?? c.agents ?? c.__agents ?? 0);
                 const rawState = String(c.state || c.__state || "").trim().toUpperCase();
-                const isRunning = rawState === "ACTIVE" || rawState === "RUNNING" || agents > 0;
+                const isActiveBool = c.active === true || c.__active === true || c.__operational === true;
+                const isRunning = isActiveBool || rawState === "ACTIVE" || rawState === "RUNNING" || agents > 0;
                 if (isRunning) runningCampaignsCount++;
 
-                // Lookup verified assignment by ID first, then name
+                // Lookup verified assignment by real ID first, then name
                 let entry = null;
-                if (cid && verifiedRegistry[cid]) {
-                    entry = verifiedRegistry[cid];
+                if (realId && verifiedRegistry[realId]) {
+                    entry = verifiedRegistry[realId];
                 } else if (cName) {
                     if (verifiedRegistry[cName]) {
                         entry = verifiedRegistry[cName];
@@ -1322,21 +1330,30 @@
                     }
                 }
 
+                const leadsVal = (c.contacts && typeof c.contacts === "object" && c.contacts.value !== undefined) ? c.contacts.value :
+                                 (c._metrics && c._metrics.contacts && c._metrics.contacts.value !== undefined) ? c._metrics.contacts.value :
+                                 (c.contacts !== undefined && c.contacts !== null && c.contacts !== "" && !isNaN(Number(c.contacts))) ? Number(c.contacts) :
+                                 (c.contactCount !== undefined ? c.contactCount : null);
+
                 return {
-                    campaignId: cid,
+                    campaignId: displayId,
+                    rawId: realId,
                     campaignName: cName,
-                    state: isRunning ? "RUNNING" : (rawState || "IDLE"),
+                    state: isRunning ? (agents > 0 ? "RUNNING" : "ACTIVE") : (isActiveBool ? "ACTIVE" : (rawState || "IDLE")),
                     assignedFilter: hasFilter ? assignedFilter : (assignedFilter === "None" ? "None Assigned" : "Filter Unavailable"),
                     filterId: filterId,
-                    verification: verification,
+                    leadList: c.leadList || "UNAVAILABLE",
+                    verification: !realId && verification.startsWith("DOM_UNAVAILABLE") ? "UNVERIFIED_DOM (Awaiting ID)" : verification,
                     usageStatus: usageStatus,
                     lastObserved: observationTime,
+                    lastRefill: "Not exposed by available source",
                     agents: agents,
-                    leads: c.contactCount || c.liveLeads || 0
+                    leads: leadsVal !== null ? leadsVal : "UNAVAILABLE",
+                    dialer: this.dialer
                 };
             });
 
-            let inventoryFreshness = "No inventory recorded";
+            let inventoryFreshness = "Awaiting observation (/manager/live-filters)";
             if (inventory.lastObservedAt) {
                 const diffSec = Math.floor((now - inventory.lastObservedAt) / 1000);
                 if (diffSec < 60) inventoryFreshness = `Fresh (${diffSec}s ago)`;
@@ -1354,24 +1371,54 @@
                 },
                 inventory: filterList.map(f => ({
                     id: f.id,
+                    rawId: f.rawId || null,
                     name: f.name,
                     status: (f.active === true || f.active === "true" || String(f.active).toLowerCase() === "true") ? "ACTIVE" : "INACTIVE",
                     count: Number(f.count) || 0,
                     totalCount: Number(f.totalCount) || Number(f.count) || 0,
                     dialer: this.dialer,
-                    observedAt: f.observedAt
+                    observedAt: f.observedAt,
+                    lastRefill: "Not exposed by available source"
                 })),
                 assignmentMatrix: matrix,
                 changeHistory: (this.liveFilterChangeHistory || []).slice(0, 20),
                 health: {
                     dialer: this.dialer,
                     inventoryFreshness,
-                    lastObservedAt: inventory.lastObservedAt,
+                    lastObservedAt: inventory.lastObservedAt || null,
                     staleCount,
                     missingVerificationCount,
-                    hasInventory: totalFilters > 0
+                    hasInventory: hasInventory,
+                    inventoryStatus: hasInventory ? "OBSERVED" : "AWAITING_OBSERVATION",
+                    missingPages: hasInventory ? [] : ["/manager/live-filters"]
                 }
             };
+        }
+
+        getRefreshHistory() {
+            try {
+                const raw = this.storage ? this.storage.getItem(this.prefix + "refresh_history_v1") : null;
+                return raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        recordRefreshResult(record) {
+            try {
+                const history = this.getRefreshHistory();
+                history.unshift(Object.assign({
+                    timestamp: Date.now(),
+                    dialer: this.dialer
+                }, record));
+                const trimmed = history.slice(0, 30);
+                if (this.storage) {
+                    this.storage.setItem(this.prefix + "refresh_history_v1", JSON.stringify(trimmed));
+                }
+                return trimmed;
+            } catch (e) {
+                return [];
+            }
         }
     }
 

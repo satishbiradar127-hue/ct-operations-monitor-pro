@@ -612,3 +612,35 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Operating campaign absolute dropdown */
+.ct-operating-wrap {
+    position: relative !important;
+    display: inline-flex;
+    align-items: center;
+}
+
+.ct-operating-menu {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    min-width: 340px !important;
+    max-width: 420px !important;
+    max-height: min(420px, 70vh) !important;
+    overflow-y: auto !important;
+    z-index: 100000 !important;
+}
+
+/* Refresh Button State */
+.ct-refresh-btn.is-refreshing {
+    opacity: 0.7;
+    cursor: wait;
+    pointer-events: none;
+}
+@keyframes ct-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.ct-refresh-btn.is-refreshing::before {
+    animation: ct-spin 1s linear infinite !important;
+}

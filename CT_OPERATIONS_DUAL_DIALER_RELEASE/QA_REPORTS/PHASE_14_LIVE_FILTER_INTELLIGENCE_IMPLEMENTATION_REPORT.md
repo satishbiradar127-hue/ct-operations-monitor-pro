@@ -200,3 +200,4 @@ Checksum master reference: [SHA256SUMS.txt](file:///C:/Users/Orange%20Carrot/Dow
    - If a filter is swapped on a campaign, the 2-cycle confirmation engine validates the change across two observations before triggering an alert and recording it in the Verified Change History log.
 4. **Dashboard Controls:**
    - The Live Filter Intelligence section can be collapsed or expanded via the header chevron button. The collapsed state is persisted across page refreshes.
+

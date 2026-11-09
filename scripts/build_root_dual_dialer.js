@@ -18,8 +18,8 @@ fs.copyFileSync(path.join(e2Dir, "helpers.js"), path.join(rootDir, "helpers.js")
 // 2. Parser
 let parserCode = fs.readFileSync(path.join(e2Dir, "parser.js"), "utf8");
 parserCode = parserCode.replace(
-    'console.log("CT Operations Monitor parser loaded (EAST-2) — v11.3.3");',
-    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor parser loaded (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — v11.3.3");'
+    'console.log("CT Operations Monitor parser loaded (EAST-2) — v11.3.4");',
+    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor parser loaded (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — v11.3.4");'
 );
 parserCode = parserCode.replace(
     'const regKey = "ct_east2_verified_campaign_filters_v1";',
@@ -50,8 +50,8 @@ fs.writeFileSync(path.join(rootDir, "dashboard.css"), combinedCss, "utf8");
 // 5. Content.js: Dynamic host & event resolution
 let contentCode = fs.readFileSync(path.join(e2Dir, "content.js"), "utf8");
 contentCode = contentCode.replace(
-    'console.log("CT Operations Monitor (EAST-2) — Production live feed controller v11.3.3");',
-    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.3");'
+    'console.log("CT Operations Monitor (EAST-2) — Production live feed controller v11.3.4");',
+    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("CT Operations Monitor (" + (isEast3 ? "EAST-3" : "EAST-2") + ") — Production live feed controller v11.3.4");'
 );
 contentCode = contentCode.replace('const TARGET_HOST = "east-2.calltools.io";', 'const TARGET_HOST = isEast3 ? "east-3.calltools.io" : "east-2.calltools.io";');
 contentCode = contentCode.replace('const EDITION = "EAST-2";', 'const EDITION = isEast3 ? "EAST-3" : "EAST-2";');
@@ -71,6 +71,7 @@ contentCode = contentCode.replaceAll('"CT_EAST_2_FEED_STATUS"', 'isEast3 ? "CT_E
 contentCode = contentCode.replaceAll('"CT_EAST_2_REFRESH_INBOUND_FEED"', 'isEast3 ? "CT_EAST_3_REFRESH_INBOUND_FEED" : "CT_EAST_2_REFRESH_INBOUND_FEED"');
 contentCode = contentCode.replaceAll('"CT_EAST_2_REQUEST_INBOUND_REFRESH"', 'isEast3 ? "CT_EAST_3_REQUEST_INBOUND_REFRESH" : "CT_EAST_2_REQUEST_INBOUND_REFRESH"');
 contentCode = contentCode.replaceAll('"CT_EAST_2_REQUEST_REFRESH"', 'isEast3 ? "CT_EAST_3_REQUEST_REFRESH" : "CT_EAST_2_REQUEST_REFRESH"');
+contentCode = contentCode.replaceAll('"CT_EAST_2_REFRESH_RESULT"', 'isEast3 ? "CT_EAST_3_REFRESH_RESULT" : "CT_EAST_2_REFRESH_RESULT"');
 
 fs.writeFileSync(path.join(rootSrc, "content.js"), contentCode, "utf8");
 fs.writeFileSync(path.join(rootDir, "content.js"), contentCode, "utf8");
@@ -78,8 +79,8 @@ fs.writeFileSync(path.join(rootDir, "content.js"), contentCode, "utf8");
 // 6. Dashboard.js: Dynamic host, namespace & event resolution
 let dashCode = fs.readFileSync(path.join(e2Dir, "dashboard.js"), "utf8");
 dashCode = dashCode.replace(
-    'console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.3");',
-    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAST-3" : "EAST-2") + ") v11.3.3");'
+    'console.log("Dashboard Loaded — CT Operations Monitor Pro (EAST-2) v11.3.4");',
+    'const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");\nconsole.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAST-3" : "EAST-2") + ") v11.3.4");'
 );
 dashCode = dashCode.replace('const TARGET_HOST = "east-2.calltools.io";', 'const TARGET_HOST = isEast3 ? "east-3.calltools.io" : "east-2.calltools.io";');
 dashCode = dashCode.replace('const EDITION = "EAST-2";', 'const EDITION = isEast3 ? "EAST-3" : "EAST-2";');
@@ -90,7 +91,7 @@ dashCode = dashCode.replace('const STYLE_ID = "ct-operations-dashboard-styles-ea
 dashCode = dashCode.replace('const THEME_KEY = "ct_east2_dashboard_theme";', 'const THEME_KEY = isEast3 ? "ct_east3_dashboard_theme" : "ct_east2_dashboard_theme";');
 dashCode = dashCode.replace('const CONTACT_THRESHOLD_KEY = "ct_east2_contact_threshold";', 'const CONTACT_THRESHOLD_KEY = isEast3 ? "ct_east3_contact_threshold" : "ct_east2_contact_threshold";');
 dashCode = dashCode.replace('const ZOOM_KEY = "ct_east2_dashboard_zoom";', 'const ZOOM_KEY = isEast3 ? "ct_east3_dashboard_zoom" : "ct_east2_dashboard_zoom";');
-dashCode = dashCode.replace('const LAYOUT_KEY = "ct_east2_dashboard_layout_v19";', 'const LAYOUT_KEY = isEast3 ? "ct_east3_dashboard_layout_v19" : "ct_east2_dashboard_layout_v19";');
+dashCode = dashCode.replace('const LAYOUT_KEY = "ct_east2_dashboard_layout_v20";', 'const LAYOUT_KEY = isEast3 ? "ct_east3_dashboard_layout_v20" : "ct_east2_dashboard_layout_v20";');
 dashCode = dashCode.replace('const LAYOUT_VERSION_KEY = "ct_east2_dashboard_layout_version";', 'const LAYOUT_VERSION_KEY = isEast3 ? "ct_east3_dashboard_layout_version" : "ct_east2_dashboard_layout_version";');
 dashCode = dashCode.replace('const POS_X_KEY = "ct_east2_dashboard_pos_x";', 'const POS_X_KEY = isEast3 ? "ct_east3_dashboard_pos_x" : "ct_east2_dashboard_pos_x";');
 dashCode = dashCode.replace('const POS_Y_KEY = "ct_east2_dashboard_pos_y";', 'const POS_Y_KEY = isEast3 ? "ct_east3_dashboard_pos_y" : "ct_east2_dashboard_pos_y";');
@@ -110,6 +111,7 @@ dashCode = dashCode.replace('const DIALER_TAG = "EAST-2";', 'const DIALER_TAG = 
 dashCode = dashCode.replace('const UPDATE_EVENT = "CT_EAST_2_UPDATE";', 'const UPDATE_EVENT = isEast3 ? "CT_EAST_3_UPDATE" : "CT_EAST_2_UPDATE";');
 dashCode = dashCode.replace('const FEED_STATUS_EVENT = "CT_EAST_2_FEED_STATUS";', 'const FEED_STATUS_EVENT = isEast3 ? "CT_EAST_3_FEED_STATUS" : "CT_EAST_2_FEED_STATUS";');
 dashCode = dashCode.replace('const REQUEST_REFRESH_EVENT = "CT_EAST_2_REQUEST_REFRESH";', 'const REQUEST_REFRESH_EVENT = isEast3 ? "CT_EAST_3_REQUEST_REFRESH" : "CT_EAST_2_REQUEST_REFRESH";');
+dashCode = dashCode.replace('const REFRESH_RESULT_EVENT = "CT_EAST_2_REFRESH_RESULT";', 'const REFRESH_RESULT_EVENT = isEast3 ? "CT_EAST_3_REFRESH_RESULT" : "CT_EAST_2_REFRESH_RESULT";');
 dashCode = dashCode.replace('const REQUEST_INBOUND_REFRESH_EVENT = "CT_EAST_2_REQUEST_INBOUND_REFRESH";', 'const REQUEST_INBOUND_REFRESH_EVENT = isEast3 ? "CT_EAST_3_REQUEST_INBOUND_REFRESH" : "CT_EAST_2_REQUEST_INBOUND_REFRESH";');
 dashCode = dashCode.replace('const OPERATING_BASELINE_KEY = "ct_east2_operating_baseline_v1";', 'const OPERATING_BASELINE_KEY = isEast3 ? "ct_east3_operating_baseline_v1" : "ct_east2_operating_baseline_v1";');
 
@@ -134,7 +136,7 @@ fs.writeFileSync(path.join(rootDir, "dashboard.js"), dashCode, "utf8");
 const rootManifest = {
     "manifest_version": 3,
     "name": "CT Operations Monitor — Dual-Dialer (East-2 / East-3)",
-    "version": "11.3.3",
+    "version": "11.3.4",
     "description": "CallTools Operations Monitor Pro — unified outbound Campaigns + inbound Queue command center with persistent Sales/Goals alerts, native Queue DOM bridge, and CT Data Change Intelligence Engine.",
     "permissions": [
         "storage"
@@ -169,4 +171,4 @@ const rootManifest = {
 };
 fs.writeFileSync(path.join(rootDir, "manifest.json"), JSON.stringify(rootManifest, null, 2), "utf8");
 
-console.log("Root workspace successfully built with v11.3.3 Dual-Dialer support!");
+console.log("Root workspace successfully built with v11.3.4 Dual-Dialer support!");

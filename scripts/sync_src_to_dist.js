@@ -13,3 +13,4 @@ const path = require("path");
     fs.copyFileSync(path.join(rootRelease, "manifest.json"), path.join(rootRelease, "dist", "manifest.json"));
     console.log(`Copied ${dialer}/manifest.json -> dist/manifest.json`);
 });
+

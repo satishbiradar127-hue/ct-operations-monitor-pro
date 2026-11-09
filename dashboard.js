@@ -1,5 +1,5 @@
 const isEast3 = typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3");
-console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAST-3" : "EAST-2") + ") v11.3.3");
+console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAST-3" : "EAST-2") + ") v11.3.4");
 
 (function () {
     "use strict";
@@ -26,9 +26,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
     const THEME_KEY = isEast3 ? "ct_east3_dashboard_theme" : "ct_east2_dashboard_theme";
     const CONTACT_THRESHOLD_KEY = isEast3 ? "ct_east3_contact_threshold" : "ct_east2_contact_threshold";
     const ZOOM_KEY = isEast3 ? "ct_east3_dashboard_zoom" : "ct_east2_dashboard_zoom";
-    const LAYOUT_KEY = isEast3 ? "ct_east3_dashboard_layout_v19" : "ct_east2_dashboard_layout_v19";
+    const LAYOUT_KEY = isEast3 ? "ct_east3_dashboard_layout_v20" : "ct_east2_dashboard_layout_v20";
     const LAYOUT_VERSION_KEY = isEast3 ? "ct_east3_dashboard_layout_version" : "ct_east2_dashboard_layout_version";
-    const LAYOUT_VERSION = 19;
+    const LAYOUT_VERSION = 20;
     const SELECTED_CAMPAIGNS_KEY = "ct_east2_selected_campaign_ids_v1";
     const FILTER_STATE_KEY = "ct_east2_campaign_state_filter_v1";
     const FILTER_HEALTH_KEY = "ct_east2_campaign_health_filter_v1";
@@ -58,6 +58,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
     const UPDATE_EVENT = isEast3 ? "CT_EAST_3_UPDATE" : "CT_EAST_2_UPDATE";
     const FEED_STATUS_EVENT = isEast3 ? "CT_EAST_3_FEED_STATUS" : "CT_EAST_2_FEED_STATUS";
     const REQUEST_REFRESH_EVENT = isEast3 ? "CT_EAST_3_REQUEST_REFRESH" : "CT_EAST_2_REQUEST_REFRESH";
+    const REFRESH_RESULT_EVENT = isEast3 ? "CT_EAST_3_REFRESH_RESULT" : "CT_EAST_2_REFRESH_RESULT";
     const REQUEST_INBOUND_REFRESH_EVENT = isEast3 ? "CT_EAST_3_REQUEST_INBOUND_REFRESH" : "CT_EAST_2_REQUEST_INBOUND_REFRESH";
     const INBOUND_HISTORY_WINDOW_MS = 5 * 60 * 1000;
     const INBOUND_TREND_BASELINE_MS = 45 * 1000;
@@ -3584,20 +3585,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + (isEast3 ? "EAS
             event.preventDefault();
             event.stopPropagation();
             const willOpen = refs.operatingMenu.hidden;
+            refs.operatingMenu.hidden = !willOpen;
+            refs.operatingTrigger.setAttribute("aria-expanded", String(willOpen));
             if (willOpen) {
-                const rect = refs.operatingTrigger.getBoundingClientRect();
-                refs.operatingMenu.style.position = "fixed";
-                refs.operatingMenu.style.top = Math.round(rect.bottom + 4) + "px";
-                refs.operatingMenu.style.left = Math.max(10, Math.min(window.innerWidth - 360, Math.round(rect.left))) + "px";
-                refs.operatingMenu.style.width = "340px";
-                refs.operatingMenu.style.maxHeight = "min(420px, 80vh)";
-                refs.operatingMenu.style.zIndex = "1000000";
-                refs.operatingMenu.hidden = false;
-                refs.operatingTrigger.setAttribute("aria-expanded", "true");
                 updateOperatingSelect(state.campaigns);
-            } else {
-                refs.operatingMenu.hidden = true;
-                refs.operatingTrigger.setAttribute("aria-expanded", "false");
             }
         });
         refs.operatingMenu.addEventListener("click", function (event) {

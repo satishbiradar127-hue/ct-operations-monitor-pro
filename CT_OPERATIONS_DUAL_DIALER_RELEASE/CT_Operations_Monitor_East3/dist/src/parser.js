@@ -1,4 +1,4 @@
-console.log("CT Operations Monitor parser loaded (EAST-3) — v11.3.3");
+console.log("CT Operations Monitor parser loaded (EAST-3) — v11.3.4");
 
 const CT_ACTIVE_IMAGE_STATE_CACHE = new Map();
 
@@ -612,20 +612,41 @@ window.CTParser = {
         const parse = this.parseMetricRecord.bind(this);
 
         return rows.map((row, index) => {
-            const idNode = row.querySelector(
-                '[data-campaign-id], [data-id], [data-campaignid], [data-campaign-id]'
-            );
-            let id = idNode
-                ? (idNode.getAttribute("data-campaign-id") || idNode.getAttribute("data-id") || idNode.getAttribute("data-campaignid"))
-                : (row.getAttribute("data-campaign-id") || row.getAttribute("data-id") || "");
+            // 1. Precise Campaign ID Extraction (Stable Numeric ID)
+            let id = null;
+            const idNode = row.querySelector('[data-campaign-id], [data-id], [data-campaignid]');
+            if (idNode) {
+                const rawAttr = (idNode.getAttribute("data-campaign-id") || idNode.getAttribute("data-id") || idNode.getAttribute("data-campaignid") || "").trim();
+                if (/^[0-9]+$/.test(rawAttr)) id = rawAttr;
+            }
             if (!id) {
-                const editLink = row.querySelector("a[href*='/manager/campaigns/edit/'], a[href*='/campaigns/edit/'], button[data-id]");
-                if (editLink) {
-                    const href = editLink.getAttribute("href") || "";
-                    const m = href.match(/\/campaigns\/edit\/([a-zA-Z0-9_\-]+)/);
-                    if (m) id = m[1];
-                    else if (editLink.getAttribute("data-id")) id = editLink.getAttribute("data-id");
+                const rowAttr = (row.getAttribute("data-campaign-id") || row.getAttribute("data-id") || "").trim();
+                if (/^[0-9]+$/.test(rowAttr)) id = rowAttr;
+            }
+            if (!id) {
+                const candidates = Array.from(row.querySelectorAll("a[href], button[data-id], [data-campaign-id], [data-id]"));
+                for (const el of candidates) {
+                    const did = (el.getAttribute("data-campaign-id") || el.getAttribute("data-id") || el.getAttribute("data-campaignid") || "").trim();
+                    if (/^[0-9]+$/.test(did)) {
+                        id = did;
+                        break;
+                    }
+                    const href = el.getAttribute("href") || "";
+                    const m = href.match(/\/(?:campaigns\/(?:edit|members|agent-dashboard-settings|change-logs|preview|overview)|campaign)\/([0-9]+)/i) ||
+                              href.match(/[?&](?:campaign|campaign_id|campaignId|logged_in_agents_for_campaign)=([0-9]+)/i);
+                    if (m && m[1]) {
+                        id = m[1];
+                        break;
+                    }
                 }
+            }
+
+            // Detect lead list/file if visibly exposed in native DOM
+            let leadList = null;
+            const leadListCell = row.querySelector(".cdk-column-lead_file, .cdk-column-contact_list, .cdk-column-lead_pool, [data-column='lead_file'], [data-column='contact_list']");
+            if (leadListCell) {
+                const txt = String(leadListCell.innerText || leadListCell.textContent || "").trim();
+                if (txt) leadList = txt;
             }
 
             const rawName = this.getByHeader(row, ["name"], ["cdk-column-name", "cdk-column-campaign__name"]);
@@ -751,6 +772,8 @@ window.CTParser = {
 
             return {
                 id: id || "",
+                rawId: id || null,
+                leadList: leadList || null,
                 rowIndex: index,
                 name: rawName,
                 active: active,
@@ -948,14 +971,25 @@ window.CTParser = {
         if (!validRows.length) return [];
 
         return validRows.map((row, index) => {
-            let filterId = row.getAttribute("data-id") || row.getAttribute("data-live-filter-id") || "";
+            let filterId = null;
+            const rawIdAttr = (row.getAttribute("data-id") || row.getAttribute("data-live-filter-id") || "").trim();
+            if (/^[0-9]+$/.test(rawIdAttr)) filterId = rawIdAttr;
+
             if (!filterId) {
-                const actionLink = row.querySelector("a[href*='/manager/live-filters/'], a[href*='/live-filters/'], button[data-id]");
-                if (actionLink) {
-                    const href = actionLink.getAttribute("href") || "";
-                    const m = href.match(/\/live-filters\/(?:edit|preview|change-logs)\/([0-9a-zA-Z_-]+)/);
-                    if (m) filterId = m[1];
-                    else if (actionLink.getAttribute("data-id")) filterId = actionLink.getAttribute("data-id");
+                const actionLinks = Array.from(row.querySelectorAll("a[href], button[data-id]"));
+                for (const el of actionLinks) {
+                    const did = (el.getAttribute("data-id") || el.getAttribute("data-live-filter-id") || "").trim();
+                    if (/^[0-9]+$/.test(did)) {
+                        filterId = did;
+                        break;
+                    }
+                    const href = el.getAttribute("href") || "";
+                    const m = href.match(/\/live-filters\/(?:edit|preview|change-logs)\/([0-9]+)/i) ||
+                              href.match(/[?&](?:filter|filter_id|live_filter)=([0-9]+)/i);
+                    if (m && m[1]) {
+                        filterId = m[1];
+                        break;
+                    }
                 }
             }
 
@@ -1005,8 +1039,10 @@ window.CTParser = {
                 }
             }
 
+            const stableId = filterId || (name ? name.toLowerCase().replace(/[^a-z0-9_-]/g, "_") : `filter-${index}`);
             return {
-                id: filterId || `filter-${index}`,
+                id: stableId,
+                rawId: filterId || null,
                 name: name || (filterId ? `Filter ${filterId}` : `Filter ${index + 1}`),
                 active: Boolean(active),
                 count: count,

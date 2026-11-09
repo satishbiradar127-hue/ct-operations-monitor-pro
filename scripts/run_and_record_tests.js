@@ -17,9 +17,9 @@ const east2Run2 = execSync("node --test tests/suite.test.js", { cwd: east2Dir, e
 
 const east2Log = `================================================================================
 EAST-2 AUTOMATED TEST VERIFICATION SUITE — RUN 1 & RUN 2
-Edition: CT Operations Monitor — East-2 (v11.3.3)
+Edition: CT Operations Monitor — East-2 (v11.3.4)
 Target Host: east-2.calltools.io
-Total Tests: 225 | Passed: 225 | Failed: 0
+Total Tests: 235 | Passed: 235 | Failed: 0
 ================================================================================
 
 --- [TEST RUN 1] ---
@@ -49,9 +49,9 @@ const east3Run2 = execSync("node --test tests/suite.test.js", { cwd: east3Dir, e
 
 const east3Log = `================================================================================
 EAST-3 AUTOMATED TEST VERIFICATION SUITE — RUN 1 & RUN 2
-Edition: CT Operations Monitor — East-3 (v11.3.3)
+Edition: CT Operations Monitor — East-3 (v11.3.4)
 Target Host: east-3.calltools.io
-Total Tests: 225 | Passed: 225 | Failed: 0
+Total Tests: 235 | Passed: 235 | Failed: 0
 ================================================================================
 
 --- [TEST RUN 1] ---

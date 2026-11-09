@@ -1,4 +1,4 @@
-console.log("CT Operations Monitor (EAST-3) — Production live feed controller v11.3.3");
+console.log("CT Operations Monitor (EAST-3) — Production live feed controller v11.3.4");
 
 (function () {
     "use strict";
@@ -663,14 +663,48 @@ console.log("CT Operations Monitor (EAST-3) — Production live feed controller 
     });
 
     document.addEventListener("CT_EAST_3_REQUEST_REFRESH", function () {
-        lastSourceRefreshAt = Date.now();
-        if (isQueuesPage()) {
+        const now = Date.now();
+        lastSourceRefreshAt = now;
+        const route = currentRoute();
+        let recordsRead = 0;
+        let result = "SUCCESS";
+        let failureReason = null;
+        let unavailableSources = [];
+
+        if (route === "campaigns") {
+            publishFeedStatus("VERIFYING", { reason: "Manual campaign feed re-check requested", route: "campaigns" });
+            readAndPublish("manual-campaign-refresh", true);
+            const campaigns = window.CTParser && window.CTParser.readCampaigns ? window.CTParser.readCampaigns() : [];
+            recordsRead = campaigns.length;
+            unavailableSources = ["/manager/live-filters"];
+        } else if (route === "live_filters") {
+            observeLiveFiltersPage();
+            const filters = window.CTParser && window.CTParser.readLiveFilters ? window.CTParser.readLiveFilters(document) : [];
+            recordsRead = filters.length;
+            unavailableSources = ["/manager/campaigns"];
+        } else if (route === "queues") {
             publishFeedStatus("VERIFYING", { reason: "Manual queue feed re-check requested", route: "queues" });
             readAndPublish("manual-queue-refresh-check", true);
-            return;
+            const queues = window.CTParser && window.CTParser.readQueues ? window.CTParser.readQueues() : [];
+            recordsRead = queues.length;
+            unavailableSources = ["/manager/campaigns", "/manager/live-filters"];
+        } else {
+            result = "PARTIAL";
+            failureReason = "Current page (" + route + ") does not contain primary operational tables";
+            unavailableSources = ["/manager/campaigns", "/manager/live-filters", "/manager/queues"];
         }
-        publishFeedStatus("VERIFYING", { reason: "Manual campaign feed re-check requested", route: "campaigns" });
-        readAndPublish("manual-campaign-refresh", true);
+
+        const detail = {
+            requestAt: now,
+            completedAt: Date.now(),
+            source: route,
+            result: result,
+            recordsRead: recordsRead,
+            failureReason: failureReason,
+            unavailableSources: unavailableSources
+        };
+
+        document.dispatchEvent(new CustomEvent("CT_EAST_3_REFRESH_RESULT", { detail: detail }));
     });
 
     init();
