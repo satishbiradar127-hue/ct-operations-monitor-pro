@@ -7245,3 +7245,133 @@ test("EAST-3 UPGRADE 336: Refresh Data runs true async multi-source session via 
     assert.ok(dashSrc.includes("detail.refreshId !== state.activeRefreshId"), "Dashboard must correlate Refresh Data responses with activeRefreshId");
     assert.ok(dashSrc.includes("!shouldOperate || !drawer || drawer.open"), "focusCampaign must not yank scroll into a closed directory drawer on table Operating toggles");
 });
+
+test("EAST-3 UPGRADE 337: Full functional multi-module isolation, refresh event correlation, and zero cross-dialer bleed", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../manifest.json"), "utf-8"));
+    const parserSrc = fs.readFileSync(path.resolve(__dirname, "../src/parser.js"), "utf-8");
+    const intelSrc = fs.readFileSync(path.resolve(__dirname, "../src/intelligence.js"), "utf-8");
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    const ngBridgeSrc = fs.readFileSync(path.resolve(__dirname, "../src/ng_bridge.js"), "utf-8");
+
+    const otherHost = "east-3.calltools.io" === "east-2.calltools.io" ? "east-3.calltools.io" : "east-2.calltools.io";
+    const otherPrefix = "ct_east3_" === "ct_east2_" ? "ct_east3_" : "ct_east2_";
+    const otherEv = "CT_EAST_3_" === "CT_EAST_2_" ? "CT_EAST_3_" : "CT_EAST_2_";
+
+    [manifest.host_permissions.join(" "), parserSrc, intelSrc, dashSrc, contentSrc, ngBridgeSrc].forEach((txt, i) => {
+        assert.strictEqual(txt.includes(otherHost), false, "File index " + i + " must not reference " + otherHost);
+        assert.strictEqual(txt.includes(otherPrefix), false, "File index " + i + " must not reference " + otherPrefix);
+        assert.strictEqual(txt.includes(otherEv), false, "File index " + i + " must not reference " + otherEv);
+    });
+
+    assert.ok(ngBridgeSrc.includes("east-3.calltools.io"), "ng_bridge.js must enforce east-3.calltools.io");
+    assert.ok(contentSrc.includes("CT_EAST_3_REFRESH_RESULT") && contentSrc.includes("finalizeManualRefreshSession"), "Async refresh required");
+    assert.ok(dashSrc.includes("ct_east3_operating_campaigns") && dashSrc.includes("verifiedFreshManual"), "Operating + fresh manual sync required");
+
+    // Verify dist parity matches src 1:1
+    ["helpers.js", "parser.js", "intelligence.js", "dashboard.js", "content.js", "ng_bridge.js", "dashboard.css"].forEach((f) => {
+        const s = fs.readFileSync(path.resolve(__dirname, "../src", f), "utf-8");
+        const d = fs.readFileSync(path.resolve(__dirname, "../dist/src", f), "utf-8");
+        assert.strictEqual(s, d, "dist/src/" + f + " must match src/" + f);
+    });
+});
+
+test("EAST-3 UPGRADE 338: End-to-end runtime simulation of Edit Catalog + LiveFilters icon status + LFI synthesis + A->B->A transition alerts", () => {
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+    const store = new Map();
+    const storage = {
+        getItem(k) { return store.get(k) || null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); }
+    };
+    const origStorage = global.localStorage;
+    const origWin = global.window;
+    global.localStorage = storage;
+    global.window = { location: { pathname: "/manager/campaigns/edit/1716", hostname: "east-3.calltools.io", origin: "https://east-3.calltools.io" } };
+    try {
+        const doc = new MockNode("document");
+        const form = new MockNode("form", { class: "campaign-edit-form", "data-campaign-id": "1716" });
+        form.appendChild(new MockNode("input", { formcontrolname: "name", value: "TS FRESH DATA" }));
+        const sel = new MockNode("select", { formcontrolname: "live_filter", name: "live_filter" });
+        const opt0 = new MockNode("option", { value: "0: null" }, "");
+        const opt1 = new MockNode("option", { value: "1: 4125", selected: "true" }, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts (Count: 65000)");
+        const opt2 = new MockNode("option", { value: "2: 3682" }, "TS FIRE DATA (Not Active)");
+        opt0.value = "0: null";
+        opt1.value = "1: 4125";
+        opt2.value = "2: 3682";
+        [opt0, opt1, opt2].forEach(o => sel.appendChild(o));
+        sel.options = [opt0, opt1, opt2];
+        sel.selectedOptions = [opt1];
+        sel.selectedIndex = 1;
+        sel.value = "1: 4125";
+        form.appendChild(sel);
+        doc.appendChild(form);
+
+        const editParsed = global.CTParser.readCampaignEditForm(doc);
+        assert.strictEqual(editParsed.campaignId, "1716");
+        assert.strictEqual(editParsed.filterId, "4125");
+        assert.strictEqual(editParsed.filterCount, 65000);
+        assert.strictEqual(editParsed.filterCatalog.length, 2);
+
+        const lfDoc = new MockNode("document");
+        const lfTable = new MockNode("table");
+        const lfThead = new MockNode("thead");
+        const lfHtr = new MockNode("tr");
+        ["Name", "Active", "Count", "Ignore time zone count"].forEach(h => lfHtr.appendChild(new MockNode("th", {}, h)));
+        lfThead.appendChild(lfHtr);
+        lfTable.appendChild(lfThead);
+        const lfTbody = new MockNode("tbody");
+        function mkLfRow(name, iconSrc, cnt, tot) {
+            const tr = new MockNode("tr");
+            const td0 = new MockNode("td", { class: "cdk-column-name" }, name);
+            const td1 = new MockNode("td", { class: "cdk-column-active" });
+            td1.appendChild(new MockNode("img", { src: iconSrc }));
+            const td2 = new MockNode("td", { class: "cdk-column-count" }, String(cnt));
+            const td3 = new MockNode("td", { class: "cdk-column-total-count" }, String(tot));
+            [td0, td1, td2, td3].forEach(c => tr.appendChild(c));
+            tr.cells = [td0, td1, td2, td3];
+            return tr;
+        }
+        lfTbody.appendChild(mkLfRow(editParsed.liveFilter, "/assets/img/check-icon.svg", 65000, 66200));
+        lfTbody.appendChild(mkLfRow("TS FIRE DATA", "/assets/img/cancel-icon.svg", 0, 0));
+        lfTable.appendChild(lfTbody);
+        lfDoc.appendChild(lfTable);
+        const lfParsed = global.CTParser.readLiveFilters(lfDoc);
+        assert.strictEqual(lfParsed.length, 2);
+        assert.strictEqual(lfParsed[0].active, true);
+        assert.strictEqual(lfParsed[1].active, false);
+
+        const now = Date.now();
+        storage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
+            "1716": { campaignId: "1716", campaignName: "TS FRESH DATA", liveFilter: editParsed.liveFilter, filterId: editParsed.filterId, filterCount: lfParsed[0].count, source: "CAMPAIGN_EDIT_DOM", timestamp: now }
+        }));
+        storage.setItem("ct_east3_live_filters_inventory_v1", JSON.stringify({
+            items: {
+                "4125": { id: "4125", name: lfParsed[0].name, active: lfParsed[0].active, count: lfParsed[0].count, totalCount: lfParsed[0].totalCount, observedAt: now, source: "LIVE_FILTERS_PAGE" },
+                "3682": { id: "3682", name: lfParsed[1].name, active: lfParsed[1].active, count: lfParsed[1].count, totalCount: lfParsed[1].totalCount, observedAt: now, source: "CAMPAIGN_EDIT_CATALOG" }
+            },
+            lastObservedAt: now,
+            totalCount: 2
+        }));
+
+        const engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage });
+        const summary = engine.getLiveFilterIntelligenceSummary({
+            campaigns: [{ id: "1716", name: "TS FRESH DATA", state: "Active", agents: 25, contacts: 65000 }]
+        });
+        assert.strictEqual(summary.summary.totalFilters, 2);
+        assert.strictEqual(summary.summary.activeFilters, 1);
+        assert.strictEqual(summary.summary.verifiedActiveConfigurations, 1);
+        assert.strictEqual(summary.assignmentMatrix[0].filterId, "4125");
+        assert.strictEqual(summary.assignmentMatrix[0].filterCount, 65000);
+        assert.strictEqual(summary.assignmentMatrix[0].usageStatus, "VERIFIED ACTIVE");
+
+        // Transition tracking & A->B->A reversion alert
+        engine.recordTargetingTransition({ cid: "1716", cName: "TS FRESH DATA", currFilter: "Filter A", currCount: 1000, now: now - 5000 });
+        engine.recordTargetingTransition({ cid: "1716", cName: "TS FRESH DATA", prevFilter: "Filter A", currFilter: "Filter B", prevCount: 1000, currCount: 500, now: now - 2000 });
+        const rev = engine.recordTargetingTransition({ cid: "1716", cName: "TS FRESH DATA", prevFilter: "Filter B", currFilter: "Filter A", prevCount: 500, currCount: 950, now });
+        assert.ok(rev && rev.currentFilter === "Filter A");
+    } finally {
+        global.localStorage = origStorage;
+        global.window = origWin;
+    }
+});

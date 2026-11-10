@@ -2610,7 +2610,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             #${DASHBOARD_ID} .ct-operating-menu { position:absolute; top:calc(100% + 6px); left:0; width:min(360px,42vw); max-height:360px; overflow:auto; padding:8px; border:1px solid rgba(148,163,184,.46); border-radius:9px; background:#111a2b; box-shadow:0 18px 42px rgba(0,0,0,.36); z-index:100000; }
             #${DASHBOARD_ID} .ct-operating-menu[hidden] { display:none !important; }
             #${DASHBOARD_ID} .ct-operating-menu-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:3px 3px 8px; color:#f8fafc; font-size:10px; }
-            #${DASHBOARD_ID} .ct-operating-menu-head button { border:0; background:transparent; color:#93c5fd; cursor:pointer; font-size:9px; font-weight:900; }
+            #${DASHBOARD_ID} .ct-operating-menu-actions { display:flex; align-items:center; gap:6px; }
+            #${DASHBOARD_ID} .ct-operating-menu-head button { border:0; border-radius:4px; padding:4px 8px; background:rgba(147,197,253,.12); color:#93c5fd; cursor:pointer; font-size:9px; font-weight:900; }
             #${DASHBOARD_ID} .ct-operating-options { display:grid; gap:5px; }
             #${DASHBOARD_ID} .ct-operating-option { width:100%; display:grid; grid-template-columns:22px minmax(0,1fr); align-items:center; gap:8px; padding:8px; border:1px solid rgba(148,163,184,.22); border-radius:7px; color:#fff; background:rgba(255,255,255,.035); cursor:pointer; text-align:left; }
             #${DASHBOARD_ID} .ct-operating-option:hover { background:rgba(255,255,255,.08); }
@@ -4618,7 +4619,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 state.filter = button.dataset.filter || "all";
                 persistHealthFilter();
                 syncFilterButtons();
-                scheduleRender();
+                if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+                render();
             });
         });
         if (refs.stateFilterButtons) {
@@ -4627,7 +4629,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                     state.stateFilter = button.dataset.stateFilter || "all";
                     persistFilterState();
                     syncFilterButtons();
-                    scheduleRender();
+                    if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+                    render();
                 });
             });
         }
@@ -4637,7 +4640,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                     state.filter = button.dataset.healthFilter || "all";
                     persistHealthFilter();
                     syncFilterButtons();
-                    scheduleRender();
+                    if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+                    render();
                 });
             });
         }

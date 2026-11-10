@@ -1,0 +1,2 @@
+66984638a6810aaac50426404ef2ad756fb21288a9d04fd3cdee33ceb9c7c784 *CT_Operations_Monitor_East2_v11.3.9.zip
+2bb1bc8238b7b7a7cf947fea9563eef23c5f13159def43d9247709b06b372174 *CT_Operations_Monitor_East3_v11.3.9.zip
