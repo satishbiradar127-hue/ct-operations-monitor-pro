@@ -528,6 +528,11 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                             ? baselineCount
                             : previousCount;
 
+                        const entryTs = Number(entry.timestamp || 0);
+                        const currTs = Number(c.liveFilterTimestamp || 0);
+                        if (currTs > 0 && entryTs > 0 && entryTs < currTs) {
+                            return;
+                        }
                         if (c.liveFilter !== entry.liveFilter ||
                             c.liveFilterTimestamp !== entry.timestamp ||
                             c.liveFilterId !== resolvedFid ||
@@ -2337,82 +2342,105 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         `;
 
         style.textContent += `
-            /* v11.0.5 command-center & v11.3.9 enterprise Action Center redesign */
-            #${DASHBOARD_ID} .ct-alerts { min-height: 0; max-height: 460px; overflow-y: auto; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(148,163,184,.24); background: linear-gradient(155deg,#07101f 0%,#0f1d33 64%,#0e2c35 100%); box-shadow: 0 10px 28px rgba(2,6,23,.28); }
-            #${DASHBOARD_ID} .ct-alert-title { min-height: 36px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(148,163,184,.16); display:flex; align-items:center; justify-content:space-between; gap:10px; color:#fff; }
-            #${DASHBOARD_ID} .ct-alert-heading { display:flex; flex-direction:column; gap:2px; }
-            #${DASHBOARD_ID} .ct-alert-heading > span { font-size:12.5px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:#f8fafc; }
-            #${DASHBOARD_ID} .ct-alert-heading > span::before { content:"⚡"; margin-right:6px; color:#fbbf24; }
-            #${DASHBOARD_ID} .ct-alert-heading small { color:#94a3b8; font-size:10px; font-weight:650; letter-spacing:.01em; }
-            #${DASHBOARD_ID} .ct-alert-controls { display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
-            #${DASHBOARD_ID} .ct-alert-counter { padding:4px 9px; border:1px solid rgba(255,255,255,.16); border-radius:999px; background:rgba(255,255,255,.07); color:#e2e8f0; font-size:9.5px; font-weight:900; letter-spacing:.05em; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-critical-counter { border-color:rgba(239,68,68,.42); background:rgba(239,68,68,.16); color:#fca5a5; }
-            #${DASHBOARD_ID} .ct-warning-counter { border-color:rgba(245,158,11,.42); background:rgba(245,158,11,.15); color:#fde047; }
-            #${DASHBOARD_ID} .ct-alert-clear { padding:5px 11px; border-radius:7px; border:1px solid rgba(148,163,184,.28); color:#f8fafc; background:rgba(255,255,255,.10); font-size:10px; font-weight:850; cursor:pointer; }
-            #${DASHBOARD_ID} .ct-alert-clear:hover { background:rgba(255,255,255,.20); border-color:rgba(255,255,255,.42); }
-            #${DASHBOARD_ID} .ct-persistent-goals-container { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+            /* v11.0.5 command-center & v11.3.9 enterprise Action Center + Live Filter Copy styles */
+            #${DASHBOARD_ID} .ct-lft-card-head-row { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:4px; }
+            #${DASHBOARD_ID} .ct-lft-card-head-row .ct-lft-card-eyebrow { margin-bottom:0 !important; }
+            #${DASHBOARD_ID} .ct-lft-copy-btn { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:6px; border:1px solid rgba(56,189,248,.42); background:rgba(14,116,144,.28); color:#e0f2fe; font-size:10.5px; font-weight:850; letter-spacing:.03em; cursor:pointer; transition:background .15s ease,border-color .15s ease,transform .12s ease,opacity .15s ease; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-lft-copy-btn:hover:not(:disabled) { background:rgba(2,132,199,.45); border-color:#38bdf8; color:#ffffff; transform:translateY(-1px); }
+            #${DASHBOARD_ID} .ct-lft-copy-btn:focus-visible { outline:2px solid #38bdf8; outline-offset:2px; }
+            #${DASHBOARD_ID} .ct-lft-copy-btn.is-copied { background:rgba(16,185,129,.28); border-color:#34d399; color:#a7f3d0; }
+            #${DASHBOARD_ID} .ct-lft-copy-btn.is-error { background:rgba(239,68,68,.26); border-color:#f87171; color:#fecaca; }
+            #${DASHBOARD_ID} .ct-lft-copy-btn:disabled,
+            #${DASHBOARD_ID} .ct-lft-copy-btn.is-disabled { opacity:.52; cursor:not-allowed; border-color:rgba(148,163,184,.28); background:rgba(30,41,59,.55); color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-lft-transition-bar { justify-content:space-between !important; align-items:center !important; gap:12px !important; }
+            #${DASHBOARD_ID} .ct-lft-transition-main { display:flex; align-items:center; flex-wrap:wrap; gap:10px; min-width:0; flex:1 1 auto; }
+
+            #${DASHBOARD_ID} .ct-alerts { min-height: 0; max-height: 540px; overflow-y: auto; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(148,163,184,.26); background: linear-gradient(155deg,#07101f 0%,#0f1d33 64%,#0e2c35 100%); box-shadow: 0 12px 30px rgba(2,6,23,.30); }
+            #${DASHBOARD_ID} .ct-alert-title { min-height: 40px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(148,163,184,.18); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; color:#fff; }
+            #${DASHBOARD_ID} .ct-alert-heading { display:flex; flex-direction:column; gap:3px; }
+            #${DASHBOARD_ID} .ct-alert-heading > span { font-size:13.5px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:#f8fafc; }
+            #${DASHBOARD_ID} .ct-alert-heading > span::before { content:"⚡"; margin-right:7px; color:#fbbf24; }
+            #${DASHBOARD_ID} .ct-alert-heading small { color:#cbd5e1; font-size:11.5px; font-weight:650; letter-spacing:.01em; }
+            #${DASHBOARD_ID} .ct-alert-controls { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+            #${DASHBOARD_ID} .ct-alert-counter { padding:5px 11px; border:1px solid rgba(255,255,255,.18); border-radius:999px; background:rgba(255,255,255,.08); color:#e2e8f0; font-size:10.5px; font-weight:900; letter-spacing:.05em; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-critical-counter { border-color:rgba(239,68,68,.55); background:rgba(239,68,68,.20); color:#fecaca; }
+            #${DASHBOARD_ID} .ct-warning-counter { border-color:rgba(245,158,11,.55); background:rgba(245,158,11,.18); color:#fde68a; }
+            #${DASHBOARD_ID} .ct-active-counter { border-color:rgba(56,189,248,.48); background:rgba(56,189,248,.16); color:#bae6fd; }
+            #${DASHBOARD_ID} .ct-alert-clear { min-height:30px; padding:5px 13px; border-radius:7px; border:1px solid rgba(148,163,184,.34); color:#f8fafc; background:rgba(255,255,255,.11); font-size:11px; font-weight:850; cursor:pointer; }
+            #${DASHBOARD_ID} .ct-alert-clear:hover { background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.5); }
+            #${DASHBOARD_ID} .ct-persistent-goals-container { display:flex; flex-direction:column; gap:10px; margin-bottom:10px; }
             #${DASHBOARD_ID} .ct-persistent-goals-container:empty { display:none; margin-bottom:0; }
-            #${DASHBOARD_ID} .ct-alert-list { display:flex; flex-direction:column; gap:8px; max-height:360px; overflow:auto; padding-right:2px; }
+            #${DASHBOARD_ID} .ct-alert-list { display:flex; flex-direction:column; gap:10px; max-height:420px; overflow:auto; padding-right:2px; }
             #${DASHBOARD_ID} .ct-alert-list:empty { display:none; }
             #${DASHBOARD_ID} .ct-alert,
             #${DASHBOARD_ID} .ct-intelligence-card,
-            #${DASHBOARD_ID} .ct-persistent-goal-card { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 104px; align-items:stretch; gap:12px; padding:11px 13px; border:1px solid rgba(148,163,184,.20); border-left:4px solid #64748b; border-radius:10px; background:linear-gradient(100deg,rgba(30,41,59,.90),rgba(15,23,42,.97)); box-shadow:0 4px 14px rgba(2,6,23,.24); color:#f8fafc; transition:border-color .15s ease, box-shadow .15s ease; }
+            #${DASHBOARD_ID} .ct-persistent-goal-card { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 128px; align-items:stretch; gap:14px; padding:14px 16px; border:1px solid rgba(148,163,184,.24); border-left:5px solid #64748b; border-radius:11px; background:linear-gradient(100deg,rgba(30,41,59,.92),rgba(15,23,42,.98)); box-shadow:0 6px 18px rgba(2,6,23,.26); color:#f8fafc; transition:border-color .15s ease, box-shadow .15s ease; }
             #${DASHBOARD_ID} .ct-alert.is-critical,
-            #${DASHBOARD_ID} .ct-intelligence-card.is-critical { border-left-color:#ef4444; border-color:rgba(239,68,68,.32); border-left-width:4px; background:linear-gradient(100deg,rgba(127,29,29,.34),rgba(17,24,39,.97) 58%); }
+            #${DASHBOARD_ID} .ct-intelligence-card.is-critical { border-left-color:#ef4444; border-color:rgba(239,68,68,.38); border-left-width:5px; background:linear-gradient(100deg,rgba(127,29,29,.30),rgba(17,24,39,.98) 54%); }
             #${DASHBOARD_ID} .ct-alert.is-warning,
-            #${DASHBOARD_ID} .ct-intelligence-card.is-warning { border-left-color:#f59e0b; border-color:rgba(245,158,11,.32); border-left-width:4px; background:linear-gradient(100deg,rgba(120,53,15,.30),rgba(17,24,39,.97) 58%); }
+            #${DASHBOARD_ID} .ct-intelligence-card.is-warning { border-left-color:#f59e0b; border-color:rgba(245,158,11,.38); border-left-width:5px; background:linear-gradient(100deg,rgba(120,53,15,.26),rgba(17,24,39,.98) 54%); }
             #${DASHBOARD_ID} .ct-alert.is-good,
             #${DASHBOARD_ID} .ct-intelligence-card.is-info,
-            #${DASHBOARD_ID} .ct-intelligence-card.is-good { border-left-color:#22c55e; border-color:rgba(34,197,94,.30); border-left-width:4px; background:linear-gradient(100deg,rgba(20,83,45,.28),rgba(17,24,39,.97) 58%); }
-            #${DASHBOARD_ID} .ct-persistent-goal-card { border-left-color:#10b981; border-color:rgba(16,185,129,.42); border-left-width:4px; background:linear-gradient(100deg,rgba(6,78,59,.36),rgba(15,23,42,.97) 60%); }
-            #${DASHBOARD_ID} .ct-alert-main { min-width:0; display:flex; flex-direction:column; gap:6px; }
+            #${DASHBOARD_ID} .ct-intelligence-card.is-good { border-left-color:#22c55e; border-color:rgba(34,197,94,.34); border-left-width:5px; background:linear-gradient(100deg,rgba(20,83,45,.26),rgba(17,24,39,.98) 54%); }
+            #${DASHBOARD_ID} .ct-persistent-goal-card { border-left-color:#10b981; border-color:rgba(16,185,129,.44); border-left-width:5px; background:linear-gradient(100deg,rgba(6,78,59,.32),rgba(15,23,42,.98) 56%); }
+            #${DASHBOARD_ID} .ct-alert-main { min-width:0; display:flex; flex-direction:column; gap:8px; }
             #${DASHBOARD_ID} .ct-alert-top,
             #${DASHBOARD_ID} .ct-intel-card-top,
-            #${DASHBOARD_ID} .ct-goal-card-top { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+            #${DASHBOARD_ID} .ct-goal-card-top { display:flex; align-items:center; flex-wrap:wrap; gap:7px; }
             #${DASHBOARD_ID} .ct-alert-sev-pill,
             #${DASHBOARD_ID} .ct-intel-badge,
-            #${DASHBOARD_ID} .ct-goal-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:4px; font-size:9.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-goal-badge { display:inline-flex; align-items:center; padding:3px 9px; border-radius:5px; font-size:10.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; }
             #${DASHBOARD_ID} .ct-alert-sev-pill.is-critical,
             #${DASHBOARD_ID} .ct-intel-badge.is-increase,
-            #${DASHBOARD_ID} .ct-intel-badge.is-integrity { background:rgba(239,68,68,.24); color:#fecaca; border:1px solid rgba(239,68,68,.5); }
+            #${DASHBOARD_ID} .ct-intel-badge.is-integrity { background:rgba(239,68,68,.26); color:#fecaca; border:1px solid rgba(239,68,68,.55); }
             #${DASHBOARD_ID} .ct-alert-sev-pill.is-warning,
             #${DASHBOARD_ID} .ct-intel-badge.is-decrease,
-            #${DASHBOARD_ID} .ct-intel-badge.is-filter-change { background:rgba(245,158,11,.22); color:#fde68a; border:1px solid rgba(245,158,11,.48); }
+            #${DASHBOARD_ID} .ct-intel-badge.is-filter-change { background:rgba(245,158,11,.24); color:#fde68a; border:1px solid rgba(245,158,11,.52); }
             #${DASHBOARD_ID} .ct-alert-sev-pill.is-good,
             #${DASHBOARD_ID} .ct-goal-badge,
-            #${DASHBOARD_ID} .ct-intel-badge.is-good { background:rgba(16,185,129,.24); color:#a7f3d0; border:1px solid rgba(16,185,129,.5); }
-            #${DASHBOARD_ID} .ct-dialer-tag.ct-dialer-east3 { display:inline-flex; align-items:center; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; letter-spacing:.05em; background:#115e59; color:#ccfbf1; border:1px solid #2dd4bf; }
-            #${DASHBOARD_ID} .ct-goal-direction-tag { display:inline-flex; align-items:center; padding:2px 6px; border-radius:4px; background:rgba(148,163,184,.16); color:#cbd5e1; border:1px solid rgba(148,163,184,.25); font-size:9px; font-weight:850; letter-spacing:.04em; text-transform:uppercase; }
-            #${DASHBOARD_ID} .ct-goal-time { margin-left:auto; color:#94a3b8; font-size:10px; font-weight:700; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-alert-headline { color:#f8fafc; font-size:12.5px; font-weight:850; line-height:1.35; white-space:normal; word-break:break-word; }
-            #${DASHBOARD_ID} .ct-alert-stat-bar { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px; width:fit-content; max-width:100%; padding:3px 9px; border-radius:6px; background:rgba(15,23,42,.72); border:1px solid rgba(148,163,184,.22); font-size:11px; font-weight:800; color:#e2e8f0; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-goal-count-prev { color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-intel-badge.is-good { background:rgba(16,185,129,.26); color:#a7f3d0; border:1px solid rgba(16,185,129,.52); }
+            #${DASHBOARD_ID} .ct-dialer-tag.ct-dialer-east3 { display:inline-flex; align-items:center; padding:3px 8px; border-radius:5px; font-size:10.5px; font-weight:900; letter-spacing:.05em; background:#115e59; color:#ccfbf1; border:1px solid #2dd4bf; }
+            #${DASHBOARD_ID} .ct-goal-campaign-tag { display:inline-flex; align-items:center; padding:3px 8px; border-radius:5px; background:rgba(56,189,248,.14); color:#bae6fd; border:1px solid rgba(56,189,248,.34); font-size:10.5px; font-weight:800; letter-spacing:.02em; }
+            #${DASHBOARD_ID} .ct-goal-direction-tag { display:inline-flex; align-items:center; padding:3px 7px; border-radius:5px; background:rgba(148,163,184,.16); color:#cbd5e1; border:1px solid rgba(148,163,184,.28); font-size:10px; font-weight:850; letter-spacing:.04em; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-goal-time { margin-left:auto; color:#cbd5e1; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-alert-headline { color:#f8fafc; font-size:13.5px; font-weight:850; line-height:1.42; white-space:normal; word-break:break-word; }
+            #${DASHBOARD_ID} .ct-alert-stat-bar { display:inline-flex; align-items:center; flex-wrap:wrap; gap:7px; width:fit-content; max-width:100%; padding:5px 11px; border-radius:7px; background:rgba(15,23,42,.82); border:1px solid rgba(148,163,184,.26); font-size:12px; font-weight:800; color:#e2e8f0; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-goal-count-prev { color:#cbd5e1; }
             #${DASHBOARD_ID} .ct-goal-arrow { color:#38bdf8; font-weight:900; }
             #${DASHBOARD_ID} .ct-goal-count-curr { color:#f8fafc; font-weight:900; }
             #${DASHBOARD_ID} .ct-intel-delta,
-            #${DASHBOARD_ID} .ct-goal-increase { color:#38bdf8; font-weight:850; font-size:10.5px; }
+            #${DASHBOARD_ID} .ct-goal-increase { color:#38bdf8; font-weight:850; font-size:11.5px; }
             #${DASHBOARD_ID} .ct-goal-increase { color:#34d399; }
-            #${DASHBOARD_ID} .ct-alert-explain-grid { display:grid; gap:3px; padding:6px 9px; border-radius:6px; background:rgba(2,6,23,.42); border:1px solid rgba(148,163,184,.14); }
-            #${DASHBOARD_ID} .ct-alert-explain-row { font-size:11px; line-height:1.4; color:#cbd5e1; white-space:normal; word-break:break-word; }
-            #${DASHBOARD_ID} .ct-alert-explain-row strong { color:#94a3b8; font-size:9.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; margin-right:6px; }
-            #${DASHBOARD_ID} .ct-alert-explain-row.is-action { color:#e0f2fe; }
+            #${DASHBOARD_ID} .ct-alert-explain-grid { display:grid; gap:5px; padding:8px 11px; border-radius:8px; background:rgba(2,6,23,.48); border:1px solid rgba(148,163,184,.18); }
+            #${DASHBOARD_ID} .ct-alert-explain-row { display:grid; grid-template-columns:126px minmax(0,1fr); align-items:baseline; gap:10px; font-size:11.8px; line-height:1.45; color:#e2e8f0; white-space:normal; word-break:break-word; padding:2px 0; }
+            #${DASHBOARD_ID} .ct-alert-explain-row strong { color:#94a3b8; font-size:10px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-alert-explain-row.is-why strong { color:#fbbf24; }
+            #${DASHBOARD_ID} .ct-alert-explain-row.is-action { padding-top:4px; margin-top:2px; border-top:1px solid rgba(148,163,184,.12); color:#e0f2fe; font-weight:600; }
             #${DASHBOARD_ID} .ct-alert-explain-row.is-action strong { color:#38bdf8; }
             #${DASHBOARD_ID} .ct-alert-buttons,
-            #${DASHBOARD_ID} .ct-goal-card-actions { display:flex; flex-direction:column; justify-content:center; gap:6px; min-width:100px; border-left:1px solid rgba(148,163,184,.14); padding-left:10px; }
+            #${DASHBOARD_ID} .ct-goal-card-actions { display:flex; flex-direction:column; justify-content:center; gap:7px; min-width:120px; border-left:1px solid rgba(148,163,184,.18); padding-left:12px; }
             #${DASHBOARD_ID} .ct-alert-btn,
-            #${DASHBOARD_ID} .ct-btn-noted { width:100%; min-height:28px; padding:5px 8px; border:1px solid rgba(148,163,184,.28); border-radius:6px; color:#f8fafc; background:rgba(255,255,255,.08); font-size:10px; font-weight:850; letter-spacing:.04em; cursor:pointer; text-align:center; transition:background .15s ease, transform .12s ease; }
-            #${DASHBOARD_ID} .ct-alert-btn-primary { background:#2563eb; border-color:#60a5fa; color:#ffffff; box-shadow:0 3px 10px rgba(37,99,235,.28); }
+            #${DASHBOARD_ID} .ct-btn-noted { display:inline-flex; align-items:center; justify-content:center; gap:5px; width:100%; min-height:32px; padding:6px 10px; border:1px solid rgba(148,163,184,.32); border-radius:7px; color:#f8fafc; background:rgba(255,255,255,.09); font-size:11px; font-weight:850; letter-spacing:.04em; cursor:pointer; text-align:center; transition:background .15s ease, transform .12s ease, border-color .15s ease; }
+            #${DASHBOARD_ID} .ct-alert-btn-primary { background:#2563eb; border-color:#60a5fa; color:#ffffff; box-shadow:0 3px 10px rgba(37,99,235,.32); }
             #${DASHBOARD_ID} .ct-alert-btn-primary:hover { background:#1d4ed8; transform:translateY(-1px); }
             #${DASHBOARD_ID} .ct-alert-btn-secondary:hover,
-            #${DASHBOARD_ID} .ct-alert-btn-dismiss:hover { background:rgba(148,163,184,.22); border-color:rgba(203,213,225,.45); }
+            #${DASHBOARD_ID} .ct-alert-btn-dismiss:hover { background:rgba(148,163,184,.24); border-color:rgba(203,213,225,.5); }
             #${DASHBOARD_ID} .ct-btn-noted { background:#059669; border-color:#34d399; color:#ffffff; }
             #${DASHBOARD_ID} .ct-btn-noted:hover { background:#10b981; }
-            #${DASHBOARD_ID} .ct-all-clear { min-height:54px; display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid rgba(57,229,140,.26); border-radius:9px; background:linear-gradient(90deg,rgba(57,229,140,.11),rgba(255,255,255,.03)); color:#fff; }
-            #${DASHBOARD_ID} .ct-all-clear-icon { width:26px; height:26px; display:grid; place-items:center; border-radius:50%; background:rgba(57,229,140,.18); color:#5df0a2; font-size:13px; font-weight:950; }
-            #${DASHBOARD_ID} .ct-all-clear div:nth-child(2) { display:flex; flex-direction:column; gap:2px; min-width:0; }
-            #${DASHBOARD_ID} .ct-all-clear strong { font-size:11px; letter-spacing:.07em; }
-            #${DASHBOARD_ID} .ct-all-clear span { color:rgba(255,255,255,.70); font-size:10px; }
-            #${DASHBOARD_ID} .ct-all-clear-live { margin-left:auto; padding:4px 8px; border-radius:999px; color:#5df0a2 !important; background:rgba(57,229,140,.10); border:1px solid rgba(57,229,140,.28); font-size:8.5px !important; font-weight:900 !important; letter-spacing:.08em; }
+            @media (max-width: 780px) {
+                #${DASHBOARD_ID} .ct-alert,
+                #${DASHBOARD_ID} .ct-intelligence-card,
+                #${DASHBOARD_ID} .ct-persistent-goal-card { grid-template-columns:1fr; }
+                #${DASHBOARD_ID} .ct-alert-buttons,
+                #${DASHBOARD_ID} .ct-goal-card-actions { flex-direction:row; border-left:0; border-top:1px solid rgba(148,163,184,.18); padding-left:0; padding-top:8px; }
+                #${DASHBOARD_ID} .ct-alert-explain-row { grid-template-columns:1fr; gap:2px; }
+            }
+            #${DASHBOARD_ID} .ct-all-clear { min-height:60px; display:flex; align-items:center; gap:12px; padding:12px 16px; border:1px solid rgba(57,229,140,.32); border-radius:10px; background:linear-gradient(90deg,rgba(57,229,140,.13),rgba(255,255,255,.04)); color:#fff; }
+            #${DASHBOARD_ID} .ct-all-clear-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:50%; background:rgba(57,229,140,.20); color:#5df0a2; font-size:14px; font-weight:950; flex-shrink:0; }
+            #${DASHBOARD_ID} .ct-all-clear div:nth-child(2) { display:flex; flex-direction:column; gap:3px; min-width:0; }
+            #${DASHBOARD_ID} .ct-all-clear strong { font-size:12.5px; letter-spacing:.07em; }
+            #${DASHBOARD_ID} .ct-all-clear span { color:rgba(255,255,255,.78); font-size:11.5px; }
+            #${DASHBOARD_ID} .ct-all-clear-live { margin-left:auto; padding:5px 10px; border-radius:999px; color:#5df0a2 !important; background:rgba(57,229,140,.12); border:1px solid rgba(57,229,140,.32); font-size:9.5px !important; font-weight:900 !important; letter-spacing:.08em; }
             #${DASHBOARD_ID} .ct-insights-panel { margin-top:7px; padding:9px; border:1px solid rgba(148,163,184,.28); border-radius:10px; background:var(--ct-surface); box-shadow:0 5px 18px rgba(15,23,42,.08); }
             #${DASHBOARD_ID} .ct-insights-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
             #${DASHBOARD_ID} .ct-insights-head div { display:flex; flex-direction:column; gap:2px; }
@@ -3238,7 +3266,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                         <div class="ct-lft-cards-grid">
                             <!-- Card 1: Assigned Live Filter -->
                             <div class="ct-lft-card ct-lft-card-filter">
-                                <div class="ct-lft-card-eyebrow">ASSIGNED LIVE FILTER</div>
+                                <div class="ct-lft-card-head-row">
+                                    <div class="ct-lft-card-eyebrow">ASSIGNED LIVE FILTER</div>
+                                    <button type="button" class="ct-lft-copy-btn" data-ref="copyAssignedFilterBtn" disabled title="Resolve verified Live Filter and Available Contacts before copying" aria-label="Copy verified Assigned Live Filter and Available Leads in WhatsApp format"><span class="ct-copy-icon" aria-hidden="true">⧉</span><span class="ct-copy-label">Copy</span></button>
+                                </div>
                                 <div class="ct-lft-card-primary" data-ref="topFilterName">—</div>
                                 <div class="ct-lft-card-meta">
                                     <span class="ct-lft-status-pill is-unavailable" data-ref="topFilterStatus">UNAVAILABLE</span>
@@ -3292,8 +3323,11 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                         </div>
                         <!-- Latest Verified Targeting Transition -->
                         <div class="ct-lft-transition-bar" data-ref="topFilterTransitionBar">
-                            <span class="ct-lft-transition-label">LATEST TARGETING TRANSITION:</span>
-                            <div class="ct-lft-transition-content" data-ref="topFilterChange">No verified targeting changes recorded</div>
+                            <div class="ct-lft-transition-main">
+                                <span class="ct-lft-transition-label">LATEST TARGETING TRANSITION:</span>
+                                <div class="ct-lft-transition-content" data-ref="topFilterChange">No verified targeting changes recorded</div>
+                            </div>
+                            <button type="button" class="ct-lft-copy-btn ct-lft-copy-btn-compact is-disabled" data-ref="copyTransitionBtn" disabled title="No verified targeting transition available to copy" aria-label="Copy latest verified Live Filter transition (FROM / TO)"><span class="ct-copy-icon" aria-hidden="true">⧉</span><span class="ct-copy-label">NO VERIFIED TRANSITION</span></button>
                         </div>
                     </section>
 
@@ -3321,7 +3355,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                     <section class="ct-alerts" aria-label="Operations Action Center">
                         <div class="ct-alert-title">
                             <div class="ct-alert-heading"><span>Action Center</span><small data-ref="alertSubtitle">Immediate operator actions</small></div>
-                            <div class="ct-alert-controls"><span class="ct-alert-counter ct-critical-counter" data-ref="criticalCount">0 CRITICAL</span><span class="ct-alert-counter ct-warning-counter" data-ref="warningCount">0 AT RISK</span><button class="ct-alert-clear" type="button" data-ref="clearAlerts">Clear All</button></div>
+                            <div class="ct-alert-controls"><span class="ct-alert-counter ct-critical-counter" data-ref="criticalCount">0 CRITICAL</span><span class="ct-alert-counter ct-warning-counter" data-ref="warningCount">0 AT RISK</span><span class="ct-alert-counter ct-active-counter" data-ref="alertCount">0 ACTIVE SIGNALS</span><button class="ct-alert-clear" type="button" data-ref="clearAlerts">Clear All</button></div>
                         </div>
                         <div class="ct-action-notice" data-ref="actionNotice" hidden aria-live="polite"></div><div class="ct-persistent-goals-container" data-ref="persistentGoalsContainer"></div><div class="ct-alert-list"></div>
                     </section>
@@ -3715,6 +3749,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             topFilterName: root.querySelector('[data-ref="topFilterName"]'),
             topFilterStatus: root.querySelector('[data-ref="topFilterStatus"]'),
             topFilterId: root.querySelector('[data-ref="topFilterId"]'),
+            copyAssignedFilterBtn: root.querySelector('[data-ref="copyAssignedFilterBtn"]'),
+            copyTransitionBtn: root.querySelector('[data-ref="copyTransitionBtn"]'),
             topFilterConfidence: root.querySelector('[data-ref="topFilterConfidence"]'),
             topFilterVerifySource: root.querySelector('[data-ref="topFilterVerifySource"]'),
             topFilterAge: root.querySelector('[data-ref="topFilterAge"]'),
@@ -4162,6 +4198,109 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             scheduleRender();
         });
         refs.clearAlerts.addEventListener("click", clearAttentionCenter);
+
+        function resolveCurrentNumericOperatingCampaignId() {
+            const list = state.campaigns || [];
+            const operating = getOperatingCampaigns(prepareCampaigns(list))[0] || null;
+            let candId = operating && /^[0-9]+$/.test(String(operating.rawId || operating.id || ""))
+                ? String(operating.rawId || operating.id).trim()
+                : "";
+            if (!candId && state.operatingCampaigns && state.operatingCampaigns.length > 0) {
+                const rawSel = String(state.operatingCampaigns[0] || "").trim();
+                if (/^[0-9]+$/.test(rawSel)) {
+                    candId = rawSel;
+                } else {
+                    const match = list.find(function (c) {
+                        return c && c.name && String(c.name).trim().toLowerCase() === rawSel.toLowerCase();
+                    });
+                    if (match && /^[0-9]+$/.test(String(match.rawId || match.id || ""))) {
+                        candId = String(match.rawId || match.id).trim();
+                    }
+                }
+            }
+            return candId;
+        }
+
+        function setCopyButtonFeedback(btn, stateCls, labelText, resetLabel, resetDisabled) {
+            if (!btn) return;
+            if (btn._ctFeedbackTimer) {
+                clearTimeout(btn._ctFeedbackTimer);
+                btn._ctFeedbackTimer = null;
+            }
+            btn.classList.remove("is-copied", "is-error");
+            if (stateCls) btn.classList.add(stateCls);
+            const lbl = btn.querySelector(".ct-copy-label");
+            if (lbl) lbl.textContent = labelText;
+            btn._ctFeedbackTimer = window.setTimeout(function () {
+                btn.classList.remove("is-copied", "is-error");
+                if (typeof resetDisabled === "boolean") {
+                    btn.disabled = resetDisabled;
+                    btn.classList.toggle("is-disabled", resetDisabled);
+                }
+                if (lbl && resetLabel !== undefined) lbl.textContent = resetLabel;
+                btn._ctFeedbackTimer = null;
+            }, 2400);
+        }
+
+        if (refs.copyAssignedFilterBtn) {
+            refs.copyAssignedFilterBtn.addEventListener("click", async function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const cid = resolveCurrentNumericOperatingCampaignId();
+                const snap = window.CT && window.CT.resolveAuthoritativeAssignedFilterCopy
+                    ? window.CT.resolveAuthoritativeAssignedFilterCopy({
+                        campaignId: cid,
+                        prefix: PREFIX,
+                        now: Date.now()
+                    })
+                    : { ok: false, unavailableFields: ["Copy Helper"], errorReason: "Authoritative resolver unavailable" };
+                if (!snap.ok) {
+                    const missingDesc = (snap.unavailableFields && snap.unavailableFields.length)
+                        ? snap.unavailableFields.join(", ")
+                        : "Verified Filter Data";
+                    setCopyButtonFeedback(refs.copyAssignedFilterBtn, "is-error", "UNAVAILABLE", "Copy");
+                    showActionNotice("Cannot copy Assigned Live Filter — unavailable: " + missingDesc + " (" + (snap.errorReason || "Unverified") + ")");
+                    return;
+                }
+                const writeRes = await window.CT.writeTextToClipboard(snap.text);
+                if (!writeRes.ok) {
+                    setCopyButtonFeedback(refs.copyAssignedFilterBtn, "is-error", "COPY FAILED", "Copy");
+                    showActionNotice("Clipboard copy failed for Assigned Live Filter: " + (writeRes.error || "Unknown error"));
+                    return;
+                }
+                setCopyButtonFeedback(refs.copyAssignedFilterBtn, "is-copied", "✓ COPIED", "Copy");
+                showActionNotice("Copied Assigned Live Filter (#" + snap.filterId + " · " + snap.formattedAvailableContacts + " available leads) in WhatsApp format.");
+            });
+        }
+
+        if (refs.copyTransitionBtn) {
+            refs.copyTransitionBtn.addEventListener("click", async function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                const cid = resolveCurrentNumericOperatingCampaignId();
+                const snap = window.CT && window.CT.resolveAuthoritativeTransitionCopy
+                    ? window.CT.resolveAuthoritativeTransitionCopy({
+                        campaignId: cid,
+                        dialer: DIALER,
+                        prefix: PREFIX,
+                        intelligenceHistory: intelligenceEngine ? intelligenceEngine.history : null
+                    })
+                    : { ok: false, errorReason: "NO VERIFIED TRANSITION" };
+                if (!snap.ok) {
+                    setCopyButtonFeedback(refs.copyTransitionBtn, "is-error", "NO VERIFIED TRANSITION", "NO VERIFIED TRANSITION", true);
+                    showActionNotice("No verified targeting transition available to copy.");
+                    return;
+                }
+                const writeRes = await window.CT.writeTextToClipboard(snap.text);
+                if (!writeRes.ok) {
+                    setCopyButtonFeedback(refs.copyTransitionBtn, "is-error", "COPY FAILED", "Copy Transition", false);
+                    showActionNotice("Clipboard copy failed for Latest Targeting Transition: " + (writeRes.error || "Unknown error"));
+                    return;
+                }
+                setCopyButtonFeedback(refs.copyTransitionBtn, "is-copied", "✓ COPIED", "Copy Transition", false);
+                showActionNotice("Copied verified filter transition (FROM / TO) in WhatsApp format.");
+            });
+        }
         if (refs.persistentGoalsContainer) {
             refs.persistentGoalsContainer.addEventListener("click", function(event) {
                 const btn = event.target.closest("[data-noted-id]");
@@ -5310,50 +5449,82 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 const invList = (lfiData && Array.isArray(lfiData.inventory)) ? lfiData.inventory : [];
                 const invLastObsMs = (lfiData && lfiData.health) ? lfiData.health.lastObservedAt : null;
 
+                let directReg = {};
+                let directInv = {};
+                let fidMap = {};
+                try { directReg = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}"); } catch (e) {}
+                try { directInv = JSON.parse(localStorage.getItem(LIVE_FILTERS_INVENTORY_KEY) || "{}"); } catch (e) {}
+                try { fidMap = JSON.parse(localStorage.getItem("ct_east3_filter_id_map_v1") || "{}"); } catch (e) {}
+
+                const directRegEntry = (cId && directReg[cId]) ? directReg[cId] : null;
+                let fId = targetCamp.liveFilterId || (directRegEntry && directRegEntry.filterId) || null;
+                if (!fId && fName) {
+                    const m = fidMap[String(fName).trim().toLowerCase()];
+                    if (m && m.filterId) fId = String(m.filterId);
+                }
+
+                // Resolve Live Filter Inventory strictly by exact Filter ID first
+                const directInvItems = (directInv && directInv.items && typeof directInv.items === "object") ? directInv.items : {};
+                const directInvRec = (fId && directInvItems[String(fId)]) ? directInvItems[String(fId)] : null;
                 let invMatch = null;
-                if (fName && invList.length > 0) {
-                    const normFName = String(fName).trim().toLowerCase();
-                    invMatch = invList.find(function(inv) {
-                        return inv && String(inv.name || "").trim().toLowerCase() === normFName;
+                if (fId && invList.length > 0) {
+                    invMatch = invList.find(function (inv) {
+                        return inv && (String(inv.id || "") === String(fId) || String(inv.rawId || "") === String(fId));
                     }) || null;
                 }
-                const fAvailContacts = invMatch ? (invMatch.count !== undefined ? invMatch.count : invMatch.totalCount) : (targetCamp.filterActive !== false ? fCount : null);
-                const fTotalMatches = (invMatch && invMatch.totalCount !== undefined && invMatch.totalCount !== null) ? Number(invMatch.totalCount) : fCount;
-                let fId = targetCamp.liveFilterId || (invMatch && invMatch.rawId ? invMatch.rawId : null);
-                if (!fId && fName) {
-                    try {
-                        const fidMap = JSON.parse(localStorage.getItem("ct_east3_filter_id_map_v1") || "{}");
-                        const m = fidMap[String(fName).trim().toLowerCase()];
-                        if (m && m.filterId) fId = String(m.filterId);
-                    } catch (e) {}
+                if (!invMatch && !fId && fName && invList.length > 0) {
+                    const normFName = String(fName).trim().toLowerCase();
+                    invMatch = invList.find(function (inv) {
+                        return inv && String(inv.name || "").trim().toLowerCase() === normFName;
+                    }) || null;
+                    if (invMatch && /^[0-9]+$/.test(String(invMatch.id || invMatch.rawId || ""))) {
+                        fId = String(invMatch.id || invMatch.rawId);
+                    }
                 }
+                if (invMatch && invMatch.name && fName && String(invMatch.name).trim().toLowerCase() !== String(fName).trim().toLowerCase()) {
+                    // Reject mismatched inventory record rather than attributing another filter's count
+                    invMatch = null;
+                }
+                if (directInvRec && directInvRec.name && fName && window.CT && window.CT.cleanCanonicalFilterName &&
+                    window.CT.cleanCanonicalFilterName(directInvRec.name).toLowerCase() !== String(fName).trim().toLowerCase()) {
+                    // Canonical name mismatch — do not mix filter counts
+                    invMatch = null;
+                }
+                const fAvailContacts = (directInvRec && directInvRec.count !== null && directInvRec.count !== undefined && Number.isFinite(Number(directInvRec.count)))
+                    ? Number(directInvRec.count)
+                    : ((invMatch && invMatch.count !== null && invMatch.count !== undefined && Number.isFinite(Number(invMatch.count)))
+                        ? Number(invMatch.count)
+                        : null);
+                const fTotalMatches = (invMatch && invMatch.totalCount !== undefined && invMatch.totalCount !== null)
+                    ? Number(invMatch.totalCount)
+                    : ((directInvRec && directInvRec.totalCount !== null && directInvRec.totalCount !== undefined) ? Number(directInvRec.totalCount) : fCount);
 
                 const fSource = targetCamp.liveFilterSource || "DOM_UNAVAILABLE";
                 const fTimeMs = targetCamp.liveFilterTimestamp || null;
                 const fTime = targetCamp.liveFilterTimestamp ? new Date(targetCamp.liveFilterTimestamp).toLocaleTimeString() : (fName ? new Date().toLocaleTimeString() : "Awaiting DOM");
                 const targetingFreshness = evaluateFreshness(fTimeMs, Date.now());
 
+                const transSnap = (window.CT && window.CT.resolveAuthoritativeTransitionCopy && cId)
+                    ? window.CT.resolveAuthoritativeTransitionCopy({
+                        campaignId: cId,
+                        dialer: DIALER,
+                        prefix: PREFIX,
+                        intelligenceHistory: intelligenceEngine ? intelligenceEngine.history : null
+                    })
+                    : { ok: false, errorReason: "NO VERIFIED TRANSITION" };
+
                 let lastChangeHtml = "No verified targeting transitions recorded";
                 let changeFound = false;
-                if (intelligenceEngine && intelligenceEngine.history) {
-                    const normCampName = cName ? String(cName).trim().toLowerCase() : "";
-                    const recentChange = intelligenceEngine.history.find(function(h) {
-                        return h && h.category === "LIVE_FILTER" && (
-                            (cId && (String(h.targetId) === String(cId) || String(h.campaignId) === String(cId))) ||
-                            (normCampName && h.targetName && String(h.targetName).trim().toLowerCase() === normCampName)
-                        );
-                    });
-                    if (recentChange) {
-                        changeFound = true;
-                        const prevCountStr = recentChange.previousCount !== undefined && recentChange.previousCount !== null ? ' (' + formatNumber(recentChange.previousCount) + ')' : '';
-                        const currCountStr = recentChange.currentCount !== undefined && recentChange.currentCount !== null ? ' (' + formatNumber(recentChange.currentCount) + ')' : '';
-                        lastChangeHtml = '<span class="ct-lft-change-campaign">' + escapeHtml(cName) + ': </span>' +
-                            '<span class="ct-lfi-prev">' + escapeHtml(recentChange.previousFilter || recentChange.previous || "None") + prevCountStr + '</span>' +
-                            '<span class="ct-lfi-arrow"> ➔ </span>' +
-                            '<span class="ct-lfi-curr">' + escapeHtml(recentChange.currentFilter || recentChange.current || "None") + currCountStr + '</span>' +
-                            ' <span class="ct-lft-change-time">(' + escapeHtml(recentChange.confirmedAt || (recentChange.timestamp ? new Date(recentChange.timestamp).toLocaleTimeString() : "")) + ')</span>' +
-                            ' <span class="ct-lfi-source">Evidence: ' + escapeHtml(recentChange.source || "CONFIRMED OBSERVATION") + '</span>';
-                    }
+                if (transSnap && transSnap.ok) {
+                    changeFound = true;
+                    const prevCountStr = transSnap.previousCount !== undefined && transSnap.previousCount !== null ? ' (' + formatNumber(transSnap.previousCount) + ')' : '';
+                    const currCountStr = transSnap.currentCount !== undefined && transSnap.currentCount !== null ? ' (' + formatNumber(transSnap.currentCount) + ')' : '';
+                    lastChangeHtml = '<span class="ct-lft-change-campaign">' + escapeHtml(cName) + ': </span>' +
+                        '<span class="ct-lfi-prev">' + escapeHtml(transSnap.filterFrom) + prevCountStr + '</span>' +
+                        '<span class="ct-lfi-arrow"> ➔ </span>' +
+                        '<span class="ct-lfi-curr">' + escapeHtml(transSnap.filterTo) + currCountStr + '</span>' +
+                        (transSnap.confirmedAt ? ' <span class="ct-lft-change-time">(' + escapeHtml(transSnap.confirmedAt) + ')</span>' : '') +
+                        ' <span class="ct-lfi-source">Evidence: ' + escapeHtml(transSnap.source || "CONFIRMED OBSERVATION") + '</span>';
                 }
 
                 // 1. Header elements
@@ -5464,12 +5635,38 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                     setText(refs.topFilterAge, fTimeMs ? formatAge(Math.floor((Date.now() - fTimeMs)/1000)) + " old" : "Never observed");
                 }
 
-                // 8. Transition Bar
+                // 8. Transition Bar & One-Click WhatsApp Copy controls
                 if (refs.topFilterChange) {
                     if (changeFound) {
                         refs.topFilterChange.innerHTML = lastChangeHtml;
                     } else {
                         setText(refs.topFilterChange, "No verified targeting transitions recorded for " + cName);
+                    }
+                }
+                const assignSnap = (window.CT && window.CT.resolveAuthoritativeAssignedFilterCopy && cId)
+                    ? window.CT.resolveAuthoritativeAssignedFilterCopy({ campaignId: cId, prefix: PREFIX, now: Date.now() })
+                    : { ok: false, errorReason: "Assigned filter unverified" };
+                if (refs.copyAssignedFilterBtn) {
+                    refs.copyAssignedFilterBtn.disabled = false;
+                    refs.copyAssignedFilterBtn.classList.toggle("is-disabled", !assignSnap.ok);
+                    refs.copyAssignedFilterBtn.title = assignSnap.ok
+                        ? ("Copy verified Assigned Live Filter and Available Leads in WhatsApp format:\n\n" + assignSnap.text)
+                        : ("Assigned Live Filter unavailable to copy: " + (assignSnap.errorReason || "Unverified"));
+                    if (!refs.copyAssignedFilterBtn._ctFeedbackTimer) {
+                        const lbl = refs.copyAssignedFilterBtn.querySelector(".ct-copy-label");
+                        if (lbl) lbl.textContent = assignSnap.ok ? "Copy" : "Unavailable";
+                    }
+                }
+                if (refs.copyTransitionBtn) {
+                    const hasTrans = Boolean(transSnap && transSnap.ok);
+                    refs.copyTransitionBtn.disabled = !hasTrans;
+                    refs.copyTransitionBtn.classList.toggle("is-disabled", !hasTrans);
+                    refs.copyTransitionBtn.title = hasTrans
+                        ? ("Copy latest verified Live Filter transition in WhatsApp format:\n\n" + transSnap.text)
+                        : "NO VERIFIED TRANSITION — requires a verified prior and new Live Filter swap";
+                    if (!refs.copyTransitionBtn._ctFeedbackTimer) {
+                        const lbl = refs.copyTransitionBtn.querySelector(".ct-copy-label");
+                        if (lbl) lbl.textContent = hasTrans ? "Copy Transition" : "NO VERIFIED TRANSITION";
                     }
                 }
             } else {
@@ -5492,6 +5689,24 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 }
                 if (refs.topFilterAge) setText(refs.topFilterAge, "—");
                 if (refs.topFilterChange) setText(refs.topFilterChange, "No verified targeting changes recorded");
+                if (refs.copyAssignedFilterBtn) {
+                    refs.copyAssignedFilterBtn.disabled = false;
+                    refs.copyAssignedFilterBtn.classList.add("is-disabled");
+                    refs.copyAssignedFilterBtn.title = "Select an Operating campaign with a verified Live Filter before copying";
+                    if (!refs.copyAssignedFilterBtn._ctFeedbackTimer) {
+                        const lbl = refs.copyAssignedFilterBtn.querySelector(".ct-copy-label");
+                        if (lbl) lbl.textContent = "Unavailable";
+                    }
+                }
+                if (refs.copyTransitionBtn) {
+                    refs.copyTransitionBtn.disabled = true;
+                    refs.copyTransitionBtn.classList.add("is-disabled");
+                    refs.copyTransitionBtn.title = "NO VERIFIED TRANSITION";
+                    if (!refs.copyTransitionBtn._ctFeedbackTimer) {
+                        const lbl = refs.copyTransitionBtn.querySelector(".ct-copy-label");
+                        if (lbl) lbl.textContent = "NO VERIFIED TRANSITION";
+                    }
+                }
                 if (refs.topFilterBadge) {
                     setText(refs.topFilterBadge, "FILTER SOURCE UNAVAILABLE");
                     setClass(refs.topFilterBadge, "ct-tlf-badge is-unavailable");
@@ -7248,30 +7463,40 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                       '</div>'
                     : '';
 
-                const headlineText = alert.message || (alert.targetName + " — " + alert.metric);
+                const targetCidStr = (alert.campaignId || alert.targetId) ? String(alert.campaignId || alert.targetId).trim() : "";
+                const hasSpecificTarget = Boolean(alert.targetName && targetCidStr !== "ALL" && alert.targetName !== "ALL");
+                const campaignPillHtml = hasSpecificTarget
+                    ? '<span class="ct-goal-campaign-tag">' + escapeHtml(alert.targetName) + (/^[0-9]+$/.test(targetCidStr) ? ' · #' + escapeHtml(targetCidStr) : '') + '</span>'
+                    : '';
+                const headlineText = hasSpecificTarget
+                    ? (safeValue(alert.status) + " on " + safeValue(alert.targetName) + (/^[0-9]+$/.test(targetCidStr) ? " (#" + targetCidStr + ")" : ""))
+                    : (safeValue(alert.status) + " — " + safeValue(alert.metric || DIALER));
+                const whatHappenedText = alert.message || (safeValue(alert.targetName, DIALER) + " recorded " + safeValue(alert.metric, "telemetry change") + ".");
                 const impactText = alert.impact || "Significant variance observed in " + DIALER + " CallTools telemetry.";
                 const actionText = alert.recommendedAction || "Inspect " + safeValue(alert.targetName, DIALER) + " and verify current configuration.";
 
                 const primaryBtn = isIntegrity
-                    ? '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="refresh">REFRESH</button>'
+                    ? '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="refresh"><span aria-hidden="true">↻</span><span>REFRESH</span></button>'
                     : isInbound
-                        ? '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="inbound-focus">VIEW QUEUE</button>'
-                        : '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="focus" data-target="' + escapeHtml(alert.targetId || alert.campaignId || alert.targetName || "") + '">FOCUS</button>';
-                const dismissBtn = '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-intel-action="dismiss" data-intel-id="' + escapeHtml(alert.id) + '">DISMISS</button>';
+                        ? '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="inbound-focus"><span aria-hidden="true">📋</span><span>VIEW QUEUE</span></button>'
+                        : '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="focus" data-target="' + escapeHtml(alert.targetId || alert.campaignId || alert.targetName || "") + '"><span aria-hidden="true">🎯</span><span>FOCUS</span></button>';
+                const dismissBtn = '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-intel-action="dismiss" data-intel-id="' + escapeHtml(alert.id) + '"><span aria-hidden="true">✕</span><span>DISMISS</span></button>';
 
                 return '<div class="ct-intelligence-card ' + sevClass + '" data-intel-id="' + escapeHtml(alert.id) + '">' +
                     '<div class="ct-alert-main">' +
                         '<div class="ct-intel-card-top">' +
                             '<span class="ct-intel-badge ' + badgeClass + '">' + escapeHtml(alert.status) + '</span>' +
                             '<span class="' + dialerBadgeClass + '">' + escapeHtml(alert.dialer || DIALER) + '</span>' +
+                            campaignPillHtml +
                             '<span class="ct-goal-direction-tag">' + escapeHtml(alert.direction || "OUTBOUND") + '</span>' +
                             '<span class="ct-goal-time" title="Detected: ' + escapeHtml(alert.firstDetectedAt) + ' · Confirmed: ' + escapeHtml(alert.confirmedAt) + '">' + escapeHtml(alert.confirmedAt || alert.firstDetectedAt) + '</span>' +
                         '</div>' +
                         '<div class="ct-alert-headline">' + escapeHtml(headlineText) + '</div>' +
                         statBarHtml +
                         '<div class="ct-alert-explain-grid">' +
-                            '<div class="ct-alert-explain-row"><strong>WHY IT MATTERS</strong>' + escapeHtml(impactText) + '</div>' +
-                            '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong>' + escapeHtml(actionText) + '</div>' +
+                            '<div class="ct-alert-explain-row is-what"><strong>WHAT HAPPENED</strong><span>' + escapeHtml(whatHappenedText) + '</span></div>' +
+                            '<div class="ct-alert-explain-row is-why"><strong>WHY IT MATTERS</strong><span>' + escapeHtml(impactText) + '</span></div>' +
+                            '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong><span>' + escapeHtml(actionText) + '</span></div>' +
                         '</div>' +
                     '</div>' +
                     '<div class="ct-goal-card-actions">' + primaryBtn + dismissBtn + '</div>' +
@@ -7279,12 +7504,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             }).join("");
 
             const activeGoalCards = activePersistent.map(function (alert) {
-                const headline = (alert.dialer || DIALER) + ": " + safeValue(alert.targetName) + " recorded +" + formatNumber(alert.increase) + " new " + alert.metric.toLowerCase() + ".";
+                const targetCidStr = alert.targetId ? String(alert.targetId).trim() : "";
+                const campaignPillHtml = alert.targetName
+                    ? '<span class="ct-goal-campaign-tag">' + escapeHtml(alert.targetName) + (/^[0-9]+$/.test(targetCidStr) ? ' · #' + escapeHtml(targetCidStr) : '') + '</span>'
+                    : '';
+                const headline = safeValue(alert.targetName) + " recorded +" + formatNumber(alert.increase) + " new " + alert.metric.toLowerCase();
+                const whatHappened = (alert.dialer || DIALER) + " " + safeValue(alert.targetName) + " incremented from " + formatNumber(alert.previous) + " to " + formatNumber(alert.current) + " " + alert.metric.toLowerCase() + ".";
                 return '<div class="ct-persistent-goal-card" data-goal-id="' + escapeHtml(alert.id) + '">' +
                     '<div class="ct-alert-main">' +
                         '<div class="ct-goal-card-top">' +
                             '<span class="ct-goal-badge">NEW ' + escapeHtml(alert.metric.toUpperCase()) + '</span>' +
                             '<span class="' + dialerBadgeClass + '">' + escapeHtml(alert.dialer || DIALER) + '</span>' +
+                            campaignPillHtml +
                             '<span class="ct-goal-direction-tag">' + escapeHtml(alert.direction) + '</span>' +
                             '<span class="ct-goal-time">' + escapeHtml(alert.detectedAt) + '</span>' +
                         '</div>' +
@@ -7296,13 +7527,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                             '<span class="ct-goal-increase">(+' + formatNumber(alert.increase) + ')</span>' +
                         '</div>' +
                         '<div class="ct-alert-explain-grid">' +
-                            '<div class="ct-alert-explain-row"><strong>WHY IT MATTERS</strong>Verified conversion progress on ' + escapeHtml(alert.dialer || DIALER) + ' ' + escapeHtml(alert.targetName) + '.</div>' +
-                            '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong>Review conversion details and click NOTED once acknowledged.</div>' +
+                            '<div class="ct-alert-explain-row is-what"><strong>WHAT HAPPENED</strong><span>' + escapeHtml(whatHappened) + '</span></div>' +
+                            '<div class="ct-alert-explain-row is-why"><strong>WHY IT MATTERS</strong><span>Verified conversion progress on ' + escapeHtml(alert.dialer || DIALER) + ' ' + escapeHtml(alert.targetName) + '.</span></div>' +
+                            '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong><span>Review conversion details and click NOTED once acknowledged.</span></div>' +
                         '</div>' +
                     '</div>' +
                     '<div class="ct-goal-card-actions">' +
-                        '<button type="button" class="ct-alert-btn ct-alert-btn-secondary" data-intel-action="focus" data-target="' + escapeHtml(alert.targetId || alert.targetName || "") + '">FOCUS</button>' +
-                        '<button type="button" class="ct-btn ct-btn-noted" data-noted-id="' + escapeHtml(alert.id) + '" title="Acknowledge this goal alert">NOTED</button>' +
+                        '<button type="button" class="ct-alert-btn ct-alert-btn-secondary" data-intel-action="focus" data-target="' + escapeHtml(alert.targetId || alert.targetName || "") + '"><span aria-hidden="true">🎯</span><span>FOCUS</span></button>' +
+                        '<button type="button" class="ct-btn ct-btn-noted" data-noted-id="' + escapeHtml(alert.id) + '" title="Acknowledge this goal alert"><span aria-hidden="true">✓</span><span>NOTED</span></button>' +
                     '</div>' +
                 '</div>';
             }).join("");
@@ -7345,31 +7577,39 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             const domainTag = sourceAlert ? "SYSTEM" : inboundAlert ? "INBOUND" : "OUTBOUND";
             const campaignIsOperating = !sourceAlert && !inboundAlert && (state.operatingCampaigns || []).map(function (id) { return String(id || "").trim().toLowerCase(); }).includes(campaignId);
             const actionLabel = sourceAlert ? "REFRESH" : inboundAlert ? "VIEW QUEUE" : campaignIsOperating ? "FOCUS" : "OPERATE";
+            const actionIcon = sourceAlert ? "↻" : inboundAlert ? "📋" : campaignIsOperating ? "🎯" : "⚡";
             const actionType = sourceAlert ? "refresh" : inboundAlert ? "inbound-focus" : campaignIsOperating ? "focus" : "operate";
-            const secondary = sourceAlert || inboundAlert || campaignIsOperating ? "" : '<button type="button" class="ct-alert-btn ct-alert-btn-secondary" data-alert-action="focus" data-campaign="' + escapeHtml(campaignId) + '">FOCUS</button>';
+            const secondary = sourceAlert || inboundAlert || campaignIsOperating ? "" : '<button type="button" class="ct-alert-btn ct-alert-btn-secondary" data-alert-action="focus" data-campaign="' + escapeHtml(campaignId) + '"><span aria-hidden="true">🎯</span><span>FOCUS</span></button>';
             const sevPillClass = a.severity === "critical" ? "is-critical" : "is-warning";
             const sevLabel = a.severity === "critical" ? "CRITICAL" : "AT RISK";
             const timeLabel = a.createdAt ? formatDateTime(new Date(a.createdAt)) : "";
-            const headline = safeValue(a.name) + " — " + safeValue(a.message);
+            const rawCid = a.campaignId && !String(a.campaignId).startsWith("operational:") ? String(a.campaignId).trim() : "";
+            const campaignPillHtml = (!sourceAlert && a.name)
+                ? '<span class="ct-goal-campaign-tag">' + escapeHtml(safeValue(a.name)) + (/^[0-9]+$/.test(rawCid) ? ' · #' + escapeHtml(rawCid) : '') + '</span>'
+                : '';
+            const headline = safeValue(a.name) + " — " + safeValue(a.label || sevLabel);
+            const whatHappened = safeValue(a.message);
             const whyMatters = a.impact || operationalImpactText(a);
             item.innerHTML = '<div class="ct-alert-main">' +
                 '<div class="ct-alert-top">' +
                     '<span class="ct-alert-sev-pill ' + sevPillClass + '">' + escapeHtml(a.label || sevLabel) + '</span>' +
                     '<span class="' + dialerBadgeClass + '">' + escapeHtml(DIALER) + '</span>' +
+                    campaignPillHtml +
                     '<span class="ct-goal-direction-tag">' + escapeHtml(domainTag) + '</span>' +
                     '<span class="ct-goal-direction-tag">' + escapeHtml(sevLabel) + '</span>' +
                     (timeLabel ? '<span class="ct-goal-time">' + escapeHtml(timeLabel) + '</span>' : '') +
                 '</div>' +
                 '<div class="ct-alert-headline">' + escapeHtml(headline) + '</div>' +
                 '<div class="ct-alert-explain-grid">' +
-                    '<div class="ct-alert-explain-row"><strong>WHY IT MATTERS</strong>' + escapeHtml(whyMatters) + '</div>' +
-                    '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong>' + escapeHtml(a.action || "Review the condition.") + '</div>' +
+                    '<div class="ct-alert-explain-row is-what"><strong>WHAT HAPPENED</strong><span>' + escapeHtml(whatHappened) + '</span></div>' +
+                    '<div class="ct-alert-explain-row is-why"><strong>WHY IT MATTERS</strong><span>' + escapeHtml(whyMatters) + '</span></div>' +
+                    '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong><span>' + escapeHtml(a.action || "Review the condition.") + '</span></div>' +
                 '</div>' +
             '</div>' +
             '<div class="ct-alert-buttons">' +
-                '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-alert-action="' + actionType + '" data-campaign="' + escapeHtml(campaignId) + '">' + actionLabel + '</button>' +
+                '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-alert-action="' + actionType + '" data-campaign="' + escapeHtml(campaignId) + '"><span aria-hidden="true">' + actionIcon + '</span><span>' + actionLabel + '</span></button>' +
                 secondary +
-                '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-alert-action="dismiss">DISMISS</button>' +
+                '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-alert-action="dismiss"><span aria-hidden="true">✕</span><span>DISMISS</span></button>' +
             '</div>';
             fragment.appendChild(item);
         });

@@ -12,8 +12,8 @@ Both dialer ZIP packages in `releases/v11.3.9/` match `CT_OPERATIONS_DUAL_DIALER
 
 | Package | Size (bytes) | Files | SHA-256 |
 | --- | ---: | ---: | --- |
-| `CT_Operations_Monitor_East2_v11.3.9.zip` | 158,870 | 8 | `f53ae41ad824edb78e6cd70d4f6ba408e33fd91b0ffa6ed5f6ec8ffeeb4c6ff0` |
-| `CT_Operations_Monitor_East3_v11.3.9.zip` | 158,876 | 8 | `079eaf5bab85348bef2a07a6cce71c3f91833b6303fb0cabe9d71417ef7b3bfe` |
+| `CT_Operations_Monitor_East2_v11.3.9.zip` | 165,691 | 8 | `694f62a05563ca1e9e82399d4367d32c1d3fc093594e3b1a627e48a1db12441c` |
+| `CT_Operations_Monitor_East3_v11.3.9.zip` | 165,615 | 8 | `663b3f35397e70e7e6f2eee81bac29905c247090eec7d11b8caf4169ce8d0d82` |
 
 Canonical `SHA256SUMS.txt` is stored alongside the ZIPs in `releases/v11.3.9/SHA256SUMS.txt` and `CT_OPERATIONS_DUAL_DIALER_RELEASE/RELEASE_PACKAGES/SHA256SUMS.txt`.
 
@@ -45,7 +45,11 @@ Canonical `SHA256SUMS.txt` is stored alongside the ZIPs in `releases/v11.3.9/SHA
    - Restricted `UNEXPECTED RESET` (`isCumulativeCounter: true`) strictly to true cumulative counters (`outbound_abandoned`, `inbound_not_answered`), preventing false reset alerts on live gauges (`Total Agents Logged In`, `Callers Waiting`, `Worst Wait Time`, `Active Campaigns Count`).
    - Required combined absolute + percentage thresholds (`requireBothAbsAndPct: true`) and baseline gates (`minBaseline: 3` on active campaigns) to eliminate minor variance noise (`24->36` wait, `27->23` agents) and transient `18 -> 1` campaign-count spikes.
    - Added automatic cleanup of legacy gauge reset / foreign-dialer alerts in `loadState()`, auto-resolution for `AUTH_LOST`/`INBOUND_AUTH_LOST`/`FEED_STALE`/`TABLE_MISSING`/`CONTRADICTORY`/`MISSING`, and added `OUTBOUND_NO_AGENT_WAITING`, `INBOUND_AUTH_LOST`, `INACTIVE FILTER ASSIGNED`, and `FILTER POOL EXHAUSTED`.
-   - Redesigned Action Center cards (`dashboard.js` + deduplicated/scoped `dashboard.css`) with accurate `CRITICAL`/`AT RISK`/`ACTIVE SIGNALS` counters, false `ALL CLEAR` suppression, dialer pills (`EAST-2` / `EAST-3`), numeric stat transition bars, working `FOCUS`/`REFRESH`/`VIEW QUEUE`/`DISMISS`/`NOTED` actions, and explicit **What happened / Dialer / `WHY IT MATTERS` / `ACTION REQUIRED`** sections.
+   - Redesigned Action Center (`dashboard.js` + scoped `dashboard.css`) with full header hierarchy (`CRITICAL`, `AT RISK`, `ACTIVE SIGNALS`, `Clear All`), `ALL CLEAR` only when zero signals are active, comfortable desktop typography (`13.5px` headlines, `11.8px` rows, `32px` controls), campaign pills, explicit **`WHAT HAPPENED` / `WHY IT MATTERS` / `ACTION REQUIRED`** separation, and consistent icons (`🎯 FOCUS`, `↻ REFRESH`, `📋 VIEW QUEUE`, `✓ NOTED`, `✕ DISMISS`).
+5. **Dynamic One-Click WhatsApp Copy Controls & Stale-Overwrite Protection (`helpers.js` + `dashboard.js` + `content.js` + `intelligence.js`):**
+   - Added `CT.resolveAuthoritativeAssignedFilterCopy`, `CT.resolveAuthoritativeTransitionCopy`, and `CT.writeTextToClipboard` in `helpers.js` (`East2` & `East3`), plus stale timestamp overwrite guards across `content.js` (`verified_campaign_filters_v1`, `live_filters_inventory_v1`), `intelligence.js` (`filterBaselines`), and `dashboard.js` (`reconcileCampaignsWithVerifiedRegistry`).
+   - Added `[data-ref="copyAssignedFilterBtn"]` inside Assigned Live Filter Card 1 resolving live at click time strictly via immutable numeric Campaign ID → numeric Filter ID → Live Filter Inventory `items[filterId].count` (never substituting Campaign Lead Pool, Total Matching Contacts, or truncated names) in exact format `LIVE FILTER\n[Full Live Filter Name]\nAVAILABLE LEADS: [Verified Available Contacts]`.
+   - Added separate `[data-ref="copyTransitionBtn"]` beside Latest Targeting Transition resolving strictly `FROM: [Previous Live Filter Name]\nTO: [New Live Filter Name]` (no counts/timestamps/metrics) and disabling with `NO VERIFIED TRANSITION` whenever no verified prior filter swap exists.
 
 ---
 
@@ -56,11 +60,11 @@ Canonical `SHA256SUMS.txt` is stored alongside the ZIPs in `releases/v11.3.9/SHA
 | `node --check` (`src/*.js` & `dist/src/*.js`) | `24/24` passed | All JS modules in EAST-2 and EAST-3 |
 | Cross-dialer & CSS/network security scan | `0` violations | Zero cross-dialer strings, zero `.click(`/fetch/XHR/WS in `content.js`/`ng_bridge.js` |
 | Root regression suite (`tests/suite.test.js`) | `47/47` passed (`fail 0`) | Core shared modules & security invariants |
-| EAST-2 suite (`tests/suite.test.js`) | `340/340` passed (`fail 0`) | Parser, intelligence, dashboard, content, `dist/` parity, simulation (`UPGRADE 338`), alert accuracy & isolation (`UPGRADE 339-340`) |
-| EAST-3 suite (`tests/suite.test.js`) | `340/340` passed (`fail 0`) | Parser, intelligence, dashboard, content, `dist/` parity, simulation (`UPGRADE 338`), alert accuracy & isolation (`UPGRADE 339-340`) |
+| EAST-2 suite (`tests/suite.test.js`) | `342/342` passed (`fail 0`) | Parser, intelligence, dashboard, content, `dist/` parity, simulation (`UPGRADE 338`), alerts & isolation (`UPGRADE 339-340`), WhatsApp copy & stale guards (`UPGRADE 341-342`) |
+| EAST-3 suite (`tests/suite.test.js`) | `342/342` passed (`fail 0`) | Parser, intelligence, dashboard, content, `dist/` parity, simulation (`UPGRADE 338`), alerts & isolation (`UPGRADE 339-340`), WhatsApp copy & stale guards (`UPGRADE 341-342`) |
 | ZIP ↔ `dist/` SHA-256 verification | `8/8` files exact match per dialer | Both `releases/v11.3.9/` and `RELEASE_PACKAGES/` ZIPs |
 
-**Total Automated Tests Passed:** `727 / 727` (`0` failed, `0` skipped).
+**Total Automated Tests Passed:** `731 / 731` (`0` failed, `0` skipped).
 
 ---
 
@@ -76,14 +80,12 @@ Canonical `SHA256SUMS.txt` is stored alongside the ZIPs in `releases/v11.3.9/SHA
 
 ### A. EAST-3 Live Authenticated Production Verification (Brave Profile 2, CDP `127.0.0.1:9222`)
 - **Extension:** `mmbceflgijbjeepkphiplhmclidhmhjn` v`11.3.9`, `state: "ENABLED"`, `runtimeErrors: []`, `manifestErrors: []`, `PAGE_ERRORS: []`.
-- **Realtime & Live Transition:** Verified `36` filters (`20` active / `16` inactive / `168,072` available at audit, `0` deleted ghosts), `22s` Plan B rotation with inbound queue continuously `LIVE`. Observed live campaign `#1716` (`TS FRESH DATA`) filter transition `TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts` -> `TS JAN 4 Hilton 2nd attempt 11/09` (`#4619`) rendered automatically in both Live Filter Targeting cards and redesigned Action Center (`1 CRITICAL`, `EAST-3`, `WHY IT MATTERS`, `ACTION REQUIRED`, `FOCUS`/`DISMISS`).
-- **Action Center Steady State:** Verified `historyFalseGaugeResetsLeft === 0` after `loadState()` legacy purge, accurate `[0 CRITICAL] [0 AT RISK]` counters when clear, and `[Clear All]` transition into `EAST-3 · ALL CLEAR`.
-- **Operating Controls:** Real CDP mouse clicks verified toolbar dropdown (`All`, `Clear`, `#1717`, `#1629`, `#1716`), table-row focus button (`[data-campaign-focus="1717"]`, exact scroll `310 === 310`), drawer card `[data-row-action="operate"]` (`aria-pressed="true"`/`"false"`), and full `Page.reload` persistence (`["1716"]`, `"TS FRESH DATA 1"`).
-- **Refresh Data:** Verified real async refresh (`refreshId: "ref-1794340645958-1"`, `elapsedMs: 4705`, `recordsRead: 7`: `campaigns: 3`, `liveFilters: 3`, `campaignEdit: 1716`, `inboundQueues: 1`, `unavailableSources: []`), advancing real timestamps and syncing `33,780 === 33,780`.
+- **Alert Center & Controls:** Verified `CRITICAL`, `AT RISK`, and `ACTIVE SIGNALS` header counters, `TS FRESH DATA — LOW LEADS` card (`13.5px` headline, `11.8px` rows, `32px` buttons, separated `WHAT HAPPENED`, `WHY IT MATTERS`, `ACTION REQUIRED`), working `FOCUS` action, and automatic transition back to `EAST-3 · ALL CLEAR` (`0 CRITICAL · 0 AT RISK · 0 ACTIVE SIGNALS`).
+- **One-Click Assigned Filter WhatsApp Copy (`#1716` → Filter `#4721`):** Real CDP mouse click on `[data-ref="copyAssignedFilterBtn"]` wrote to system clipboard cleanly (`"LIVE FILTER\r\nTS BLEND Hilton 2nd + 3 small lists 11/10\r\nAVAILABLE LEADS: 52,636"`, using Filter Inventory `52,636` rather than `52,861` Total Matching Contacts) with `✓ COPIED` UI feedback.
+- **One-Click Transition WhatsApp Copy:** Real CDP mouse click on `[data-ref="copyTransitionBtn"]` wrote `"FROM: TS ALL agent connects NP NP burst 11/10\r\nTO: TS BLEND Hilton 2nd + 3 small lists 11/10"` with `✓ COPIED` feedback (zero counts/timestamps).
+- **Unavailable / Clipboard Failure / No-Transition Edge Cases:** Denied `clipboard-write` via CDP -> verified `COPY FAILED` error state; cleared `count` in temporary inventory -> verified `UNAVAILABLE` without inventing a count; selected `#1629` (`RES CRED MAIN`, 0 transitions) -> verified disabled `NO VERIFIED TRANSITION` control.
+- **Realtime, Operating, Refresh Data & Persistence:** Verified live dialing sync, Plan B rotation, all 3 Operating button surfaces, async `Refresh Data` (`5.6s`, `29` records across 4 CallTools sources), and live inbound `LIVE · automatic native Queue feed`.
 
 ### B. Simultaneous Dual-Site Isolation & Live EAST-2 Authentication Boundary
 - **Isolated Simultaneous Browser Verification (Brave CDP `127.0.0.1:9225`):** Loaded unpacked `CT_Operations_Monitor_East2\dist` (`odbhfepdmhhngjcmbidojcbnmobhjhcc`) and `CT_Operations_Monitor_East3\dist` (`jjbpgdmpippgffhhabjckehpgdabfknb`) side-by-side (`v11.3.9`, both `ENABLED`, `runtimeErrors: []`, `manifestErrors: []`), opened `https://east-2.calltools.io/manager/campaigns` and `https://east-3.calltools.io/manager/campaigns` simultaneously, and confirmed `0` cross-dialer DOM/attribute/global/storage leakage and `0` runtime/manifest errors.
-- **Live Authenticated EAST-2 Blocker:** Live authenticated CallTools UI testing on `east-2.calltools.io` could **not** be executed directly by automation because:
-  1. Brave Profile 2 (`127.0.0.1:9222`) holds no authenticated `east-2.calltools.io` session, and
-  2. Google Chrome `Profile 20` (`PID 12552`, which holds `east-2` cookies and `CT_Operations_Monitor_East2` id `cimaihkehebfcejdkkinilegdlmpaejm`) is running without `--remote-debugging-port`.
-  - Per strict read-only and non-bypass security constraints, no credential extraction or process bypass was performed. All `340/340` EAST-2 automated tests, static/runtime isolation checks, and simultaneous isolated extension-load checks pass on the identical v11.3.9 package build.
+- **Live Authenticated EAST-2 Blocker:** Live authenticated CallTools UI testing on `east-2.calltools.io` could **not** be executed directly by automation because Brave Profile 2 (`127.0.0.1:9222`) holds no authenticated `east-2.calltools.io` session and Google Chrome `Profile 20` (`PID 12552`) is running without `--remote-debugging-port`. Per strict non-bypass constraints, no credential extraction or browser termination was attempted. All `342/342` EAST-2 automated tests, static/runtime isolation checks, and simultaneous isolated extension-load checks pass on the identical v11.3.9 build.

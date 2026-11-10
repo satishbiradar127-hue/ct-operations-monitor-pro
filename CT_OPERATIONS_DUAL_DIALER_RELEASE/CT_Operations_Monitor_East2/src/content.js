@@ -119,13 +119,18 @@ console.log("CT Operations Monitor (" + ("EAST-2") + ") — Production live feed
                     if (slugId !== resolvedId && inventory.items[slugId]) {
                         delete inventory.items[slugId];
                     }
+                    const existingInv = inventory.items[resolvedId];
+                    const nextObsAt = Number(f.observedAt || now);
+                    if (existingInv && existingInv.observedAt && nextObsAt < Number(existingInv.observedAt)) {
+                        return;
+                    }
                     inventory.items[resolvedId] = {
                         id: resolvedId,
                         name: f.name,
                         active: f.active,
                         count: f.count,
                         totalCount: f.totalCount,
-                        observedAt: f.observedAt || now,
+                        observedAt: nextObsAt,
                         source: "LIVE_FILTERS_PAGE"
                     };
                 });
@@ -147,7 +152,7 @@ console.log("CT Operations Monitor (" + ("EAST-2") + ") — Production live feed
                     }
                 });
 
-                inventory.lastObservedAt = now;
+                inventory.lastObservedAt = Math.max(Number(inventory.lastObservedAt || 0), now);
                 inventory.totalCount = Object.keys(inventory.items).length;
                 lastInvSig = sig;
                 lastInvWriteAt = now;
@@ -319,6 +324,11 @@ console.log("CT Operations Monitor (" + ("EAST-2") + ") — Production live feed
                     source: "CAMPAIGN_EDIT_DOM",
                     timestamp: editData.timestamp || now
                 };
+
+                const existingReg = registry[cid];
+                if (existingReg && existingReg.timestamp && Number(entry.timestamp || 0) < Number(existingReg.timestamp)) {
+                    return false;
+                }
 
                 // STRICTLY KEY ONLY BY IMMUTABLE CAMPAIGN ID! NEVER BY NAME!
                 registry[cid] = entry;

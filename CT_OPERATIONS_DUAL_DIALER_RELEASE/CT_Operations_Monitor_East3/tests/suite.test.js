@@ -7545,3 +7545,125 @@ test("EAST-3 UPGRADE 340: Strict dual-dialer isolation, scoped CSS, empty snapsh
     assert.ok(parserSrc.includes("isAllowedHost()") && parserSrc.includes('TARGET_HOST: "east-3.calltools.io"'), "parser must enforce host guard");
     assert.ok(dashSrc.includes("ct-alert-explain-grid") && dashSrc.includes("WHY IT MATTERS") && dashSrc.includes("ACTION REQUIRED"), "Dashboard must render Action Center What/Why/Action explanation blocks");
 });
+
+test("EAST-3 UPGRADE 341: Authoritative One-Click WhatsApp Copy resolvers and clipboard failure handling", async () => {
+    const now = Date.now();
+    const store = new Map();
+    const storage = {
+        getItem(k) { return store.get(k) || null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); }
+    };
+
+    // Valid numeric campaign + numeric filter ID + exact inventory record
+    storage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
+        "1716": {
+            campaignId: "1716",
+            campaignName: "TS FRESH DATA",
+            liveFilter: "TS BLEND Hilton 2nd + 3 small lists 11/10 (Count: 57889)",
+            filterId: "4721",
+            filterCount: 99999,
+            status: "ASSIGNED",
+            source: "CAMPAIGN_EDIT_DOM",
+            timestamp: now - 5000
+        }
+    }));
+    storage.setItem("ct_east3_live_filters_inventory_v1", JSON.stringify({
+        items: {
+            "4721": { id: "4721", name: "TS BLEND Hilton 2nd + 3 small lists 11/10", active: true, count: 57120, totalCount: 57889, observedAt: now - 3000, source: "LIVE_FILTERS_PAGE" },
+            "9999": { id: "9999", name: "Other Filter", active: true, count: 123, totalCount: 123, observedAt: now - 3000 }
+        },
+        lastObservedAt: now - 3000
+    }));
+
+    // Must use Available Contacts (57,120) strictly from inventory[4721], NEVER totalCount (57,889) or edit count (99,999)
+    const assignedOk = global.CT.resolveAuthoritativeAssignedFilterCopy({ campaignId: "1716", prefix: "ct_east3_", storage, now });
+    assert.strictEqual(assignedOk.ok, true);
+    assert.strictEqual(assignedOk.filterId, "4721");
+    assert.strictEqual(assignedOk.availableContacts, 57120);
+    assert.strictEqual(assignedOk.text, "LIVE FILTER\nTS BLEND Hilton 2nd + 3 small lists 11/10\nAVAILABLE LEADS: 57,120");
+
+    // Must reject truncated display names
+    storage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
+        "1716": { campaignId: "1716", liveFilter: "TS BLEND Hilton...", filterId: "4721", timestamp: now - 2000 }
+    }));
+    const truncRes = global.CT.resolveAuthoritativeAssignedFilterCopy({ campaignId: "1716", prefix: "ct_east3_", storage, now });
+    assert.strictEqual(truncRes.ok, false);
+    assert.ok(truncRes.unavailableFields.includes("Assigned Live Filter Name"));
+
+    // Must reject stale inventory (>120s) without inventing a count
+    storage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
+        "1716": { campaignId: "1716", liveFilter: "TS BLEND Hilton 2nd + 3 small lists 11/10", filterId: "4721", timestamp: now - 2000 }
+    }));
+    storage.setItem("ct_east3_live_filters_inventory_v1", JSON.stringify({
+        items: { "4721": { id: "4721", name: "TS BLEND Hilton 2nd + 3 small lists 11/10", active: true, count: 57120, totalCount: 57889, observedAt: now - 150000 } },
+        lastObservedAt: now - 150000
+    }));
+    const staleRes = global.CT.resolveAuthoritativeAssignedFilterCopy({ campaignId: "1716", prefix: "ct_east3_", storage, now });
+    assert.strictEqual(staleRes.ok, false);
+    assert.ok(staleRes.unavailableFields.some(f => /Stale/i.test(f)));
+
+    // Must reject missing Available Contacts instead of falling back to totalCount
+    storage.setItem("ct_east3_live_filters_inventory_v1", JSON.stringify({
+        items: { "4721": { id: "4721", name: "TS BLEND Hilton 2nd + 3 small lists 11/10", active: true, count: null, totalCount: 57889, observedAt: now - 2000 } },
+        lastObservedAt: now - 2000
+    }));
+    const missingCnt = global.CT.resolveAuthoritativeAssignedFilterCopy({ campaignId: "1716", prefix: "ct_east3_", storage, now });
+    assert.strictEqual(missingCnt.ok, false);
+    assert.ok(missingCnt.unavailableFields.includes("Available Contacts"));
+
+    // Transition Copy: requires genuine prior filter -> new filter swap, zero counts/timestamps
+    const noTrans = global.CT.resolveAuthoritativeTransitionCopy({ campaignId: "1716", dialer: "EAST-3", prefix: "ct_east3_", storage });
+    assert.strictEqual(noTrans.ok, false);
+    assert.strictEqual(noTrans.errorReason, "NO VERIFIED TRANSITION");
+
+    storage.setItem("ct_east3_live_filter_change_history_v1", JSON.stringify([
+        { campaignId: "1716", dialer: "EAST-3", previousFilter: "None", currentFilter: "TS ALL agent connects NP NP burst 11/10", timestamp: now - 1000 }
+    ]));
+    const initAssignOnly = global.CT.resolveAuthoritativeTransitionCopy({ campaignId: "1716", dialer: "EAST-3", prefix: "ct_east3_", storage });
+    assert.strictEqual(initAssignOnly.ok, false, "Initial assignment from None must not fabricate FROM/TO transition");
+
+    storage.setItem("ct_east3_live_filter_change_history_v1", JSON.stringify([
+        { campaignId: "1716", dialer: "EAST-3", previousFilter: "TS ALL agent connects NP NP burst 11/10", currentFilter: "TS BLEND Hilton 2nd + 3 small lists 11/10", previousCount: 6651, currentCount: 57120, timestamp: now }
+    ]));
+    const validTrans = global.CT.resolveAuthoritativeTransitionCopy({ campaignId: "1716", dialer: "EAST-3", prefix: "ct_east3_", storage });
+    assert.strictEqual(validTrans.ok, true);
+    assert.strictEqual(validTrans.text, "FROM: TS ALL agent connects NP NP burst 11/10\nTO: TS BLEND Hilton 2nd + 3 small lists 11/10");
+    assert.strictEqual(/\d{4}/.test(validTrans.text), false, "Transition WhatsApp copy must contain zero counts or timestamps");
+
+    // Clipboard success + failure handling
+    let copied = null;
+    const okClip = await global.CT.writeTextToClipboard(assignedOk.text, { async writeText(v) { copied = v; } });
+    assert.strictEqual(okClip.ok, true);
+    assert.strictEqual(copied, assignedOk.text);
+
+    const failClip = await global.CT.writeTextToClipboard(assignedOk.text, { async writeText() { throw new Error("NotAllowedError"); } });
+    assert.strictEqual(failClip.ok, false);
+    assert.strictEqual(failClip.error, "NotAllowedError");
+});
+
+test("EAST-3 UPGRADE 342: Premium Alert Center WHAT/WHY/ACTION separation, ACTIVE SIGNALS badge, copy buttons & stale-overwrite guards", () => {
+    const cssSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.css"), "utf-8");
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+
+    assert.ok(dashSrc.includes('data-ref="alertCount"') && dashSrc.includes("0 ACTIVE SIGNALS"), "Action Center header must display ACTIVE SIGNALS counter badge");
+    assert.ok(dashSrc.includes("WHAT HAPPENED") && dashSrc.includes("WHY IT MATTERS") && dashSrc.includes("ACTION REQUIRED"), "Alert cards must separate WHAT HAPPENED, WHY IT MATTERS, and ACTION REQUIRED");
+    assert.ok(dashSrc.includes('data-ref="copyAssignedFilterBtn"') && dashSrc.includes('data-ref="copyTransitionBtn"'), "Assigned Live Filter and Transition copy buttons must exist");
+    assert.ok(cssSrc.includes("#ct-operations-dashboard-east3 .ct-lft-copy-btn") && cssSrc.includes("#ct-operations-dashboard-east3 .ct-alert-explain-row"), "Copy button and Alert explain CSS must be scoped cleanly");
+    assert.ok(contentSrc.includes("nextObsAt < Number(existingInv.observedAt)") && contentSrc.includes("Number(entry.timestamp || 0) < Number(existingReg.timestamp)"), "content.js must reject out-of-order stale observations");
+
+    // Stale recordTargetingTransition call must never overwrite newer baseline
+    const origWin = global.window;
+    global.window = { location: { pathname: "/manager/campaigns", hostname: "east-3.calltools.io", origin: "https://east-3.calltools.io" } };
+    try {
+        const engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } });
+        engine.recordTargetingTransition({ cid: "1716", cName: "TS FRESH DATA", currFilter: "Newer Filter", currCount: 1000, now: 50000 });
+        const ignoredStale = engine.recordTargetingTransition({ cid: "1716", cName: "TS FRESH DATA", prevFilter: "Newer Filter", currFilter: "Old Cached Filter", currCount: 500, now: 40000 });
+        assert.strictEqual(ignoredStale, null);
+        assert.strictEqual(engine.filterBaselines["campaign_filter_1716"].filter, "Newer Filter");
+    } finally {
+        global.window = origWin;
+    }
+});

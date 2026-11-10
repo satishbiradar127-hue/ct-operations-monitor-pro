@@ -1289,6 +1289,9 @@
             const baseline = this.filterBaselines[bKey];
             const previousFilter = String(opts.prevFilter || (baseline ? baseline.filter : "") || "").trim();
             const now = Number(opts.now) || Date.now();
+            if (baseline && baseline.updatedAt && now < Number(baseline.updatedAt)) {
+                return null;
+            }
             const timeStr = new Date(now).toLocaleTimeString();
             const cName = String(opts.cName || `Campaign ${cid}`).trim();
             const source = opts.source || "CAMPAIGN_EDIT_DOM";
