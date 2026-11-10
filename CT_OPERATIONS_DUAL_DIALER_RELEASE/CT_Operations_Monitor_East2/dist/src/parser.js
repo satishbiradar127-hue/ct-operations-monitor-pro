@@ -4,6 +4,19 @@ const CT_ACTIVE_IMAGE_STATE_CACHE = new Map();
 
 window.CTParser = {
 
+    TARGET_HOST: "east-2.calltools.io",
+    DIALER: "EAST-2",
+
+    isAllowedHost() {
+        try {
+            if (typeof window === "undefined" || !window.location || !window.location.hostname) return true;
+            const host = String(window.location.hostname).toLowerCase();
+            if (!host) return true;
+            if (host.endsWith(".calltools.io") && host !== this.TARGET_HOST) return false;
+            return true;
+        } catch (e) { return true; }
+    },
+
     get(cls, row) {
         const cell = row.querySelector("." + cls);
         if (!cell) return "";
@@ -503,6 +516,7 @@ window.CTParser = {
     },
 
     readQueues() {
+        if (!this.isAllowedHost()) return [];
         const table = this.findQueueTable();
         if (!table) return [];
         const rows = Array.from(table.querySelectorAll('tr.mat-row, tr.mat-mdc-row, tbody tr')).filter(function(row) {
@@ -571,40 +585,46 @@ window.CTParser = {
     },
 
     findCampaignTable() {
+        if (!this.isAllowedHost()) return null;
+        if (typeof window !== "undefined" && window.location && window.location.pathname) {
+            const p = String(window.location.pathname).toLowerCase();
+            if (p.includes("/manager/live-filters") || p.includes("/manager/queues") || p.includes("/manager/campaigns/edit/")) {
+                return null;
+            }
+        }
         const rawTables = Array.from(document.querySelectorAll("table, mat-table, [role='table']"));
         if (!rawTables.length) return null;
         for (const table of rawTables) {
             // Strictly exclude CT Operations Monitor dashboard elements, modals, and hidden frames
             if (table.closest && (
-                table.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], .ct-dashboard, #ct-operations-root, iframe, [id^='ct-operations-hidden-']") ||
+                table.closest("#ct-operations-dashboard, #ct-operations-dashboard-east2, [id^='ct-operations-dashboard'], .ct-dashboard, #ct-operations-root, iframe, [id^='ct-operations-hidden-']") ||
                 (table.className && String(table.className).includes("ct-active-summary-table"))
             )) {
                 continue;
             }
+            const text = String(table.innerText || table.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+            // Reject Queue or Live-Filters tables masquerading during SPA route switches
+            const looksQueue = (/calls \(today\)|calls today/.test(text) && /agents \(now\)|agents now|on queue calls/.test(text));
+            const looksLiveFilters = /ignore time zone count|change log/.test(text) && !/outbound|human|channels|per agent/.test(text);
+            if (looksQueue || looksLiveFilters) continue;
+
             // Check for native CallTools table markers: headers, rows, or characteristic classes
             const hasNativeHeaders = Boolean(table.querySelector("th.cdk-column-name, th.cdk-column-outbound, th.mat-header-cell, tr.mat-header-row, tr.mat-mdc-header-row, mat-header-row"));
             const hasNativeRows = Boolean(table.querySelector("tr.mat-row, tr.mat-mdc-row, mat-row, tr[mat-row], [role='row'].mat-row, [role='row'].mat-mdc-row"));
-            const text = String(table.innerText || table.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
 
             if (hasNativeHeaders || hasNativeRows || /campaign|contacts|channels|outbound|human/.test(text)) {
                 return table;
             }
         }
-        const nonDash = rawTables.filter(t => !t.closest || !t.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], iframe, [id^='ct-operations-hidden-']"));
-        return nonDash.length ? nonDash[0] : null;
+        return null;
     },
 
     readCampaigns() {
+        if (!this.isAllowedHost()) return [];
         const table = this.findCampaignTable ? this.findCampaignTable() : null;
+        if (!table) return [];
         const selector = "tr.mat-row, tr.mat-mdc-row, mat-row, tr[mat-row], tbody tr, [role='row'].mat-row, [role='row'].mat-mdc-row";
-        let allRows = [];
-        if (table) {
-            allRows = Array.from(table.querySelectorAll(selector));
-        } else {
-            allRows = Array.from(document.querySelectorAll(selector)).filter(function (r) {
-                return !r.closest || !r.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard'], iframe, [id^='ct-operations-hidden-']");
-            });
-        }
+        const allRows = Array.from(table.querySelectorAll(selector));
         const rows = allRows.filter(function (row) {
             return !row.closest("thead") && !row.querySelector("th") && !row.matches("tr.mat-header-row, tr.mat-mdc-header-row");
         });
@@ -620,7 +640,7 @@ window.CTParser = {
                 if (/^[0-9]+$/.test(rawAttr)) id = rawAttr;
             }
             if (!id) {
-                const rowAttr = (row.getAttribute("data-ct-campaign-id") || row.getAttribute("data-campaign-id") || row.getAttribute("data-id") || "").trim();
+                const rowAttr = (row.getAttribute("data-ct-east2-campaign-id") || row.getAttribute("data-ct-campaign-id") || row.getAttribute("data-campaign-id") || row.getAttribute("data-id") || "").trim();
                 if (/^[0-9]+$/.test(rowAttr)) id = rowAttr;
             }
             if (!id) {
@@ -855,6 +875,7 @@ window.CTParser = {
      * Supports Angular ng-select, mat-select, native select, and combobox.
      */
     readCampaignEditForm(doc) {
+        if (!this.isAllowedHost()) return null;
         const targetDoc = (doc && doc.document) ? doc.document : (doc || (typeof document !== "undefined" ? document : null));
         if (!targetDoc || !targetDoc.querySelector) return null;
 
@@ -1281,6 +1302,7 @@ window.CTParser = {
     },
 
     readLiveFilters(doc) {
+        if (!this.isAllowedHost()) return [];
         const targetDoc = doc || (typeof document !== "undefined" ? document : null);
         if (!targetDoc) return [];
 

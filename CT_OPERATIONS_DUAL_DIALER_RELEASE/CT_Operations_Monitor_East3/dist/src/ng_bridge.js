@@ -6,6 +6,8 @@
 
     if (window !== window.top) return;
     if (window.location.hostname !== "east-3.calltools.io") return;
+    if (window.__CT_NG_BRIDGE_EAST3__) return;
+    window.__CT_NG_BRIDGE_EAST3__ = true;
 
     let lastIndexSig = "";
 
@@ -23,7 +25,8 @@
                 return {
                     id: String(cand.id),
                     name: String(cand.name).trim(),
-                    active: cand.active === true
+                    active: cand.active === true,
+                    dialer: "EAST-3"
                 };
             }
         }
@@ -31,10 +34,11 @@
     }
 
     function syncCampaignRowIds() {
+        if (window.location.hostname !== "east-3.calltools.io") return;
         const path = (window.location.pathname || "").replace(/\/+$/, "");
         if (path !== "/manager/campaigns") return;
 
-        const dash = document.querySelector("[id^='ct-operations-dashboard']");
+        const dash = document.getElementById("ct-operations-dashboard-east3");
         const rows = Array.from(document.querySelectorAll("table tr.mat-row, table tr.mat-mdc-row, table tbody tr"))
             .filter(function (r) { return !dash || !dash.contains(r); });
 
@@ -45,11 +49,11 @@
             const row = rows[i];
             const obj = extractCampaignObjFromRow(row);
             if (!obj) continue;
-            if (row.getAttribute("data-ct-campaign-id") !== obj.id) {
-                row.setAttribute("data-ct-campaign-id", obj.id);
+            if (row.getAttribute("data-ct-east3-campaign-id") !== obj.id) {
+                row.setAttribute("data-ct-east3-campaign-id", obj.id);
             }
-            if (row.getAttribute("data-ct-campaign-name") !== obj.name) {
-                row.setAttribute("data-ct-campaign-name", obj.name);
+            if (row.getAttribute("data-ct-east3-campaign-name") !== obj.name) {
+                row.setAttribute("data-ct-east3-campaign-name", obj.name);
             }
             if (!seenIds.has(obj.id)) {
                 seenIds.add(obj.id);
@@ -61,7 +65,7 @@
             const sig = JSON.stringify(indexList);
             if (sig !== lastIndexSig) {
                 lastIndexSig = sig;
-                document.documentElement.setAttribute("data-ct-campaign-index", sig);
+                document.documentElement.setAttribute("data-ct-east3-campaign-index", sig);
             }
         }
     }

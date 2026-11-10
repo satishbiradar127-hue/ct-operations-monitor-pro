@@ -640,8 +640,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 if (items && Array.isArray(items[PERSISTENT_GOAL_ALERTS_KEY])) {
                     const existingIds = new Set((state.persistentGoalAlerts || []).map(function (a) { return a.id; }));
                     items[PERSISTENT_GOAL_ALERTS_KEY].forEach(function (a) {
+                        if (a && a.dialer && a.dialer !== DIALER) return;
                         if (a && a.id && !existingIds.has(a.id) && !state.acknowledgedGoalAlerts.has(a.id)) {
-                            state.persistentGoalAlerts.push(a);
+                            state.persistentGoalAlerts.push(Object.assign({ dialer: DIALER }, a));
                             changed = true;
                         }
                     });
@@ -735,12 +736,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         }
     }, 1000);
 
-    if (window.__CTOperationsDashboardCleanup) {
-        window.__CTOperationsDashboardCleanup();
+    if (window.__CTOperationsDashboardCleanup_EAST3) {
+        window.__CTOperationsDashboardCleanup_EAST3();
     }
 
     const onCtUpdate = function (event) {
         const detail = event && event.detail;
+        if (detail && detail.dialer && detail.dialer !== DIALER) return;
+        if (detail && detail.targetHost && detail.targetHost !== TARGET_HOST) return;
+        if (window.location.hostname && window.location.hostname !== TARGET_HOST) return;
         const now = Date.now();
         const route = String((detail && detail.route) || state.route || "campaigns");
         state.route = route;
@@ -916,7 +920,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
 
-    window.__CTOperationsDashboardCleanup = function () {
+    window.__CTOperationsDashboardCleanup_EAST3 = function () {
         document.removeEventListener(UPDATE_EVENT, onCtUpdate);
         document.removeEventListener(FEED_STATUS_EVENT, onCtFeedStatus);
         document.removeEventListener("visibilitychange", onVisibilityChange);
@@ -2333,39 +2337,82 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         `;
 
         style.textContent += `
-            /* v11.0.5 command-center redesign */
-            #${DASHBOARD_ID} .ct-alerts { min-height: 0; max-height: 310px; padding: 11px; border-radius: 12px; background: linear-gradient(145deg,#08111f,#12223a 68%,#123f3b); }
-            #${DASHBOARD_ID} .ct-alert-title { min-height: 34px; display:flex; align-items:center; justify-content:space-between; gap:10px; color:#fff; }
+            /* v11.0.5 command-center & v11.3.9 enterprise Action Center redesign */
+            #${DASHBOARD_ID} .ct-alerts { min-height: 0; max-height: 460px; overflow-y: auto; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(148,163,184,.24); background: linear-gradient(155deg,#07101f 0%,#0f1d33 64%,#0e2c35 100%); box-shadow: 0 10px 28px rgba(2,6,23,.28); }
+            #${DASHBOARD_ID} .ct-alert-title { min-height: 36px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(148,163,184,.16); display:flex; align-items:center; justify-content:space-between; gap:10px; color:#fff; }
             #${DASHBOARD_ID} .ct-alert-heading { display:flex; flex-direction:column; gap:2px; }
-            #${DASHBOARD_ID} .ct-alert-heading > span { font-size:12px; font-weight:950; letter-spacing:.08em; text-transform:uppercase; }
-            #${DASHBOARD_ID} .ct-alert-heading > span::before { content:"⚡"; margin-right:6px; }
-            #${DASHBOARD_ID} .ct-alert-heading small { color:rgba(255,255,255,.58); font-size:9px; font-weight:650; letter-spacing:.01em; }
-            #${DASHBOARD_ID} .ct-alert-controls { display:flex; align-items:center; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
-            #${DASHBOARD_ID} .ct-alert-counter { padding:4px 7px; border:1px solid rgba(255,255,255,.16); border-radius:999px; background:rgba(255,255,255,.07); color:rgba(255,255,255,.78); font-size:8px; font-weight:950; letter-spacing:.05em; }
-            #${DASHBOARD_ID} .ct-critical-counter { color:#ff8c97; }
-            #${DASHBOARD_ID} .ct-warning-counter { color:#ffd47a; }
-            #${DASHBOARD_ID} .ct-alert-clear { padding:5px 9px; border-radius:7px; border:1px solid rgba(255,255,255,.20); color:#fff; background:rgba(255,255,255,.10); font-size:9px; font-weight:900; }
-            #${DASHBOARD_ID} .ct-alert-list { display:flex; flex-direction:column; gap:6px; max-height:245px; overflow:auto; padding-right:1px; }
-            #${DASHBOARD_ID} .ct-alert { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; padding:10px 10px 10px 12px; border:1px solid rgba(255,255,255,.13); border-left-width:5px; border-radius:9px; color:#fff; }
-            #${DASHBOARD_ID} .ct-alert-main { min-width:0; }
-            #${DASHBOARD_ID} .ct-alert-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-            #${DASHBOARD_ID} .ct-alert-campaign { min-width:0; overflow:hidden; color:#fff; font-size:11px; font-weight:950; text-overflow:ellipsis; white-space:nowrap; }
-            #${DASHBOARD_ID} .ct-alert-priority { display:inline-block; margin-right:6px; padding:3px 6px; border-radius:999px; background:rgba(255,255,255,.12); color:#fff; font-size:7px; font-weight:950; letter-spacing:.06em; vertical-align:1px; }
-            #${DASHBOARD_ID} .ct-alert-severity { flex:0 0 auto; color:#fff; font-size:8px; font-weight:950; letter-spacing:.08em; }
-            #${DASHBOARD_ID} .ct-alert-why { margin-top:5px; color:#fff; font-size:10px; font-weight:800; line-height:1.35; }
-            #${DASHBOARD_ID} .ct-alert-action { margin-top:3px; color:rgba(255,255,255,.64); font-size:9px; font-weight:650; line-height:1.35; }
-            #${DASHBOARD_ID} .ct-alert-buttons { display:flex; flex-direction:column; justify-content:center; gap:5px; min-width:72px; }
-            #${DASHBOARD_ID} .ct-alert-btn { min-width:72px; padding:6px 7px; border:1px solid rgba(255,255,255,.20); border-radius:6px; color:#fff; background:rgba(255,255,255,.08); font-size:8px; font-weight:950; letter-spacing:.04em; }
-            #${DASHBOARD_ID} .ct-alert-btn-primary { background:#2563eb; border-color:#7eabff; box-shadow:0 3px 10px rgba(37,99,235,.28); }
-            #${DASHBOARD_ID} .ct-alert-btn:hover { filter:brightness(1.12); transform:translateY(-1px); }
-            #${DASHBOARD_ID} .ct-alert.is-critical { border-left-color:#ff4d5f; background:linear-gradient(90deg,rgba(255,58,76,.25),rgba(25,34,53,.94) 62%); }
-            #${DASHBOARD_ID} .ct-alert.is-warning { border-left-color:#ffbf3f; background:linear-gradient(90deg,rgba(255,177,31,.22),rgba(25,34,53,.94) 62%); }
-            #${DASHBOARD_ID} .ct-all-clear { min-height:52px; display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid rgba(57,229,140,.22); border-radius:8px; background:linear-gradient(90deg,rgba(57,229,140,.10),rgba(255,255,255,.035)); color:#fff; }
-            #${DASHBOARD_ID} .ct-all-clear-icon { width:25px; height:25px; display:grid; place-items:center; border-radius:50%; background:rgba(57,229,140,.16); color:#5df0a2; font-size:13px; font-weight:950; }
+            #${DASHBOARD_ID} .ct-alert-heading > span { font-size:12.5px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:#f8fafc; }
+            #${DASHBOARD_ID} .ct-alert-heading > span::before { content:"⚡"; margin-right:6px; color:#fbbf24; }
+            #${DASHBOARD_ID} .ct-alert-heading small { color:#94a3b8; font-size:10px; font-weight:650; letter-spacing:.01em; }
+            #${DASHBOARD_ID} .ct-alert-controls { display:flex; align-items:center; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+            #${DASHBOARD_ID} .ct-alert-counter { padding:4px 9px; border:1px solid rgba(255,255,255,.16); border-radius:999px; background:rgba(255,255,255,.07); color:#e2e8f0; font-size:9.5px; font-weight:900; letter-spacing:.05em; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-critical-counter { border-color:rgba(239,68,68,.42); background:rgba(239,68,68,.16); color:#fca5a5; }
+            #${DASHBOARD_ID} .ct-warning-counter { border-color:rgba(245,158,11,.42); background:rgba(245,158,11,.15); color:#fde047; }
+            #${DASHBOARD_ID} .ct-alert-clear { padding:5px 11px; border-radius:7px; border:1px solid rgba(148,163,184,.28); color:#f8fafc; background:rgba(255,255,255,.10); font-size:10px; font-weight:850; cursor:pointer; }
+            #${DASHBOARD_ID} .ct-alert-clear:hover { background:rgba(255,255,255,.20); border-color:rgba(255,255,255,.42); }
+            #${DASHBOARD_ID} .ct-persistent-goals-container { display:flex; flex-direction:column; gap:8px; margin-bottom:8px; }
+            #${DASHBOARD_ID} .ct-persistent-goals-container:empty { display:none; margin-bottom:0; }
+            #${DASHBOARD_ID} .ct-alert-list { display:flex; flex-direction:column; gap:8px; max-height:360px; overflow:auto; padding-right:2px; }
+            #${DASHBOARD_ID} .ct-alert-list:empty { display:none; }
+            #${DASHBOARD_ID} .ct-alert,
+            #${DASHBOARD_ID} .ct-intelligence-card,
+            #${DASHBOARD_ID} .ct-persistent-goal-card { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 104px; align-items:stretch; gap:12px; padding:11px 13px; border:1px solid rgba(148,163,184,.20); border-left:4px solid #64748b; border-radius:10px; background:linear-gradient(100deg,rgba(30,41,59,.90),rgba(15,23,42,.97)); box-shadow:0 4px 14px rgba(2,6,23,.24); color:#f8fafc; transition:border-color .15s ease, box-shadow .15s ease; }
+            #${DASHBOARD_ID} .ct-alert.is-critical,
+            #${DASHBOARD_ID} .ct-intelligence-card.is-critical { border-left-color:#ef4444; border-color:rgba(239,68,68,.32); border-left-width:4px; background:linear-gradient(100deg,rgba(127,29,29,.34),rgba(17,24,39,.97) 58%); }
+            #${DASHBOARD_ID} .ct-alert.is-warning,
+            #${DASHBOARD_ID} .ct-intelligence-card.is-warning { border-left-color:#f59e0b; border-color:rgba(245,158,11,.32); border-left-width:4px; background:linear-gradient(100deg,rgba(120,53,15,.30),rgba(17,24,39,.97) 58%); }
+            #${DASHBOARD_ID} .ct-alert.is-good,
+            #${DASHBOARD_ID} .ct-intelligence-card.is-info,
+            #${DASHBOARD_ID} .ct-intelligence-card.is-good { border-left-color:#22c55e; border-color:rgba(34,197,94,.30); border-left-width:4px; background:linear-gradient(100deg,rgba(20,83,45,.28),rgba(17,24,39,.97) 58%); }
+            #${DASHBOARD_ID} .ct-persistent-goal-card { border-left-color:#10b981; border-color:rgba(16,185,129,.42); border-left-width:4px; background:linear-gradient(100deg,rgba(6,78,59,.36),rgba(15,23,42,.97) 60%); }
+            #${DASHBOARD_ID} .ct-alert-main { min-width:0; display:flex; flex-direction:column; gap:6px; }
+            #${DASHBOARD_ID} .ct-alert-top,
+            #${DASHBOARD_ID} .ct-intel-card-top,
+            #${DASHBOARD_ID} .ct-goal-card-top { display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+            #${DASHBOARD_ID} .ct-alert-sev-pill,
+            #${DASHBOARD_ID} .ct-intel-badge,
+            #${DASHBOARD_ID} .ct-goal-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:4px; font-size:9.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-alert-sev-pill.is-critical,
+            #${DASHBOARD_ID} .ct-intel-badge.is-increase,
+            #${DASHBOARD_ID} .ct-intel-badge.is-integrity { background:rgba(239,68,68,.24); color:#fecaca; border:1px solid rgba(239,68,68,.5); }
+            #${DASHBOARD_ID} .ct-alert-sev-pill.is-warning,
+            #${DASHBOARD_ID} .ct-intel-badge.is-decrease,
+            #${DASHBOARD_ID} .ct-intel-badge.is-filter-change { background:rgba(245,158,11,.22); color:#fde68a; border:1px solid rgba(245,158,11,.48); }
+            #${DASHBOARD_ID} .ct-alert-sev-pill.is-good,
+            #${DASHBOARD_ID} .ct-goal-badge,
+            #${DASHBOARD_ID} .ct-intel-badge.is-good { background:rgba(16,185,129,.24); color:#a7f3d0; border:1px solid rgba(16,185,129,.5); }
+            #${DASHBOARD_ID} .ct-dialer-tag.ct-dialer-east3 { display:inline-flex; align-items:center; padding:2px 7px; border-radius:4px; font-size:9.5px; font-weight:900; letter-spacing:.05em; background:#115e59; color:#ccfbf1; border:1px solid #2dd4bf; }
+            #${DASHBOARD_ID} .ct-goal-direction-tag { display:inline-flex; align-items:center; padding:2px 6px; border-radius:4px; background:rgba(148,163,184,.16); color:#cbd5e1; border:1px solid rgba(148,163,184,.25); font-size:9px; font-weight:850; letter-spacing:.04em; text-transform:uppercase; }
+            #${DASHBOARD_ID} .ct-goal-time { margin-left:auto; color:#94a3b8; font-size:10px; font-weight:700; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-alert-headline { color:#f8fafc; font-size:12.5px; font-weight:850; line-height:1.35; white-space:normal; word-break:break-word; }
+            #${DASHBOARD_ID} .ct-alert-stat-bar { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px; width:fit-content; max-width:100%; padding:3px 9px; border-radius:6px; background:rgba(15,23,42,.72); border:1px solid rgba(148,163,184,.22); font-size:11px; font-weight:800; color:#e2e8f0; font-variant-numeric:tabular-nums; }
+            #${DASHBOARD_ID} .ct-goal-count-prev { color:#94a3b8; }
+            #${DASHBOARD_ID} .ct-goal-arrow { color:#38bdf8; font-weight:900; }
+            #${DASHBOARD_ID} .ct-goal-count-curr { color:#f8fafc; font-weight:900; }
+            #${DASHBOARD_ID} .ct-intel-delta,
+            #${DASHBOARD_ID} .ct-goal-increase { color:#38bdf8; font-weight:850; font-size:10.5px; }
+            #${DASHBOARD_ID} .ct-goal-increase { color:#34d399; }
+            #${DASHBOARD_ID} .ct-alert-explain-grid { display:grid; gap:3px; padding:6px 9px; border-radius:6px; background:rgba(2,6,23,.42); border:1px solid rgba(148,163,184,.14); }
+            #${DASHBOARD_ID} .ct-alert-explain-row { font-size:11px; line-height:1.4; color:#cbd5e1; white-space:normal; word-break:break-word; }
+            #${DASHBOARD_ID} .ct-alert-explain-row strong { color:#94a3b8; font-size:9.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase; margin-right:6px; }
+            #${DASHBOARD_ID} .ct-alert-explain-row.is-action { color:#e0f2fe; }
+            #${DASHBOARD_ID} .ct-alert-explain-row.is-action strong { color:#38bdf8; }
+            #${DASHBOARD_ID} .ct-alert-buttons,
+            #${DASHBOARD_ID} .ct-goal-card-actions { display:flex; flex-direction:column; justify-content:center; gap:6px; min-width:100px; border-left:1px solid rgba(148,163,184,.14); padding-left:10px; }
+            #${DASHBOARD_ID} .ct-alert-btn,
+            #${DASHBOARD_ID} .ct-btn-noted { width:100%; min-height:28px; padding:5px 8px; border:1px solid rgba(148,163,184,.28); border-radius:6px; color:#f8fafc; background:rgba(255,255,255,.08); font-size:10px; font-weight:850; letter-spacing:.04em; cursor:pointer; text-align:center; transition:background .15s ease, transform .12s ease; }
+            #${DASHBOARD_ID} .ct-alert-btn-primary { background:#2563eb; border-color:#60a5fa; color:#ffffff; box-shadow:0 3px 10px rgba(37,99,235,.28); }
+            #${DASHBOARD_ID} .ct-alert-btn-primary:hover { background:#1d4ed8; transform:translateY(-1px); }
+            #${DASHBOARD_ID} .ct-alert-btn-secondary:hover,
+            #${DASHBOARD_ID} .ct-alert-btn-dismiss:hover { background:rgba(148,163,184,.22); border-color:rgba(203,213,225,.45); }
+            #${DASHBOARD_ID} .ct-btn-noted { background:#059669; border-color:#34d399; color:#ffffff; }
+            #${DASHBOARD_ID} .ct-btn-noted:hover { background:#10b981; }
+            #${DASHBOARD_ID} .ct-all-clear { min-height:54px; display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid rgba(57,229,140,.26); border-radius:9px; background:linear-gradient(90deg,rgba(57,229,140,.11),rgba(255,255,255,.03)); color:#fff; }
+            #${DASHBOARD_ID} .ct-all-clear-icon { width:26px; height:26px; display:grid; place-items:center; border-radius:50%; background:rgba(57,229,140,.18); color:#5df0a2; font-size:13px; font-weight:950; }
             #${DASHBOARD_ID} .ct-all-clear div:nth-child(2) { display:flex; flex-direction:column; gap:2px; min-width:0; }
-            #${DASHBOARD_ID} .ct-all-clear strong { font-size:10px; letter-spacing:.07em; }
-            #${DASHBOARD_ID} .ct-all-clear span { color:rgba(255,255,255,.62); font-size:9px; }
-            #${DASHBOARD_ID} .ct-all-clear-live { margin-left:auto; padding:4px 6px; border-radius:999px; color:#5df0a2 !important; background:rgba(57,229,140,.08); font-size:7px !important; font-weight:950 !important; letter-spacing:.08em; }
+            #${DASHBOARD_ID} .ct-all-clear strong { font-size:11px; letter-spacing:.07em; }
+            #${DASHBOARD_ID} .ct-all-clear span { color:rgba(255,255,255,.70); font-size:10px; }
+            #${DASHBOARD_ID} .ct-all-clear-live { margin-left:auto; padding:4px 8px; border-radius:999px; color:#5df0a2 !important; background:rgba(57,229,140,.10); border:1px solid rgba(57,229,140,.28); font-size:8.5px !important; font-weight:900 !important; letter-spacing:.08em; }
             #${DASHBOARD_ID} .ct-insights-panel { margin-top:7px; padding:9px; border:1px solid rgba(148,163,184,.28); border-radius:10px; background:var(--ct-surface); box-shadow:0 5px 18px rgba(15,23,42,.08); }
             #${DASHBOARD_ID} .ct-insights-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
             #${DASHBOARD_ID} .ct-insights-head div { display:flex; flex-direction:column; gap:2px; }
@@ -2379,7 +2426,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             #${DASHBOARD_ID} .ct-focus-flash { animation:ctFocusFlash .9s ease 1; }
             @keyframes ctFocusFlash { 0%,100%{box-shadow:0 0 0 rgba(37,99,235,0)} 40%{box-shadow:0 0 0 3px rgba(37,99,235,.35),0 8px 25px rgba(37,99,235,.25)} }
             #${DASHBOARD_ID}.is-panel-collapsed .ct-insights-panel { display:none; }
-            @media (max-width: 620px) { #${DASHBOARD_ID} .ct-insights-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } #${DASHBOARD_ID} .ct-alert { grid-template-columns:1fr; } #${DASHBOARD_ID} .ct-alert-buttons { flex-direction:row; } }
+            @media (max-width: 620px) { #${DASHBOARD_ID} .ct-insights-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } #${DASHBOARD_ID} .ct-alert, #${DASHBOARD_ID} .ct-intelligence-card, #${DASHBOARD_ID} .ct-persistent-goal-card { grid-template-columns:1fr; } #${DASHBOARD_ID} .ct-alert-buttons, #${DASHBOARD_ID} .ct-goal-card-actions { flex-direction:row; border-left:0; padding-left:0; border-top:1px solid rgba(148,163,184,.14); padding-top:8px; } }
 
         `;
         style.textContent += `
@@ -4150,6 +4197,17 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                         if (target) {
                             focusCampaign(target, false);
                         }
+                    } else if (action === "refresh") {
+                        if (refs && refs.refreshBtn && !refs.refreshBtn.disabled) refs.refreshBtn.click();
+                        else requestPageRefresh("Action Center intelligence refresh requested");
+                    } else if (action === "inbound-focus") {
+                        const inboundSection = root.querySelector(".ct-inbound-panel");
+                        if (inboundSection) {
+                            inboundSection.scrollIntoView({ behavior: "smooth", block: "center" });
+                            inboundSection.classList.add("ct-focus-flash");
+                            window.setTimeout(function () { inboundSection.classList.remove("ct-focus-flash"); }, 1200);
+                        }
+                        showActionNotice("Scrolled to " + DIALER + " Inbound Operations.");
                     }
                     return;
                 }
@@ -4451,6 +4509,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                     }
                     return;
                 }
+                if (intelAct === "refresh") {
+                    if (refs && refs.refreshBtn && !refs.refreshBtn.disabled) refs.refreshBtn.click();
+                    else requestPageRefresh("Action Center intelligence refresh requested");
+                    return;
+                }
+                if (intelAct === "inbound-focus") {
+                    const inboundSection = root.querySelector(".ct-inbound-panel");
+                    if (inboundSection) {
+                        inboundSection.scrollIntoView({ behavior: "smooth", block: "center" });
+                        inboundSection.classList.add("ct-focus-flash");
+                        window.setTimeout(function () { inboundSection.classList.remove("ct-focus-flash"); }, 1200);
+                    }
+                    showActionNotice("Scrolled to " + DIALER + " Inbound Operations.");
+                    return;
+                }
             }
 
             // Persistent Goal NOTED
@@ -4665,7 +4738,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
     }
 
     function installGlobalInteractions() {
-        if (!window.__CTOperationsDashboardInteractions) {
+        if (!window.__CTOperationsDashboardInteractions_EAST3) {
             const interactionState = {
                 mode: "",
                 pointerId: null,
@@ -4744,7 +4817,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             document.addEventListener("mouseup", end);
             document.addEventListener("pointercancel", end);
 
-            window.__CTOperationsDashboardInteractions = {
+            window.__CTOperationsDashboardInteractions_EAST3 = {
                 state: interactionState,
                 begin: function (mode, event, dashboardRoot, layout, layoutApplier, layoutPersister) {
                     interactionState.mode = mode;
@@ -4999,7 +5072,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
 
         event.preventDefault();
         try { if (event.pointerId !== undefined && refs.header.setPointerCapture) refs.header.setPointerCapture(event.pointerId); } catch (ignored) {}
-        window.__CTOperationsDashboardInteractions.begin("drag", event, root, state.layout, applyLayout, persistLayout);
+        window.__CTOperationsDashboardInteractions_EAST3.begin("drag", event, root, state.layout, applyLayout, persistLayout);
     }
 
     function startResize(event) {
@@ -5014,7 +5087,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         event.preventDefault();
         event.stopPropagation();
         try { if (event.pointerId !== undefined && refs.resize.setPointerCapture) refs.resize.setPointerCapture(event.pointerId); } catch (ignored) {}
-        window.__CTOperationsDashboardInteractions.begin("resize", event, root, state.layout, applyLayout, persistLayout);
+        window.__CTOperationsDashboardInteractions_EAST3.begin("resize", event, root, state.layout, applyLayout, persistLayout);
     }
 
     function shouldIgnoreDragStart(target) {
@@ -5078,19 +5151,27 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         updateSummary(stats, filtered.length, ordered);
         updateInsights(stats);
         checkPersistentGoalAlerts(state.campaigns, state.queues);
-            if (intelligenceEngine) {
+            if (intelligenceEngine && (
+                (state.campaigns && state.campaigns.length > 0) ||
+                state.authRequired ||
+                state.tableMissing ||
+                state.feedHeartbeatStale ||
+                state.queueFeedStatus === "AUTH_REQUIRED"
+            )) {
                 intelligenceEngine.processSnapshot({
                     campaigns: state.campaigns,
                     queues: state.queues,
                     isCampaignsRoute: Boolean(window.location && window.location.pathname && window.location.pathname.includes("/manager/campaigns")),
                     campaignTableFound: (function () {
+                        if (state.tableMissing) return false;
                         const nativeTable = (window.CTParser && window.CTParser.findCampaignTable)
                             ? window.CTParser.findCampaignTable()
                             : document.querySelector("mat-table, table.mat-table, table.mat-mdc-table, table[mat-table], table.cdk-table, tr.mat-row, tr.mat-mdc-row, mat-row");
                         return Boolean(nativeTable || (state.campaigns && state.campaigns.length > 0) || document.querySelector("tr.mat-row, tr.mat-mdc-row, mat-row, [role='row'].mat-row"));
                     })(),
                     isStale: state.feedHeartbeatStale,
-                    authLost: state.authRequired
+                    authLost: state.authRequired,
+                    inboundAuthLost: state.queueFeedStatus === "AUTH_REQUIRED"
                 });
             }
         updateInboundPanel();
@@ -6326,12 +6407,24 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
     function focusCampaign(identifier, setOperating) {
         const raw = String(identifier || "").trim().toLowerCase();
         const prepared = prepareCampaigns(state.campaigns);
-        const match = prepared.find(function(c){
+        let match = prepared.find(function(c){
             return (c.__id && String(c.__id).trim().toLowerCase() === raw) ||
                    (c.id && String(c.id).trim().toLowerCase() === raw) ||
                    (c.rawId && String(c.rawId).trim().toLowerCase() === raw) ||
                    (c.name && String(c.name).trim().toLowerCase() === raw);
         });
+        if (!match && (!raw || raw === "all" || raw === "dialer outbound coverage" || raw === "worst wait delay" || raw === "callers waiting" || raw === "total abandoned" || raw === "total agents logged in" || raw === "active campaigns")) {
+            const activePrepared = prepared.filter(function(c){ return c.__active === true; })
+                .sort(function(a, b){ return (b.__wait - a.__wait) || (b.__waiting - a.__waiting) || (b.__loggedIn - a.__loggedIn); });
+            match = activePrepared[0] || prepared[0] || null;
+            if (!match && refs && refs.activeCommandSummary) {
+                refs.activeCommandSummary.scrollIntoView({ behavior: "smooth", block: "center" });
+                refs.activeCommandSummary.classList.add("ct-focus-flash");
+                window.setTimeout(function(){ refs.activeCommandSummary.classList.remove("ct-focus-flash"); }, 1200);
+                showActionNotice("Viewing " + DIALER + " Active Campaigns Command Summary.");
+                return;
+            }
+        }
         if (!match) return;
         const primaryId = match.rawId || match.id || match.__id || String(match.name || "").trim().toLowerCase();
         const shouldOperate = setOperating !== false;
@@ -7092,84 +7185,123 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 }
             }
             return true;
-        })
-            .sort(function (a, b) { return severityRank(a.severity) - severityRank(b.severity) || (b.createdAt || 0) - (a.createdAt || 0); });
-        const critical = alerts.filter(function (a) { return a.severity === "critical"; }).length;
-        const warning = alerts.filter(function (a) { return a.severity === "warning"; }).length;
+        });
+        const sortedAlerts = alerts.slice().sort(function (a, b) { return severityRank(a.severity) - severityRank(b.severity) || (b.createdAt || 0) - (a.createdAt || 0); });
+        const activeIntelAlerts = (intelligenceEngine ? intelligenceEngine.activeAlerts : []).filter(function (a) {
+            return a && !a.acknowledged && a.category !== "SALES_GOAL" && (!a.dialer || a.dialer === DIALER);
+        });
+        const activePersistent = (state.persistentGoalAlerts || []).filter(function (a) {
+            return a && !state.acknowledgedGoalAlerts.has(a.id) && (!a.dialer || a.dialer === DIALER);
+        });
+
+        const critical = sortedAlerts.filter(function (a) { return a.severity === "critical"; }).length +
+            activeIntelAlerts.filter(function (a) { return a.severity === "critical"; }).length;
+        const warning = sortedAlerts.filter(function (a) { return a.severity === "warning"; }).length +
+            activeIntelAlerts.filter(function (a) { return a.severity === "warning"; }).length;
         setText(refs.criticalCount, critical + " CRITICAL");
         setText(refs.warningCount, warning + " AT RISK");
-        // Render Persistent Goals & Intelligence Alerts (NEVER AUTO-DISMISSED BY CLEAR ALL)
+
+        function operationalImpactText(a) {
+            const k = String((a && a.conditionKey) || "");
+            if (k.includes("OUT_OF_LEADS")) return "Campaign or pool has no callable leads remaining; agent occupancy and dialing halt unless replenished.";
+            if (k.includes("LOW_LEADS")) return "Remaining lead runway is nearing exhaustion; agents risk running dry mid-shift.";
+            if (k.includes("CAPACITY")) return "Callers or prospects are waiting with zero logged-in agents, driving direct abandon loss.";
+            if (k.includes("WAIT")) return "Elevated hold wait increases caller hang-up probability and degrades answer rate.";
+            if (k.includes("SATURATION")) return "Every logged-in agent is tied up while queue calls continue stacking.";
+            if (k.includes("ABANDON")) return "Rising abandon count or rate signals compliance pressure and insufficient live answer coverage.";
+            if (k.includes("RUNWAY")) return "Projected depletion window requires lead list preparation before dialing stops.";
+            if (k.includes("OPERATING_AGENTS")) return "Headcount shifted away from your selected operating campaign(s), impacting expected pacing.";
+            if (k.includes("SOURCE_")) return "Feed interruption reduces live visibility until CallTools DOM synchronizes cleanly.";
+            if (k.includes("DATA_CHECK")) return "Inconsistent CallTools table values should be confirmed before making staffing or filter changes.";
+            return "Operational threshold breached on " + DIALER + " and requires operator verification.";
+        }
+
+        const dialerBadgeClass = "ct-dialer-tag ct-dialer-" + DIALER.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+        // Render Persistent Goals & Intelligence Cards (NEVER AUTO-DISMISSED FOR SALES/GOALS)
         if (refs.persistentGoalsContainer) {
-            const activePersistent = (state.persistentGoalAlerts || []).filter(function (a) {
-                return !state.acknowledgedGoalAlerts.has(a.id);
-            });
-            // Render CT Data Change Intelligence Cards (Engines A, B, C, D)
-            const activeIntelCards = (intelligenceEngine ? intelligenceEngine.activeAlerts : []).filter(function (a) {
-                return !a.acknowledged && a.category !== "SALES_GOAL";
-            }).map(function (alert) {
+            const activeIntelCards = activeIntelAlerts.map(function (alert) {
                 const sevClass = alert.severity === "critical" ? "is-critical" : alert.severity === "warning" ? "is-warning" : "is-info";
                 const badgeClass = alert.status === "INCREASE" || alert.status === "NEW LEADS ADDED" || alert.status === "LIVE FILTER ASSIGNED"
                     ? "is-increase"
-                    : (alert.status === "DECREASE" || alert.status === "LARGE LEAD INVENTORY REDUCTION" || alert.status === "LIVE FILTER REMOVED"
+                    : (alert.status === "DECREASE" || alert.status === "LARGE LEAD INVENTORY REDUCTION" || alert.status === "LIVE FILTER REMOVED" || alert.status === "INACTIVE FILTER ASSIGNED" || alert.status === "FILTER POOL EXHAUSTED" || alert.status === "NO AGENT CAPACITY"
                         ? "is-decrease"
                         : (alert.status === "LIVE FILTER CHANGED" ? "is-filter-change" : "is-integrity"));
-                const dialerClass = "ct-dialer-" + String(alert.dialer || DIALER).toLowerCase().replace(/[^a-z0-9]/g, "");
-                const isFilterAlert = alert.category === "LIVE_FILTER" || alert.status === "LIVE FILTER CHANGED" || alert.status === "LIVE FILTER ASSIGNED";
+                const isIntegrity = alert.category === "INTEGRITY";
+                const isInbound = alert.direction === "INBOUND";
+                const isFilterAlert = alert.category === "LIVE_FILTER" || alert.status === "LIVE FILTER CHANGED" || alert.status === "LIVE FILTER ASSIGNED" || alert.status === "LIVE FILTER REMOVED";
+                const showStatBar = alert.previous !== undefined && alert.current !== undefined && !(alert.previous === "—" && alert.current === "—");
                 const deltaHtml = isFilterAlert
                     ? ((alert.previousCount != null || alert.currentCount != null)
                         ? '<span class="ct-intel-delta">(' + (alert.previousCount != null ? formatNumber(alert.previousCount) : '—') + ' → ' + (alert.currentCount != null ? formatNumber(alert.currentCount) : '—') + ' contacts)</span>'
                         : '')
-                    : ((alert.absoluteDiff !== undefined && alert.percentDiff !== undefined)
-                        ? '<span class="ct-intel-delta">(' + (alert.absoluteDiff > 0 ? '+' : '') + alert.absoluteDiff + ' / ' + alert.percentDiff + ')</span>'
+                    : ((alert.absoluteDiff !== undefined && alert.absoluteDiff !== "—" && alert.percentDiff !== undefined && alert.percentDiff !== "—")
+                        ? '<span class="ct-intel-delta">(' + (Number(alert.absoluteDiff) > 0 ? '+' : '') + escapeHtml(alert.absoluteDiff) + ' / ' + escapeHtml(alert.percentDiff) + ')</span>'
                         : '');
+
+                const statBarHtml = showStatBar
+                    ? '<div class="ct-alert-stat-bar">' +
+                        '<span class="ct-goal-count-prev">' + escapeHtml(alert.previous) + '</span>' +
+                        '<span class="ct-goal-arrow">→</span>' +
+                        '<span class="ct-goal-count-curr">' + escapeHtml(alert.current) + '</span>' +
+                        deltaHtml +
+                      '</div>'
+                    : '';
+
+                const headlineText = alert.message || (alert.targetName + " — " + alert.metric);
+                const impactText = alert.impact || "Significant variance observed in " + DIALER + " CallTools telemetry.";
+                const actionText = alert.recommendedAction || "Inspect " + safeValue(alert.targetName, DIALER) + " and verify current configuration.";
+
+                const primaryBtn = isIntegrity
+                    ? '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="refresh">REFRESH</button>'
+                    : isInbound
+                        ? '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="inbound-focus">VIEW QUEUE</button>'
+                        : '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="focus" data-target="' + escapeHtml(alert.targetId || alert.campaignId || alert.targetName || "") + '">FOCUS</button>';
+                const dismissBtn = '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-intel-action="dismiss" data-intel-id="' + escapeHtml(alert.id) + '">DISMISS</button>';
+
                 return '<div class="ct-intelligence-card ' + sevClass + '" data-intel-id="' + escapeHtml(alert.id) + '">' +
-                    '<div class="ct-intel-card-top">' +
-                        '<span class="ct-intel-badge ' + badgeClass + '">' + escapeHtml(alert.status) + '</span>' +
-                        '<span class="ct-dialer-tag ' + dialerClass + '">[' + escapeHtml(alert.dialer) + ']</span>' +
-                        '<span class="ct-goal-direction-tag">[' + escapeHtml(alert.direction) + ']</span>' +
-                        '<span class="ct-goal-time" title="Detected: ' + escapeHtml(alert.firstDetectedAt) + ' · Confirmed: ' + escapeHtml(alert.confirmedAt) + '">' + escapeHtml(alert.confirmedAt || alert.firstDetectedAt) + '</span>' +
-                    '</div>' +
-                    '<div class="ct-intel-card-body">' +
-                        '<div class="ct-intel-target-row">' +
-                            '<strong>' + escapeHtml(alert.targetName) + '</strong> · <span class="ct-intel-metric-title">' + escapeHtml(alert.metric) + '</span>' +
+                    '<div class="ct-alert-main">' +
+                        '<div class="ct-intel-card-top">' +
+                            '<span class="ct-intel-badge ' + badgeClass + '">' + escapeHtml(alert.status) + '</span>' +
+                            '<span class="' + dialerBadgeClass + '">' + escapeHtml(alert.dialer || DIALER) + '</span>' +
+                            '<span class="ct-goal-direction-tag">' + escapeHtml(alert.direction || "OUTBOUND") + '</span>' +
+                            '<span class="ct-goal-time" title="Detected: ' + escapeHtml(alert.firstDetectedAt) + ' · Confirmed: ' + escapeHtml(alert.confirmedAt) + '">' + escapeHtml(alert.confirmedAt || alert.firstDetectedAt) + '</span>' +
                         '</div>' +
-                        '<div class="ct-goal-stat-row">' +
-                            '<span class="ct-goal-count-prev">' + escapeHtml(alert.previous) + '</span>' +
-                            '<span class="ct-goal-arrow">→</span>' +
-                            '<span class="ct-goal-count-curr">' + escapeHtml(alert.current) + '</span>' +
-                            deltaHtml +
+                        '<div class="ct-alert-headline">' + escapeHtml(headlineText) + '</div>' +
+                        statBarHtml +
+                        '<div class="ct-alert-explain-grid">' +
+                            '<div class="ct-alert-explain-row"><strong>WHY IT MATTERS</strong>' + escapeHtml(impactText) + '</div>' +
+                            '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong>' + escapeHtml(actionText) + '</div>' +
                         '</div>' +
-                        (alert.message ? '<div class="ct-intel-msg-row">' + escapeHtml(alert.message) + '</div>' : '') +
                     '</div>' +
-                    '<div class="ct-goal-card-actions">' +
-                        (alert.severity === "critical" || alert.severity === "warning" || alert.direction === "INCREASE" || alert.direction === "DECREASE"
-                            ? '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="focus" data-target="' + escapeHtml(alert.targetId || alert.campaignId || alert.targetName || "") + '">FOCUS</button>' +
-                              '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-intel-action="dismiss" data-intel-id="' + escapeHtml(alert.id) + '">DISMISS</button>'
-                            : '<span class="ct-intel-auto-tag" title="Updates automatically with live CallTools observations">AUTO-UPDATING</span>') +
-                    '</div>' +
+                    '<div class="ct-goal-card-actions">' + primaryBtn + dismissBtn + '</div>' +
                 '</div>';
             }).join("");
 
             const activeGoalCards = activePersistent.map(function (alert) {
-                const dialerClass = "ct-dialer-" + String(alert.dialer || DIALER).toLowerCase().replace(/[^a-z0-9]/g, "");
+                const headline = (alert.dialer || DIALER) + ": " + safeValue(alert.targetName) + " recorded +" + formatNumber(alert.increase) + " new " + alert.metric.toLowerCase() + ".";
                 return '<div class="ct-persistent-goal-card" data-goal-id="' + escapeHtml(alert.id) + '">' +
-                    '<div class="ct-goal-card-top">' +
-                        '<span class="ct-goal-badge">NEW ' + escapeHtml(alert.metric.toUpperCase()) + ' DETECTED</span>' +
-                        '<span class="ct-dialer-tag ' + dialerClass + '">' + escapeHtml(alert.dialer) + '</span>' +
-                        '<span class="ct-goal-direction-tag">' + escapeHtml(alert.direction) + '</span>' +
-                        '<span class="ct-goal-time">' + escapeHtml(alert.detectedAt) + '</span>' +
-                    '</div>' +
-                    '<div class="ct-goal-card-body">' +
-                        '<div class="ct-goal-target-name"><strong>' + escapeHtml(alert.targetName) + '</strong></div>' +
-                        '<div class="ct-goal-stat-row">' +
-                            '<span class="ct-goal-metric-label">' + escapeHtml(alert.metric) + ':</span>' +
+                    '<div class="ct-alert-main">' +
+                        '<div class="ct-goal-card-top">' +
+                            '<span class="ct-goal-badge">NEW ' + escapeHtml(alert.metric.toUpperCase()) + '</span>' +
+                            '<span class="' + dialerBadgeClass + '">' + escapeHtml(alert.dialer || DIALER) + '</span>' +
+                            '<span class="ct-goal-direction-tag">' + escapeHtml(alert.direction) + '</span>' +
+                            '<span class="ct-goal-time">' + escapeHtml(alert.detectedAt) + '</span>' +
+                        '</div>' +
+                        '<div class="ct-alert-headline">' + escapeHtml(headline) + '</div>' +
+                        '<div class="ct-alert-stat-bar">' +
                             '<span class="ct-goal-count-prev">' + formatNumber(alert.previous) + '</span>' +
                             '<span class="ct-goal-arrow">→</span>' +
                             '<span class="ct-goal-count-curr">' + formatNumber(alert.current) + '</span>' +
                             '<span class="ct-goal-increase">(+' + formatNumber(alert.increase) + ')</span>' +
                         '</div>' +
+                        '<div class="ct-alert-explain-grid">' +
+                            '<div class="ct-alert-explain-row"><strong>WHY IT MATTERS</strong>Verified conversion progress on ' + escapeHtml(alert.dialer || DIALER) + ' ' + escapeHtml(alert.targetName) + '.</div>' +
+                            '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong>Review conversion details and click NOTED once acknowledged.</div>' +
+                        '</div>' +
                     '</div>' +
                     '<div class="ct-goal-card-actions">' +
+                        '<button type="button" class="ct-alert-btn ct-alert-btn-secondary" data-intel-action="focus" data-target="' + escapeHtml(alert.targetId || alert.targetName || "") + '">FOCUS</button>' +
                         '<button type="button" class="ct-btn ct-btn-noted" data-noted-id="' + escapeHtml(alert.id) + '" title="Acknowledge this goal alert">NOTED</button>' +
                     '</div>' +
                 '</div>';
@@ -7181,38 +7313,64 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 refs.persistentGoalsContainer.dataset.signature = persistentSig;
             }
         }
-        const unackIntelCount = (intelligenceEngine ? intelligenceEngine.activeAlerts : []).filter(function (a) {
-            return !a.acknowledged && a.category !== "SALES_GOAL";
-        }).length;
-        const totalActiveSignals = alerts.length + unackIntelCount + (state.persistentGoalAlerts || []).filter(function (a) {
-            return !state.acknowledgedGoalAlerts.has(a.id);
-        }).length;
-        setText(refs.alertSubtitle, totalActiveSignals ? "Immediate operator actions" : "Live monitoring · no intervention required");
+
+        const totalActiveSignals = sortedAlerts.length + activeIntelAlerts.length + activePersistent.length;
+        setText(refs.alertSubtitle, totalActiveSignals ? (DIALER + " · " + totalActiveSignals + " active incident" + (totalActiveSignals === 1 ? "" : "s") + " requiring review") : (DIALER + " · live monitoring · no intervention required"));
         if (refs.alertCount) setText(refs.alertCount, totalActiveSignals + (totalActiveSignals === 1 ? " ACTIVE SIGNAL" : " ACTIVE SIGNALS"));
-        const signature = alerts.map(function (a) { return [a.conditionKey, a.severity, a.message, a.action].join("|"); }).join("::");
+        const signature = [
+            sortedAlerts.map(function (a) { return [a.conditionKey, a.severity, a.message, a.action].join("|"); }).join("::"),
+            activeIntelAlerts.length,
+            activePersistent.length
+        ].join("@@");
         if (signature === refs.alerts.dataset.signature) return;
         refs.alerts.dataset.signature = signature;
         refs.alerts.textContent = "";
-        if (!alerts.length) {
-            const empty = document.createElement("div");
-            empty.className = "ct-all-clear";
-            empty.innerHTML = '<div class="ct-all-clear-icon">✓</div><div><strong>ALL CLEAR</strong><span>No critical or at-risk condition is active right now.</span></div><span class="ct-all-clear-live">MONITORING</span>';
-            refs.alerts.appendChild(empty);
+        if (!sortedAlerts.length) {
+            if (!activeIntelAlerts.length && !activePersistent.length) {
+                const empty = document.createElement("div");
+                empty.className = "ct-all-clear";
+                empty.innerHTML = '<div class="ct-all-clear-icon">✓</div><div><strong>' + escapeHtml(DIALER) + ' · ALL CLEAR</strong><span>No critical or at-risk condition is active right now.</span></div><span class="ct-all-clear-live">MONITORING</span>';
+                refs.alerts.appendChild(empty);
+            }
             return;
         }
         const fragment = document.createDocumentFragment();
-        alerts.slice(0, MAX_ALERTS).forEach(function (a) {
+        sortedAlerts.slice(0, MAX_ALERTS).forEach(function (a) {
             const item = document.createElement("div");
             item.className = "ct-alert is-" + a.severity;
             item.dataset.conditionKey = a.conditionKey;
             const campaignId = a.campaignId && !String(a.campaignId).startsWith("operational:") ? String(a.campaignId).trim().toLowerCase() : String(a.name || "").trim().toLowerCase();
             const sourceAlert = String(a.conditionKey || "").startsWith("SOURCE_");
             const inboundAlert = String(a.conditionKey || "").startsWith("INBOUND:");
+            const domainTag = sourceAlert ? "SYSTEM" : inboundAlert ? "INBOUND" : "OUTBOUND";
             const campaignIsOperating = !sourceAlert && !inboundAlert && (state.operatingCampaigns || []).map(function (id) { return String(id || "").trim().toLowerCase(); }).includes(campaignId);
             const actionLabel = sourceAlert ? "REFRESH" : inboundAlert ? "VIEW QUEUE" : campaignIsOperating ? "FOCUS" : "OPERATE";
             const actionType = sourceAlert ? "refresh" : inboundAlert ? "inbound-focus" : campaignIsOperating ? "focus" : "operate";
             const secondary = sourceAlert || inboundAlert || campaignIsOperating ? "" : '<button type="button" class="ct-alert-btn ct-alert-btn-secondary" data-alert-action="focus" data-campaign="' + escapeHtml(campaignId) + '">FOCUS</button>';
-            item.innerHTML = '<div class="ct-alert-main"><div class="ct-alert-top"><div class="ct-alert-campaign"><span class="ct-alert-priority">' + escapeHtml(a.label || (a.severity === "critical" ? "ACTION NOW" : "WATCH")) + '</span>' + escapeHtml(a.name) + '</div><span class="ct-alert-severity">' + escapeHtml(a.severity === "critical" ? "CRITICAL" : "AT RISK") + '</span></div><div class="ct-alert-why">' + escapeHtml(a.message) + '</div><div class="ct-alert-action">' + escapeHtml(a.action || "Review the condition.") + '</div></div><div class="ct-alert-buttons"><button type="button" class="ct-alert-btn ct-alert-btn-primary" data-alert-action="' + actionType + '" data-campaign="' + escapeHtml(campaignId) + '">' + actionLabel + '</button>' + secondary + '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-alert-action="dismiss">DISMISS</button></div>';
+            const sevPillClass = a.severity === "critical" ? "is-critical" : "is-warning";
+            const sevLabel = a.severity === "critical" ? "CRITICAL" : "AT RISK";
+            const timeLabel = a.createdAt ? formatDateTime(new Date(a.createdAt)) : "";
+            const headline = safeValue(a.name) + " — " + safeValue(a.message);
+            const whyMatters = a.impact || operationalImpactText(a);
+            item.innerHTML = '<div class="ct-alert-main">' +
+                '<div class="ct-alert-top">' +
+                    '<span class="ct-alert-sev-pill ' + sevPillClass + '">' + escapeHtml(a.label || sevLabel) + '</span>' +
+                    '<span class="' + dialerBadgeClass + '">' + escapeHtml(DIALER) + '</span>' +
+                    '<span class="ct-goal-direction-tag">' + escapeHtml(domainTag) + '</span>' +
+                    '<span class="ct-goal-direction-tag">' + escapeHtml(sevLabel) + '</span>' +
+                    (timeLabel ? '<span class="ct-goal-time">' + escapeHtml(timeLabel) + '</span>' : '') +
+                '</div>' +
+                '<div class="ct-alert-headline">' + escapeHtml(headline) + '</div>' +
+                '<div class="ct-alert-explain-grid">' +
+                    '<div class="ct-alert-explain-row"><strong>WHY IT MATTERS</strong>' + escapeHtml(whyMatters) + '</div>' +
+                    '<div class="ct-alert-explain-row is-action"><strong>ACTION REQUIRED</strong>' + escapeHtml(a.action || "Review the condition.") + '</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="ct-alert-buttons">' +
+                '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-alert-action="' + actionType + '" data-campaign="' + escapeHtml(campaignId) + '">' + actionLabel + '</button>' +
+                secondary +
+                '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-alert-action="dismiss">DISMISS</button>' +
+            '</div>';
             fragment.appendChild(item);
         });
         refs.alerts.appendChild(fragment);
@@ -7706,16 +7864,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
     }
 
     function hasCampaignDataIntegrityIssue(campaign) {
+        const isActive = campaign.active === true || campaign.__active === true;
         const outbound = numberValue(campaign.outbound);
         const human = numberValue(campaign.human);
-        const agentConnect = numberValue(campaign.agentConnect);
         const abandoned = abandonedCount(campaign.abandoned);
         const contacts = numberValue(campaign.contacts);
-        const required = [campaign.contacts, campaign.outbound, campaign.human];
-        if (required.some(function (value) { return String(value ?? "").trim() === ""; })) return true;
+        if (isActive) {
+            const required = [campaign.contacts, campaign.outbound, campaign.human];
+            if (required.some(function (value) { return String(value ?? "").trim() === ""; })) return true;
+        }
         if (outbound < 0 || human < 0 || abandoned < 0 || contacts < 0) return true;
-        if (human > outbound || abandoned > outbound) return true;
-        if (campaign.__loggedInAvailable && campaign.__onCallAvailable && campaign.__onCall > campaign.__loggedIn) return true;
+        if (outbound > 0 && (human > outbound || abandoned > outbound)) return true;
+        if (campaign.__loggedInAvailable && campaign.__onCallAvailable && campaign.__loggedIn > 0 && campaign.__onCall > campaign.__loggedIn) return true;
         return false;
     }
 

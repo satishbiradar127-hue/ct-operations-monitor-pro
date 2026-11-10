@@ -22,14 +22,18 @@
         outbound_campaigns_count: {
             direction: "OUTBOUND",
             metric: "Active Campaigns Count",
-            minBaseline: 1,
+            minBaseline: 3,
             increaseAbs: null,
             increasePct: null,
-            decreaseAbs: 2,       // Drop of 2 or more active campaigns
-            decreasePct: 0.25,    // 25% drop in active campaign pool
+            decreaseAbs: 2,       // Drop of 2+ active campaigns AND >=40%
+            decreasePct: 0.40,
+            requireBothAbsAndPct: true,
+            isCumulativeCounter: false,
             severity: "critical",
             confirmationsRequired: 2,
-            description: "Detects unexpected widespread pausing or loss of active campaigns"
+            description: "Detects unexpected widespread pausing or loss of multiple active campaigns",
+            impact: "Sudden shutdown of multiple active dialer campaigns sharply reduces outbound dialing throughput and agent occupancy.",
+            recommendedAction: "Inspect active campaign switches in CallTools /manager/campaigns and confirm intentional schedule vs unintended pause."
         },
         outbound_leads_inventory: {
             direction: "OUTBOUND",
@@ -38,34 +42,46 @@
             increaseAbs: null,
             increasePct: null,
             decreaseAbs: 5000,    // 5k lead drop beyond normal dialer consumption
-            decreasePct: 0.35,    // 35% drop in lead pool
+            decreasePct: 0.35,
+            requireBothAbsAndPct: false,
+            isCumulativeCounter: false,
             severity: "warning",
             confirmationsRequired: 2,
-            description: "Detects rapid exhaustion or premature recycling of lead inventory"
+            description: "Detects rapid exhaustion or premature recycling of lead inventory",
+            impact: "Large lead-pool drops shorten dialer runway and risk idling seated outbound agents.",
+            recommendedAction: "Review assigned live filters and prepare backup lead lists before inventory depletes."
         },
         outbound_abandoned: {
             direction: "OUTBOUND",
             metric: "Abandoned Calls",
             minBaseline: 10,
-            increaseAbs: 20,      // Sudden spike of 20 abandoned calls
-            increasePct: 0.30,    // 30% increase in abandoned volume
-            decreaseAbs: null,    // Decreases in abandoned count are normal
+            increaseAbs: 20,      // Sudden spike of 20 abandoned calls AND >=30%
+            increasePct: 0.30,
+            decreaseAbs: null,
             decreasePct: null,
+            requireBothAbsAndPct: true,
+            isCumulativeCounter: true,
             severity: "critical",
             confirmationsRequired: 2,
-            description: "Surges in outbound abandon volume"
+            description: "Surges in outbound abandon volume",
+            impact: "Spikes in outbound abandons indicate compliance risk and insufficient agent availability when prospects answer.",
+            recommendedAction: "Inspect dialing pace/channels per agent and shift idle or under-paced seats onto affected campaigns."
         },
         outbound_wait_time: {
             direction: "OUTBOUND",
             metric: "Worst Wait Time",
-            minBaseline: 10,
-            increaseAbs: 30,      // +30 seconds wait spike
-            increasePct: 0.50,    // 50% increase in holding delay
+            minBaseline: 15,
+            increaseAbs: 25,      // +25s spike AND +50% surge
+            increasePct: 0.50,
+            requireBothAbsAndPct: true,
             decreaseAbs: null,
             decreasePct: null,
+            isCumulativeCounter: false,
             severity: "critical",
             confirmationsRequired: 2,
-            description: "Holding delays and queue starvation"
+            description: "Holding delays and queue starvation",
+            impact: "Escalating hold times degrade answer conversion and drive immediate prospect hang-ups.",
+            recommendedAction: "Focus the highest-wait campaign in Outbound Operations and check agent post-call wrap or pacing."
         },
         outbound_callers_waiting: {
             direction: "OUTBOUND",
@@ -73,23 +89,31 @@
             minBaseline: 1,
             increaseAbs: 8,       // 8 or more callers holding
             increasePct: 0.75,
+            requireBothAbsAndPct: true,
             decreaseAbs: null,
             decreasePct: null,
+            isCumulativeCounter: false,
             severity: "warning",
             confirmationsRequired: 2,
-            description: "Outbound connect holding backlog"
+            description: "Outbound connect holding backlog",
+            impact: "Growing answered-call backlogs signal pacing is outrunning available outbound agents.",
+            recommendedAction: "Monitor agent wrap times and throttle aggressive dial ratios if queue depth continues rising."
         },
         outbound_agents_logged_in: {
             direction: "OUTBOUND",
             metric: "Total Agents Logged In",
-            minBaseline: 3,
+            minBaseline: 5,
             increaseAbs: null,
             increasePct: null,
-            decreaseAbs: 3,       // Loss of 3+ agents
-            decreasePct: 0.35,    // 35% agent capacity drop
+            decreaseAbs: 3,       // Loss of 3+ agents AND >=35% staffing drop
+            decreasePct: 0.35,
+            requireBothAbsAndPct: true,
+            isCumulativeCounter: false,
             severity: "critical",
             confirmationsRequired: 2,
-            description: "Agent staffing drop"
+            description: "Agent staffing drop",
+            impact: "Sharp agent headcount drops leave dialed calls uncovered and slow contact velocity.",
+            recommendedAction: "Verify shift changes, agent disconnects, or reassignment across outbound campaigns."
         },
         // outbound_failed_calls disabled at rule-generation level per alert policy
 
@@ -98,38 +122,50 @@
         inbound_active_queues: {
             direction: "INBOUND",
             metric: "Active Queues Count",
-            minBaseline: 1,
+            minBaseline: 2,
             increaseAbs: null,
             increasePct: null,
-            decreaseAbs: 1,       // Any active queue disappearance
-            decreasePct: 0.20,
+            decreaseAbs: 1,       // Any active queue disappearance when >=2 active
+            decreasePct: 0.25,
+            requireBothAbsAndPct: true,
+            isCumulativeCounter: false,
             severity: "critical",
             confirmationsRequired: 2,
-            description: "Inbound queue availability"
+            description: "Inbound queue availability",
+            impact: "Loss of an active inbound queue can strand incoming customer transfers or DIDs.",
+            recommendedAction: "Verify inbound queue configuration on CallTools /manager/queues."
         },
         inbound_callers_waiting: {
             direction: "INBOUND",
             metric: "Callers Waiting",
             minBaseline: 1,
-            increaseAbs: 4,       // 4 callers holding in queue
+            increaseAbs: 4,       // 4+ callers holding AND >=50%
             increasePct: 0.50,
+            requireBothAbsAndPct: true,
             decreaseAbs: null,
             decreasePct: null,
+            isCumulativeCounter: false,
             severity: "warning",
             confirmationsRequired: 2,
-            description: "Surges in inbound callers holding"
+            description: "Surges in inbound callers holding",
+            impact: "Rising inbound queue depth increases customer wait time and abandonment risk.",
+            recommendedAction: "Check inbound agent availability in Inbound Operations and add overflow seats if needed."
         },
         inbound_max_wait: {
             direction: "INBOUND",
             metric: "Max Wait Time",
             minBaseline: 15,
-            increaseAbs: 30,      // +30s max wait increase
+            increaseAbs: 30,      // +30s max wait increase AND >=50%
             increasePct: 0.50,
+            requireBothAbsAndPct: true,
             decreaseAbs: null,
             decreasePct: null,
+            isCumulativeCounter: false,
             severity: "critical",
             confirmationsRequired: 2,
-            description: "Inbound caller hold time"
+            description: "Inbound caller hold time",
+            impact: "Prolonged inbound waits breach caller SLA targets and trigger hang-ups.",
+            recommendedAction: "Review Queue Detail in Inbound Operations and route logged-in agents to the oldest waiting call."
         },
         inbound_agents_logged_in: {
             direction: "INBOUND",
@@ -137,29 +173,36 @@
             minBaseline: 2,
             increaseAbs: null,
             increasePct: null,
-            decreaseAbs: 2,       // Drop of 2 queue members
-            decreasePct: 0.40,    // 40% staffing drop
+            decreaseAbs: 2,       // Drop of 2 queue members AND >=40%
+            decreasePct: 0.40,
+            requireBothAbsAndPct: true,
+            isCumulativeCounter: false,
             severity: "critical",
             confirmationsRequired: 2,
-            description: "Inbound queue staffing capacity drops"
+            description: "Inbound queue staffing capacity drops",
+            impact: "Drop in logged-in inbound members reduces answer capacity while queue demand remains active.",
+            recommendedAction: "Confirm agent logins and queue memberships immediately."
         },
         inbound_not_answered: {
             direction: "INBOUND",
             metric: "Not Answered Calls",
             minBaseline: 5,
-            increaseAbs: 15,      // Spike of 15 missed queue opportunities
+            increaseAbs: 15,      // Spike of 15 missed queue opportunities AND >=35%
             increasePct: 0.35,
-            decreaseAbs: null,
-            decreasePct: null,
+            requireBothAbsAndPct: true,
+            isCumulativeCounter: true,
             severity: "warning",
             confirmationsRequired: 2,
-            description: "Inbound queue missed call spikes"
+            description: "Inbound queue missed call spikes",
+            impact: "Rising unanswered inbound calls represent missed customer conversations and transfers.",
+            recommendedAction: "Audit queue wait thresholds, ring timers, and staffing on the affected inbound queue."
         }
     };
 
     class CTDataIntelligenceEngine {
         constructor(options = {}) {
-                    this.dialer = options.dialer || ("EAST-3");
+            this.dialer = options.dialer || ("EAST-3");
+            this.targetHost = options.targetHost || (String(this.dialer).toLowerCase() + ".calltools.io");
             this.prefix = options.prefix || ("ct_east3_");
             this.storage = options.storage || (typeof localStorage !== "undefined" ? localStorage : null);
 
@@ -184,6 +227,24 @@
             this.loadState();
         }
 
+        isHostAllowed() {
+            try {
+                if (typeof window === "undefined" || !window.location || !window.location.hostname) return true;
+                const host = String(window.location.hostname).toLowerCase();
+                if (!host) return true;
+                if (host.endsWith(".calltools.io") && host !== this.targetHost) return false;
+                return true;
+            } catch (e) { return true; }
+        }
+
+        resolveAlertsByStatus(statuses) {
+            const set = new Set(Array.isArray(statuses) ? statuses : [statuses]);
+            if (!Array.isArray(this.activeAlerts) || !this.activeAlerts.length) return false;
+            const before = this.activeAlerts.length;
+            this.activeAlerts = this.activeAlerts.filter(a => a && !set.has(a.status));
+            return this.activeAlerts.length !== before;
+        }
+
         loadState() {
             const sameCanonicalFilter = (a, b) => {
                 const canon = (v) => String(v || "")
@@ -193,13 +254,24 @@
                 const ca = canon(a), cb = canon(b);
                 return Boolean(ca && cb && ca === cb);
             };
+            const legacyNonCounterMetrics = new Set([
+                "Active Campaigns Count", "Active Queues Count",
+                "Worst Wait Time", "Max Wait Time",
+                "Callers Waiting", "Total Agents Logged In",
+                "Queue Members Logged In", "Queue Staffing Members", "Lead Inventory"
+            ]);
+            const isLegacyReset = (rec) => (rec.status === "RESET" || rec.status === "UNEXPECTED RESET") && legacyNonCounterMetrics.has(rec.metric);
             const isValidAlert = (a) => {
                 if (!a || a.metric === "Failed Call Volume" || a.profileKey === "outbound_failed_calls") return false;
+                if (a.dialer && a.dialer !== this.dialer) return false;
+                if (isLegacyReset(a)) return false;
                 if (a.category === "LIVE_FILTER" && sameCanonicalFilter(a.previousFilter || a.previous, a.currentFilter || a.current)) return false;
                 return true;
             };
             const isValidHistory = (h) => {
                 if (!h) return false;
+                if (h.dialer && h.dialer !== this.dialer) return false;
+                if (isLegacyReset(h)) return false;
                 if (h.category === "LIVE_FILTER" && sameCanonicalFilter(h.previousFilter || h.previous, h.currentFilter || h.current)) return false;
                 return true;
             };
@@ -321,10 +393,12 @@
          * Ingests native snapshot of campaigns and queues.
          */
         processSnapshot(snapshot = {}) {
+            if (!this.isHostAllowed()) return [];
             const now = Date.now();
             const timeStr = new Date(now).toLocaleTimeString();
 
             const isAuthLost = Boolean(snapshot.authLost);
+            const isInboundAuthLost = Boolean(snapshot.inboundAuthLost);
             const isStale = Boolean(snapshot.isStale);
 
             // ENGINE D: Data Integrity - Auth Loss
@@ -334,12 +408,32 @@
                     metric: "Authentication Status",
                     status: "AUTH_LOST",
                     severity: "critical",
-                    message: "CallTools authentication session expired or redirected to login",
+                    message: `${this.dialer} CallTools session expired or redirected to login (${this.targetHost}).`,
+                    impact: "All live campaign counts, lead pools, and queue metrics are suspended until authentication is restored.",
+                    recommendedAction: `Sign back in to https://${this.targetHost} and reload the Operations Monitor tab.`,
                     timestamp: now,
                     timeStr
                 });
                 this.saveState();
                 return this.activeAlerts;
+            } else {
+                this.resolveAlertsByStatus("AUTH_LOST");
+            }
+
+            if (isInboundAuthLost) {
+                this.recordIntegrityAlert({
+                    id: `${this.dialer}_INBOUND_AUTH_LOSS_${now}`,
+                    metric: "Inbound Bridge Auth",
+                    status: "INBOUND_AUTH_LOST",
+                    severity: "critical",
+                    message: `${this.dialer} background Queue monitor redirected to login on ${this.targetHost}.`,
+                    impact: "Inbound call queue metrics and waiting-caller SLA monitoring are unavailable until the session re-authenticates.",
+                    recommendedAction: `Open https://${this.targetHost}/manager/queues in this browser session and verify login state.`,
+                    timestamp: now,
+                    timeStr
+                });
+            } else {
+                this.resolveAlertsByStatus("INBOUND_AUTH_LOST");
             }
 
             // ENGINE D: Data Integrity - Stale Source Feed
@@ -349,13 +443,17 @@
                     metric: "Feed Heartbeat",
                     status: "FEED_STALE",
                     severity: "warning",
-                    message: "CallTools DOM feed heartbeat exceeded stale threshold (>15s)",
+                    message: `${this.dialer} CallTools DOM feed heartbeat exceeded stale threshold (>15s).`,
+                    impact: "Operational delta checks are paused to avoid false alerts while the page or background observer is unresponsive.",
+                    recommendedAction: "Keep the CallTools Campaigns tab open and click Refresh Data in the toolbar to re-sync all sources.",
                     timestamp: now,
                     timeStr
                 });
                 // Suspend operational comparisons while stale
                 this.saveState();
                 return this.activeAlerts;
+            } else {
+                this.resolveAlertsByStatus("FEED_STALE");
             }
 
             const campaigns = Array.isArray(snapshot.campaigns) ? snapshot.campaigns : [];
@@ -368,15 +466,14 @@
                     metric: "Native Table Container",
                     status: "TABLE_MISSING",
                     severity: "critical",
-                    message: "Native CallTools Campaigns table container not found in DOM",
+                    message: `${this.dialer} native CallTools Campaigns table container was not detected on ${this.targetHost}.`,
+                    impact: "Live campaign metrics and filter assignments cannot be read from CallTools until the native table renders.",
+                    recommendedAction: "Confirm the browser is on /manager/campaigns, click Refresh Data, or reload the CallTools page.",
                     timestamp: now,
                     timeStr
                 });
             } else if (snapshot.isCampaignsRoute && snapshot.campaignTableFound) {
-                // Auto-resolve TABLE_MISSING alert when table is confirmed present and healthy
-                if (this.activeAlerts.some(a => a && a.status === "TABLE_MISSING")) {
-                    this.activeAlerts = this.activeAlerts.filter(a => !a || a.status !== "TABLE_MISSING");
-                }
+                this.resolveAlertsByStatus("TABLE_MISSING");
             }
 
             // 1. Process Outbound Campaigns
@@ -385,11 +482,15 @@
             // 2. Process Inbound Queues
             this.evaluateInbound(queues, now, timeStr);
 
+            // 3. Process Targeting & Filter Health Integrity (Active campaigns on inactive/empty filters)
+            this.evaluateTargetingIntegrity(campaigns, now, timeStr);
+
             this.saveState();
             return this.activeAlerts;
         }
 
         evaluateOutbound(campaigns, now, timeStr) {
+            if (!Array.isArray(campaigns) || !campaigns.length) return;
             const currentCampaignIds = new Set();
             const activeCampaigns = campaigns.filter(c => c && c.active !== false && c.__active !== false);
 
@@ -471,12 +572,24 @@
                         metric: "Call Totals Consistency",
                         status: "CONTRADICTORY",
                         severity: "critical",
-                        message: `Campaign '${c.name}': answered calls (${answered}) exceeds total calls (${totalCalls})`,
+                        message: `${this.dialer} campaign '${c.name}': answered calls (${answered}) exceeds total calls (${totalCalls}).`,
+                        impact: "Contradictory CallTools table totals make connect-rate and conversion metrics unreliable.",
+                        recommendedAction: "Click Refresh Data and verify the native CallTools campaign row before acting on percentages.",
                         timestamp: now,
                         timeStr
                     });
                 }
             });
+
+            // Auto-resolve CONTRADICTORY alerts if all current rows are consistent
+            if (!campaigns.some(c => {
+                if (!c) return false;
+                const a = Number(c.answered ?? c.__answered ?? 0);
+                const t = Number(c.callsToday ?? c.__callsToday ?? c.outbound ?? c.__outbound ?? 0);
+                return a > t && t > 0;
+            })) {
+                this.resolveAlertsByStatus("CONTRADICTORY");
+            }
 
             // ENGINE D: Campaign Disappearance Check
             if (this.baselines["outbound_campaign_list"]) {
@@ -496,7 +609,9 @@
                         percentDiff: `-${Math.round((missingIds.length / prevList.length) * 100)}%`,
                         severity: "critical",
                         confirmationsRequired: 2,
-                        message: `Campaign ID(s) disappeared from native DOM: ${missingIds.join(", ")}`,
+                        message: `${this.dialer} campaign ID(s) disappeared from native DOM: ${missingIds.join(", ")}.`,
+                        impact: "Missing campaigns in the CallTools table may have been paused, deleted, or hidden by table filtering.",
+                        recommendedAction: "Clear any filter/search on native CallTools /manager/campaigns and confirm whether these campaigns are running.",
                         now,
                         timeStr
                     });
@@ -504,10 +619,38 @@
                         this.baselines["outbound_campaign_list"] = { ids: Array.from(currentCampaignIds), updatedAt: now };
                     }
                 } else {
+                    if (this.pendingConfirmations["disappeared_campaigns"]) delete this.pendingConfirmations["disappeared_campaigns"];
+                    this.resolveAlertsByStatus("MISSING");
                     this.baselines["outbound_campaign_list"] = { ids: Array.from(currentCampaignIds), updatedAt: now };
                 }
             } else {
                 this.baselines["outbound_campaign_list"] = { ids: Array.from(currentCampaignIds), updatedAt: now };
+            }
+
+            // Aggregate Outbound No-Agent Coverage Check (active dialing with waiting calls and 0 agents)
+            const uncoveredKey = "outbound_no_agent_waiting";
+            if (activeCampaigns.length > 0 && totalWaiting > 0 && totalAgents === 0) {
+                this.confirmAndTriggerAlert({
+                    key: uncoveredKey,
+                    metric: "Outbound Agent Coverage",
+                    category: "OPERATIONAL_COVERAGE",
+                    direction: "OUTBOUND",
+                    targetId: activeCampaigns[0].id || "ALL",
+                    targetName: "Dialer Outbound Coverage",
+                    status: "NO AGENT CAPACITY",
+                    previous: `${totalAgents} agents`,
+                    current: `${totalWaiting} waiting`,
+                    severity: "critical",
+                    confirmationsRequired: 2,
+                    message: `${this.dialer}: ${totalWaiting} outbound caller(s) waiting while 0 agents are logged into active campaigns.`,
+                    impact: "Answered outbound prospects cannot be bridged to a representative, causing near-immediate call abandonment.",
+                    recommendedAction: "Verify agent login status on CallTools and pause dialing or reassign seats immediately.",
+                    now,
+                    timeStr
+                });
+            } else {
+                if (this.pendingConfirmations[uncoveredKey]) delete this.pendingConfirmations[uncoveredKey];
+                this.resolveAlertsByStatus("NO AGENT CAPACITY");
             }
 
             // Check Monitored Outbound Operational Aggregates
@@ -517,11 +660,10 @@
             this.evaluateOperationalMetric("outbound_wait_time", worstWait, "OUTBOUND", "ALL", "Worst Wait Delay", now, timeStr);
             this.evaluateOperationalMetric("outbound_callers_waiting", totalWaiting, "OUTBOUND", "ALL", "Callers Waiting", now, timeStr);
             this.evaluateOperationalMetric("outbound_agents_logged_in", totalAgents, "OUTBOUND", "ALL", "Total Agents Logged In", now, timeStr);
-            // Failed-call volume alert disabled per alert policy
-            // this.evaluateOperationalMetric("outbound_failed_calls", totalFailed, "OUTBOUND", "ALL", "Failed Call Volume", now, timeStr);
         }
 
         evaluateInbound(queues, now, timeStr) {
+            if (!Array.isArray(queues) || !queues.length) return;
             const currentQueueIds = new Set();
             const activeQueues = queues.filter(q => q && !q.archived);
 
@@ -595,7 +737,9 @@
                         percentDiff: `-${Math.round((missingIds.length / prevList.length) * 100)}%`,
                         severity: "critical",
                         confirmationsRequired: 2,
-                        message: `Queue ID(s) disappeared from native DOM: ${missingIds.join(", ")}`,
+                        message: `${this.dialer} inbound queue ID(s) disappeared from native DOM: ${missingIds.join(", ")}.`,
+                        impact: "Missing inbound queues can prevent callers or DIDs from landing on active answer paths.",
+                        recommendedAction: "Inspect /manager/queues on CallTools and verify whether queues were archived or filtered.",
                         now,
                         timeStr
                     });
@@ -603,6 +747,7 @@
                         this.baselines["inbound_queue_list"] = { ids: Array.from(currentQueueIds), updatedAt: now };
                     }
                 } else {
+                    if (this.pendingConfirmations["disappeared_queues"]) delete this.pendingConfirmations["disappeared_queues"];
                     this.baselines["inbound_queue_list"] = { ids: Array.from(currentQueueIds), updatedAt: now };
                 }
             } else {
@@ -617,9 +762,91 @@
             this.evaluateOperationalMetric("inbound_not_answered", totalNotAnswered, "INBOUND", "ALL", "Not Answered Queue Calls", now, timeStr);
         }
 
+        evaluateTargetingIntegrity(campaigns, now, timeStr) {
+            if (!Array.isArray(campaigns) || !campaigns.length || !this.storage) return;
+            let inventory = { items: {} };
+            let registry = {};
+            try { inventory = JSON.parse(this.storage.getItem(this.LIVE_FILTERS_INVENTORY_KEY) || '{"items":{}}'); } catch (e) {}
+            try { registry = JSON.parse(this.storage.getItem(this.VERIFIED_FILTERS_KEY) || "{}"); } catch (e) {}
+            const itemsMap = (inventory && inventory.items) ? inventory.items : {};
+
+            const inactiveActiveCids = new Set();
+            const emptyFilterActiveCids = new Set();
+
+            campaigns.forEach(c => {
+                if (!c || !c.id) return;
+                const cid = String(c.id).trim();
+                const isActive = c.active === true || c.__active === true;
+                const agents = Number(c.loggedIn ?? c.__loggedIn ?? 0);
+                if (!isActive || agents <= 0) return;
+
+                const reg = registry[cid];
+                if (!reg || !reg.liveFilter || reg.status === "NONE" || reg.status === "NO_FILTER") return;
+                const fid = String(reg.filterId || c.liveFilterId || "").trim();
+                const invItem = (fid && itemsMap[fid])
+                    ? itemsMap[fid]
+                    : Object.values(itemsMap).find(it => it && it.name && String(it.name).trim().toLowerCase() === String(reg.cleanFilterName || reg.liveFilter).trim().toLowerCase());
+
+                if (invItem && invItem.active === false) {
+                    inactiveActiveCids.add(cid);
+                    this.confirmAndTriggerAlert({
+                        key: `inactive_filter_${cid}`,
+                        metric: "Assigned Live Filter Status",
+                        category: "TARGETING_INTEGRITY",
+                        direction: "OUTBOUND",
+                        targetId: cid,
+                        targetName: c.name || `Campaign ${cid}`,
+                        status: "INACTIVE FILTER ASSIGNED",
+                        previous: "ACTIVE",
+                        current: `${reg.liveFilter} (INACTIVE)`,
+                        severity: "critical",
+                        confirmationsRequired: 2,
+                        message: `${this.dialer} active campaign '${c.name}' (#${cid}, ${agents} agents) is assigned inactive filter '${reg.liveFilter}'.`,
+                        impact: "Agents seated on a campaign whose assigned Live Filter is disabled will dial zero contacts until reactivated or swapped.",
+                        recommendedAction: `Focus #${cid}, activate filter${fid ? " #" + fid : ""} in /manager/live-filters, or assign an active filter in /manager/campaigns/edit/${cid}.`,
+                        now,
+                        timeStr
+                    });
+                }
+                const fCount = (reg.filterCount !== undefined && reg.filterCount !== null)
+                    ? Number(reg.filterCount)
+                    : (invItem && invItem.count !== undefined ? Number(invItem.count) : null);
+                if (fCount === 0 && invItem && invItem.active === true) {
+                    emptyFilterActiveCids.add(cid);
+                    this.confirmAndTriggerAlert({
+                        key: `filter_exhausted_${cid}`,
+                        metric: "Assigned Filter Count",
+                        category: "TARGETING_INTEGRITY",
+                        direction: "OUTBOUND",
+                        targetId: cid,
+                        targetName: c.name || `Campaign ${cid}`,
+                        status: "FILTER POOL EXHAUSTED",
+                        previous: "> 0 contacts",
+                        current: "0 contacts",
+                        severity: "critical",
+                        confirmationsRequired: 2,
+                        message: `${this.dialer} active campaign '${c.name}' (#${cid}, ${agents} agents) has 0 available leads in '${reg.liveFilter}'.`,
+                        impact: "Active agents have no dialable leads remaining in the assigned filter pool.",
+                        recommendedAction: `Switch to a populated live filter in CallTools /manager/campaigns/edit/${cid} or refill the filter source.`,
+                        now,
+                        timeStr
+                    });
+                }
+            });
+
+            if (Array.isArray(this.activeAlerts)) {
+                this.activeAlerts = this.activeAlerts.filter(a => {
+                    if (!a) return false;
+                    if (a.status === "INACTIVE FILTER ASSIGNED" && !inactiveActiveCids.has(String(a.targetId))) return false;
+                    if (a.status === "FILTER POOL EXHAUSTED" && !emptyFilterActiveCids.has(String(a.targetId))) return false;
+                    return true;
+                });
+            }
+        }
+
         /**
          * Evaluates an operational aggregate against its threshold profile.
-         * Distinguishes sudden increase vs sudden decrease vs counter reset.
+         * Distinguishes cumulative midnight counters from live real-time gauges.
          */
         evaluateOperationalMetric(profileKey, currentValue, direction, targetId, targetName, now, timeStr) {
             // Rule-level disablement: failed-call volume alerts are strictly disabled
@@ -638,16 +865,16 @@
 
             const previousValue = baseline.val;
             const diff = currentValue - previousValue;
+            const pKeyIncrease = `${profileKey}_increase_${targetId}`;
+            const pKeyDecrease = `${profileKey}_decrease_${targetId}`;
 
-            // 2. Midnight Reset Handling
-            if (currentValue === 0 && previousValue > 0) {
+            // 2. Midnight / Counter Reset Handling (Strictly ONLY for true cumulative daily counters!)
+            if (profile.isCumulativeCounter && currentValue === 0 && previousValue > 0) {
                 if (this.isMidnightResetWindow()) {
-                    // Legitimate daily midnight reset: update baseline downward silently
                     baseline.val = currentValue;
                     baseline.updatedAt = now;
                     return;
                 } else {
-                    // Unexpected counter reset during operating hours
                     this.recordIntegrityAlert({
                         id: `${this.dialer}_UNEXPECTED_RESET_${profileKey}_${now}`,
                         metric: profile.metric,
@@ -660,7 +887,9 @@
                         current: currentValue,
                         absoluteDiff: -previousValue,
                         percentDiff: "-100%",
-                        message: `Unexpected counter reset observed outside midnight window for '${profile.metric}' (${previousValue} -> 0)`,
+                        message: `${this.dialer}: unexpected daily counter reset outside midnight window for '${profile.metric}' (${previousValue} → 0).`,
+                        impact: "Cumulative counter resets outside midnight suggest a browser reload, data truncation, or CallTools rollup issue.",
+                        recommendedAction: "Click Refresh Data and cross-check native CallTools daily totals before comparing session trends.",
                         timestamp: now,
                         timeStr
                     });
@@ -669,9 +898,6 @@
                     return;
                 }
             }
-
-            const pKeyIncrease = `${profileKey}_increase_${targetId}`;
-            const pKeyDecrease = `${profileKey}_decrease_${targetId}`;
 
             // Check if there was a pending anomaly that has now reverted back to normal
             if (diff === 0) {
@@ -682,13 +908,12 @@
 
             // SUDDEN INCREASE CHECK (ENGINE B)
             if (diff > 0 && (profile.increaseAbs !== null || profile.increasePct !== null)) {
-                let isAnomaly = false;
-                if (profile.increaseAbs !== null && diff >= profile.increaseAbs) {
-                    isAnomaly = true;
-                }
-                if (profile.increasePct !== null && previousValue >= profile.minBaseline && (diff / previousValue) >= profile.increasePct) {
-                    isAnomaly = true;
-                }
+                if (this.pendingConfirmations[pKeyDecrease]) delete this.pendingConfirmations[pKeyDecrease];
+                const absOk = profile.increaseAbs !== null && diff >= profile.increaseAbs;
+                const pctOk = profile.increasePct !== null && (previousValue > 0 ? (diff / previousValue) >= profile.increasePct : absOk);
+                const isAnomaly = profile.requireBothAbsAndPct
+                    ? (absOk && (previousValue >= profile.minBaseline ? pctOk : true))
+                    : (absOk || (previousValue >= profile.minBaseline && pctOk));
 
                 if (isAnomaly) {
                     const pctStr = previousValue > 0 ? `+${Math.round((diff / previousValue) * 100)}%` : `+${diff}`;
@@ -705,7 +930,9 @@
                         percentDiff: pctStr,
                         severity: profile.severity,
                         confirmationsRequired: profile.confirmationsRequired,
-                        message: `Sudden increase in ${profile.metric}: ${previousValue} -> ${currentValue} (${pctStr})`,
+                        message: `${this.dialer}: ${profile.metric} surged from ${previousValue} to ${currentValue} (${pctStr}).`,
+                        impact: profile.impact || profile.description,
+                        recommendedAction: profile.recommendedAction || "Inspect affected campaigns in Command Summary and Outbound Focus.",
                         now,
                         timeStr
                     });
@@ -719,14 +946,11 @@
 
             // SUDDEN DECREASE CHECK (ENGINE C)
             if (diff < 0 && (profile.decreaseAbs !== null || profile.decreasePct !== null)) {
+                if (this.pendingConfirmations[pKeyIncrease]) delete this.pendingConfirmations[pKeyIncrease];
                 const drop = Math.abs(diff);
-                let isAnomaly = false;
-                if (profile.decreaseAbs !== null && drop >= profile.decreaseAbs) {
-                    isAnomaly = true;
-                }
-                if (profile.decreasePct !== null && previousValue >= profile.minBaseline && (drop / previousValue) >= profile.decreasePct) {
-                    isAnomaly = true;
-                }
+                const absOk = profile.decreaseAbs !== null && drop >= profile.decreaseAbs;
+                const pctOk = profile.decreasePct !== null && previousValue >= profile.minBaseline && (drop / previousValue) >= profile.decreasePct;
+                const isAnomaly = profile.requireBothAbsAndPct ? (absOk && pctOk) : (absOk || pctOk);
 
                 if (isAnomaly) {
                     const pctStr = `-${Math.round((drop / previousValue) * 100)}%`;
@@ -743,7 +967,9 @@
                         percentDiff: pctStr,
                         severity: profile.severity,
                         confirmationsRequired: profile.confirmationsRequired,
-                        message: `Sudden decrease in ${profile.metric}: ${previousValue} -> ${currentValue} (${pctStr})`,
+                        message: `${this.dialer}: ${profile.metric} dropped sharply from ${previousValue} to ${currentValue} (${pctStr}).`,
+                        impact: profile.impact || profile.description,
+                        recommendedAction: profile.recommendedAction || "Inspect active campaign switches and staffing counts immediately.",
                         now,
                         timeStr
                     });
@@ -754,6 +980,10 @@
                     return;
                 }
             }
+
+            // Clear stale pending alerts if value moved normally toward 0 or stabilized
+            if (diff <= 0 && this.pendingConfirmations[pKeyIncrease]) delete this.pendingConfirmations[pKeyIncrease];
+            if (diff >= 0 && this.pendingConfirmations[pKeyDecrease]) delete this.pendingConfirmations[pKeyDecrease];
 
             // Update rolling baseline for normal variations
             baseline.val = currentValue;
@@ -812,7 +1042,9 @@
                     absoluteDiff: diff,
                     percentDiff: pctStr,
                     severity: "good",
-                    message: `NEW LEADS ADDED: ${this.dialer} | ${cName} — Previous inventory: ${previousVal.toLocaleString()}, Current inventory: ${contactsVal.toLocaleString()} (Increase: +${diff.toLocaleString()})`,
+                    message: `${this.dialer}: Campaign '${cName}' received +${diff.toLocaleString()} new leads (${previousVal.toLocaleString()} → ${contactsVal.toLocaleString()}).`,
+                    impact: "Dialable lead runway expanded for this active campaign.",
+                    recommendedAction: "No urgent intervention required; verify lead filter pacing matches the newly loaded pool.",
                     firstDetectedAt: timeStr,
                     confirmedAt: timeStr,
                     timestamp: now,
@@ -963,16 +1195,20 @@
             if (isPrevEmpty && !isCurrEmpty) {
                 alertStatus = "LIVE FILTER ASSIGNED";
                 severity = "warning";
-                message = `LIVE FILTER ASSIGNED — Campaign: ${cName} — Filter: ${cleanFilter}`;
+                message = `${this.dialer}: Campaign '${cName}' assigned live filter '${cleanFilter}'.`;
             } else if (!isPrevEmpty && isCurrEmpty) {
                 alertStatus = "LIVE FILTER REMOVED";
                 severity = "critical";
-                message = `LIVE FILTER REMOVED — Campaign: ${cName} — Previous filter: ${previousFilter}`;
+                message = `${this.dialer}: Campaign '${cName}' removed previous filter '${previousFilter}'.`;
             } else {
                 alertStatus = "LIVE FILTER CHANGED";
                 severity = "critical";
-                message = `LIVE FILTER CHANGED — Campaign: ${cName} — From: [${previousFilter}] — To: [${cleanFilter}]`;
+                message = `${this.dialer}: Campaign '${cName}' targeting changed from '${previousFilter}' to '${cleanFilter}'.`;
             }
+            const impactText = alertStatus === "LIVE FILTER REMOVED"
+                ? "Unfiltered dialing risks contacting unintended segments or exhausting unsegmented lists."
+                : "Live filter changes alter lead demographics, callable pool depth, and expected conversion rates immediately.";
+            const actionText = `Focus '${cName}' (#${cid}) and confirm the assigned live filter and available pool on /manager/campaigns/edit/${cid}.`;
 
             const alertId = `${this.dialer}_FILTER_CHANGED_${cid}_${encodeURIComponent(previousFilter)}_${encodeURIComponent(cleanFilter)}_${now}`;
 
@@ -991,6 +1227,8 @@
                 confidence: confidence || "VERIFIED",
                 severity: severity,
                 message: message,
+                impact: impactText,
+                recommendedAction: actionText,
                 firstDetectedAt: pending.firstDetectedAt || timeStr,
                 confirmedAt: timeStr,
                 timestamp: now,
@@ -1109,8 +1347,10 @@
             const alertStatus = isPrevEmpty ? "LIVE FILTER ASSIGNED" : "LIVE FILTER CHANGED";
             const severity = isPrevEmpty ? "warning" : "critical";
             const message = isPrevEmpty
-                ? `LIVE FILTER ASSIGNED — Campaign: ${cName} — Filter: ${cleanCurr}`
-                : `LIVE FILTER CHANGED — Campaign: ${cName} — From: [${previousFilter}] — To: [${cleanCurr}]`;
+                ? `${this.dialer}: Campaign '${cName}' assigned live filter '${cleanCurr}'.`
+                : `${this.dialer}: Campaign '${cName}' targeting changed from '${previousFilter}' to '${cleanCurr}'.`;
+            const impactText = "Live filter swaps immediately redirect dialing to a different lead segment and pool size.";
+            const actionText = `Focus '${cName}' (#${cid}) and verify assigned filter pool counts match operational expectations.`;
 
             const alertId = `${this.dialer}_FILTER_CHANGED_${cid}_${encodeURIComponent(previousFilter)}_${encodeURIComponent(cleanCurr)}_${now}`;
             const alertObj = {
@@ -1133,6 +1373,8 @@
                 confidence: "VERIFIED",
                 severity: severity,
                 message: message,
+                impact: impactText,
+                recommendedAction: actionText,
                 firstDetectedAt: timeStr,
                 confirmedAt: timeStr,
                 timestamp: now,
@@ -1295,6 +1537,8 @@
                     percentDiff: params.percentDiff,
                     severity: params.severity || "warning",
                     message: params.message,
+                    impact: params.impact || "Operational variance exceeded configured monitoring thresholds across two consecutive observations.",
+                    recommendedAction: params.recommendedAction || `Focus ${params.targetName || "campaign"} in ${this.dialer} to inspect current capacity and pacing.`,
                     firstDetectedAt: pending.firstDetectedAt,
                     confirmedAt: params.timeStr,
                     timestamp: params.now,
@@ -1308,10 +1552,12 @@
         }
 
         recordIntegrityAlert(params) {
+            if (!this.isHostAllowed()) return;
             // Check deduplication (do not fire duplicate integrity alert within 60 seconds)
-            const recentDuplicate = this.activeAlerts.find(a => 
-                a.category === "INTEGRITY" && 
-                a.metric === params.metric && 
+            const recentDuplicate = this.activeAlerts.find(a =>
+                a.category === "INTEGRITY" &&
+                a.dialer === this.dialer &&
+                a.metric === params.metric &&
                 (params.timestamp - a.timestamp) < 60000
             );
             if (recentDuplicate) return;
@@ -1320,9 +1566,9 @@
                 id: params.id,
                 dialer: this.dialer,
                 category: "INTEGRITY",
-                direction: "SYSTEM",
-                targetId: "SYSTEM",
-                targetName: "System Integrity",
+                direction: params.direction || "SYSTEM",
+                targetId: params.targetId || "SYSTEM",
+                targetName: params.targetName || "System Integrity",
                 metric: params.metric,
                 status: params.status,
                 previous: params.previous ?? "—",
@@ -1331,6 +1577,8 @@
                 percentDiff: params.percentDiff ?? "—",
                 severity: params.severity || "critical",
                 message: params.message,
+                impact: params.impact || "Data pipeline integrity check flagged an inconsistency in CallTools telemetry.",
+                recommendedAction: params.recommendedAction || "Click Refresh Data and verify the native CallTools page state before relying on affected values.",
                 firstDetectedAt: params.timeStr,
                 confirmedAt: params.timeStr,
                 timestamp: params.timestamp,
@@ -1342,10 +1590,16 @@
             if (!alertObj || alertObj.metric === "Failed Call Volume" || alertObj.profileKey === "outbound_failed_calls") {
                 return; // Suppressed at rule generation level
             }
-            // Duplicate Suppression: check if alert with same target and metric is already active
+            if (alertObj.dialer && alertObj.dialer !== this.dialer) {
+                return; // Reject foreign dialer alert contamination
+            }
+            alertObj.dialer = this.dialer;
+            // Duplicate Suppression: check if alert with same dialer, target, status, and metric is already active
             const exists = this.activeAlerts.some(a => a.id === alertObj.id || (
-                a.targetId === alertObj.targetId && 
-                a.metric === alertObj.metric && 
+                a.dialer === this.dialer &&
+                a.targetId === alertObj.targetId &&
+                a.metric === alertObj.metric &&
+                a.status === alertObj.status &&
                 a.current === alertObj.current &&
                 !a.acknowledged
             ));

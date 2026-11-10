@@ -7077,25 +7077,25 @@ test("EAST-3 UPGRADE 326: Suppresses synthetic (Not Active) transitions, cleans 
     assert.strictEqual(reloaded.activeAlerts[0].id, "real_1");
 });
 
-test("EAST-3 UPGRADE 327: ng_bridge.js is strictly read-only and parser extracts data-ct-campaign-id + guards LOADING select state", () => {
+test("EAST-3 UPGRADE 327: ng_bridge.js is strictly read-only and parser extracts data-ct-east3-campaign-id + guards LOADING select state", () => {
     const bridgeSrc = fs.readFileSync(path.resolve(__dirname, "../src/ng_bridge.js"), "utf-8");
     assert.strictEqual((bridgeSrc.match(/\.click\s*\(/g) || []).length, 0);
     assert.strictEqual((bridgeSrc.match(/\bfetch\s*\(/g) || []).length, 0);
     assert.strictEqual((bridgeSrc.match(/new\s+XMLHttpRequest/g) || []).length, 0);
     assert.strictEqual((bridgeSrc.match(/new\s+WebSocket/g) || []).length, 0);
-    assert.ok(bridgeSrc.includes('data-ct-campaign-id'), "ng_bridge must stamp data-ct-campaign-id");
+    assert.ok(bridgeSrc.includes('data-ct-east3-campaign-id'), "ng_bridge must stamp data-ct-east3-campaign-id");
 
     const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../manifest.json"), "utf-8"));
     assert.ok(manifest.content_scripts.some(cs => cs.world === "MAIN" && Array.isArray(cs.js) && cs.js.includes("src/ng_bridge.js")), "manifest must register MAIN-world ng_bridge.js");
 
-    // Verify readCampaigns reads data-ct-campaign-id even with empty localStorage registry
+    // Verify readCampaigns reads data-ct-east3-campaign-id even with empty localStorage registry
     const dom = createCallToolsCampaignsDOM([
         { name: "TS FRESH DATA", active: true, contacts: "60699", outbound: "100", human: "5", agentConnect: "5" }
     ]);
     const row = dom.tbody.querySelectorAll("tr")[0];
     delete row.attrs["data-campaign-id"];
     delete row.attrs["data-id"];
-    row.setAttribute("data-ct-campaign-id", "1716");
+    row.setAttribute("data-ct-east3-campaign-id", "1716");
     global.document = dom.document;
     const campaigns = global.CTParser.readCampaigns();
     assert.strictEqual(campaigns.length, 1);
@@ -7374,4 +7374,174 @@ test("EAST-3 UPGRADE 338: End-to-end runtime simulation of Edit Catalog + LiveFi
         global.localStorage = origStorage;
         global.window = origWin;
     }
+});
+
+test("EAST-3 UPGRADE 339: Alert noise elimination, gauge reset prevention, auto-resolve, and new critical alerts", () => {
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+    const store = new Map();
+    const storage = {
+        getItem(k) { return store.get(k) || null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); }
+    };
+    const mkMemStorage = () => {
+        const m = new Map();
+        return { getItem: (k) => m.get(k) || null, setItem: (k, v) => m.set(k, String(v)), removeItem: (k) => m.delete(k) };
+    };
+    const origWin = global.window;
+    global.window = { location: { pathname: "/manager/campaigns", hostname: "east-3.calltools.io", origin: "https://east-3.calltools.io" } };
+    try {
+        // Legacy bogus gauge RESET alert in persisted storage must be purged by loadState()
+        store.set("ct_east3_intelligence_alerts_v1", JSON.stringify([
+            {
+                id: "EAST-3_RESET_outbound_agents_logged_in_reset_ALL",
+                dialer: "EAST-3",
+                category: "INTEGRITY",
+                status: "RESET",
+                metric: "Total Agents Logged In",
+                previous: 27,
+                current: 0
+            },
+            {
+                id: "EAST-2_leak_id",
+                dialer: "EAST-2",
+                category: "THRESHOLD",
+                status: "INCREASE",
+                metric: "Callers Waiting",
+                previous: 1,
+                current: 15
+            }
+        ]));
+        const engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage });
+        assert.strictEqual(engine.activeAlerts.length, 0, "Legacy gauge RESET and foreign EAST-2 alerts must be purged on load");
+
+        // 1. Non-cumulative gauges dropping to 0 must NEVER emit RESET
+        for (let i = 0; i < 3; i++) {
+            engine.processSnapshot({
+                isCampaignsRoute: true,
+                campaignTableFound: true,
+                campaigns: [
+                    { id: "101", name: "Camp A", active: true, loggedIn: 27, waiting: 9, waitNow: 24, abandoned: 120, contacts: 5000 },
+                    { id: "102", name: "Camp B", active: true, loggedIn: 0, waiting: 0, waitNow: 0, abandoned: 0, contacts: 2000 }
+                ],
+                queues: [{ name: "Main Q", waiting: 0, waitTime: 0, loggedIn: 27, notAnswered: 5 }]
+            });
+        }
+        for (let i = 0; i < 3; i++) {
+            engine.processSnapshot({
+                isCampaignsRoute: true,
+                campaignTableFound: true,
+                campaigns: [
+                    { id: "101", name: "Camp A", active: true, loggedIn: 0, waiting: 0, waitNow: 0, abandoned: 120, contacts: 5000 },
+                    { id: "102", name: "Camp B", active: true, loggedIn: 0, waiting: 0, waitNow: 0, abandoned: 0, contacts: 2000 }
+                ],
+                queues: [{ name: "Main Q", waiting: 0, waitTime: 0, loggedIn: 0, notAnswered: 5 }]
+            });
+        }
+        assert.strictEqual(
+            engine.activeAlerts.some((a) => a.status === "RESET" && /Agents|Callers Waiting|Wait|Active Campaigns/i.test(String(a.metric || ""))),
+            false,
+            "Gauges must never emit UNEXPECTED RESET"
+        );
+
+        // 2. Minor wait variance (24 -> 36) and minor agent variance (27 -> 23) below combined abs+pct gate must NOT fire
+        const e2 = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage: mkMemStorage() });
+        e2.processSnapshot({
+            isCampaignsRoute: true,
+            campaignTableFound: true,
+            campaigns: [
+                { id: "101", name: "Camp A", active: true, loggedIn: 27, waiting: 1, waitNow: 24, abandoned: 50, contacts: 5000 },
+                { id: "102", name: "Camp B", active: true, loggedIn: 0, waiting: 0, waitNow: 0, abandoned: 0, contacts: 2000 }
+            ],
+            queues: []
+        });
+        for (let i = 0; i < 3; i++) {
+            e2.processSnapshot({
+                isCampaignsRoute: true,
+                campaignTableFound: true,
+                campaigns: [
+                    { id: "101", name: "Camp A", active: true, loggedIn: 23, waiting: 1, waitNow: 36, abandoned: 50, contacts: 5000 }
+                ],
+                queues: []
+            });
+        }
+        assert.strictEqual(
+            e2.activeAlerts.some((a) => String(a.id).includes("outbound_wait_time") || String(a.id).includes("outbound_agents_logged_in") || String(a.id).includes("outbound_campaigns_count")),
+            false,
+            "Minor wait/agent fluctuations and baseline < 3 campaign count delta must not trigger false alerts"
+        );
+
+        // 3. Cumulative counter reset (abandoned 120 -> 0), genuine multi-campaign drop (4 -> 1), and OUTBOUND_NO_AGENT_WAITING
+        const e3 = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage: mkMemStorage() });
+        e3.processSnapshot({
+            isCampaignsRoute: true,
+            campaignTableFound: true,
+            campaigns: [
+                { id: "1", name: "C1", active: true, loggedIn: 5, abandoned: 120, contacts: 1000 },
+                { id: "2", name: "C2", active: true, loggedIn: 5, abandoned: 0, contacts: 1000 },
+                { id: "3", name: "C3", active: true, loggedIn: 5, abandoned: 0, contacts: 1000 },
+                { id: "4", name: "C4", active: true, loggedIn: 5, abandoned: 0, contacts: 1000 }
+            ],
+            queues: []
+        });
+        for (let i = 0; i < 3; i++) {
+            e3.processSnapshot({
+                isCampaignsRoute: true,
+                campaignTableFound: true,
+                campaigns: [
+                    { id: "1", name: "C1", active: true, loggedIn: 0, waiting: 4, abandoned: 0, contacts: 1000 }
+                ],
+                queues: []
+            });
+        }
+        assert.ok(e3.activeAlerts.some((a) => String(a.id).includes("outbound_abandoned") && a.status === "RESET"), "True cumulative abandoned reset must fire");
+        assert.ok(e3.activeAlerts.some((a) => String(a.id).includes("outbound_campaigns_count_decrease")), "Significant active campaign drop (4->1) must fire");
+        assert.ok(e3.activeAlerts.some((a) => String(a.id).includes("outbound_no_agent_waiting") && a.impact && a.recommendedAction), "OUTBOUND_NO_AGENT_WAITING must fire with impact & recommendedAction");
+
+        // 4. Targeting integrity (INACTIVE FILTER ASSIGNED) & integrity auto-resolve
+        const s4 = mkMemStorage();
+        s4.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
+            "1716": { campaignId: "1716", campaignName: "TS FRESH DATA", liveFilter: "Broken Filter", filterId: "99", filterCount: 0, timestamp: Date.now() }
+        }));
+        s4.setItem("ct_east3_live_filters_inventory_v1", JSON.stringify({
+            items: { "99": { id: "99", name: "Broken Filter", active: false, count: 0 } },
+            lastObservedAt: Date.now()
+        }));
+        const e4 = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage: s4 });
+        const snapTarget = {
+            isCampaignsRoute: true,
+            campaignTableFound: true,
+            campaigns: [{ id: "1716", name: "TS FRESH DATA", active: true, loggedIn: 5, contacts: 100 }],
+            queues: []
+        };
+        e4.processSnapshot(snapTarget);
+        e4.processSnapshot(snapTarget);
+        assert.ok(e4.activeAlerts.some((a) => a.status === "INACTIVE FILTER ASSIGNED"), "INACTIVE FILTER ASSIGNED must trigger");
+
+        e4.processSnapshot({ authLost: true, inboundAuthLost: true, isCampaignsRoute: true, campaignTableFound: false, campaigns: [], queues: [] });
+        assert.ok(e4.activeAlerts.some((a) => a.status === "AUTH_LOST"), "AUTH_LOST should trigger");
+        e4.processSnapshot({ authLost: false, inboundAuthLost: true, isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "1716", name: "TS FRESH DATA", active: true, loggedIn: 5, contacts: 100 }], queues: [] });
+        assert.ok(e4.activeAlerts.some((a) => a.status === "INBOUND_AUTH_LOST"), "INBOUND_AUTH_LOST should trigger");
+        e4.processSnapshot({ authLost: false, inboundAuthLost: false, isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "1716", name: "TS FRESH DATA", active: true, loggedIn: 5, contacts: 100 }], queues: [] });
+        assert.strictEqual(e4.activeAlerts.some((a) => a.category === "INTEGRITY"), false, "All integrity alerts must auto-resolve on healthy feed");
+    } finally {
+        global.window = origWin;
+    }
+});
+
+test("EAST-3 UPGRADE 340: Strict dual-dialer isolation, scoped CSS, empty snapshot guards, and Action Center explainability UI", () => {
+    const cssSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.css"), "utf-8");
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    const parserSrc = fs.readFileSync(path.resolve(__dirname, "../src/parser.js"), "utf-8");
+    const bridgeSrc = fs.readFileSync(path.resolve(__dirname, "../src/ng_bridge.js"), "utf-8");
+
+    assert.strictEqual(cssSrc.includes("CT_Operations_Monitor_East2") || /east[-_]?2/i.test(cssSrc), false, "East3 CSS must contain zero East2 leakage");
+    assert.ok(cssSrc.includes("#ct-operations-dashboard-east3 .ct-intelligence-card"), "Intelligence card styles must be scoped to #ct-operations-dashboard-east3");
+    assert.ok(cssSrc.includes("#ct-operations-dashboard-east3 .ct-alert-explain-grid"), "Alert explainability CSS must exist and be scoped");
+
+    assert.ok(bridgeSrc.includes("__CT_NG_BRIDGE_EAST3__") && bridgeSrc.includes("data-ct-east3-campaign-index"), "ng_bridge must scope globals and index attribute to EAST3");
+    assert.ok(contentSrc.includes("tableMissingStreak") && contentSrc.includes("CT_EAST_3_FEED_STATUS") && contentSrc.includes("CT_EAST_3_REFRESH_RESULT"), "content.js must debounce tableMissingStreak and scope event types");
+    assert.ok(parserSrc.includes("isAllowedHost()") && parserSrc.includes('TARGET_HOST: "east-3.calltools.io"'), "parser must enforce host guard");
+    assert.ok(dashSrc.includes("ct-alert-explain-grid") && dashSrc.includes("WHY IT MATTERS") && dashSrc.includes("ACTION REQUIRED"), "Dashboard must render Action Center What/Why/Action explanation blocks");
 });

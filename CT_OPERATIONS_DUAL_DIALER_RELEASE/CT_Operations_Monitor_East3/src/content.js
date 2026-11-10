@@ -163,6 +163,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                     if (window.parent && window.parent !== window) {
                         window.parent.postMessage({
                             type: "CT_EAST_3_BG_INVENTORY_OBSERVED",
+                            dialer: EDITION,
                             inventory: inventory,
                             count: filters.length,
                             observedAt: now
@@ -335,6 +336,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                     if (window.parent && window.parent !== window) {
                         window.parent.postMessage({
                             type: "CT_EAST_3_BG_FILTER_OBSERVED",
+                            dialer: EDITION,
                             entry: entry,
                             catalogCount: Array.isArray(editData.filterCatalog) ? editData.filterCatalog.length : 0
                         }, window.location.origin);
@@ -464,13 +466,16 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             }
         } catch (e) {}
 
-        // 1. Live Angular row index exported passively by ng_bridge.js
+        // 1. Live Angular row index exported passively by ng_bridge.js (dialer-scoped attribute)
         try {
-            const rawIdx = document.documentElement ? document.documentElement.getAttribute("data-ct-campaign-index") : "";
+            const rawIdx = document.documentElement
+                ? (document.documentElement.getAttribute("data-ct-east3-campaign-index") || document.documentElement.getAttribute("data-ct-campaign-index"))
+                : "";
             if (rawIdx) {
                 const arr = JSON.parse(rawIdx);
                 if (Array.isArray(arr)) {
                     arr.forEach(function (item) {
+                        if (item && item.dialer && item.dialer !== EDITION) return;
                         const cid = item && item.id ? String(item.id).trim() : "";
                         if (/^[0-9]+$/.test(cid)) {
                             byId.set(cid, {
@@ -709,7 +714,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         }
         if (!frame.contentWindow) return;
         try {
-            frame.contentWindow.postMessage({ type: "CT_EAST_3_REFRESH_INBOUND_FEED", manual: Boolean(forceReload) }, window.location.origin);
+            frame.contentWindow.postMessage({ type: "CT_EAST_3_REFRESH_INBOUND_FEED", dialer: EDITION, manual: Boolean(forceReload) }, window.location.origin);
         } catch (error) {}
     }
 
@@ -866,10 +871,13 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     let hasPublishedQueues = false;
     let lastInboundCoordinationAt = 0;
     let lastInboundHeartbeatAt = 0;
+    let tableMissingStreak = 0;
 
     function publish(campaigns, meta, queues) {
         document.dispatchEvent(new CustomEvent("CT_EAST_3_UPDATE", {
             detail: {
+                dialer: EDITION,
+                targetHost: TARGET_HOST,
                 campaigns: Array.isArray(campaigns) ? campaigns : [],
                 queues: Array.isArray(queues) ? queues : [],
                 route: currentRoute(),
@@ -882,6 +890,8 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     function publishFeedStatus(status, extra) {
         document.dispatchEvent(new CustomEvent("CT_EAST_3_FEED_STATUS", {
             detail: Object.assign({
+                dialer: EDITION,
+                targetHost: TARGET_HOST,
                 status: status,
                 lastSourceRefreshAt: lastSourceRefreshAt || null,
                 lastDataChangeAt: lastDataChangeAt || null,
@@ -926,6 +936,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                             try {
                                 window.parent.postMessage({
                                     type: "CT_EAST_3_BG_CAMPAIGNS_OBSERVED",
+                                    dialer: EDITION,
                                     campaigns: campaigns,
                                     observedAt: now,
                                     count: campaigns.length
@@ -936,7 +947,9 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                     return;
                 }
                 if (!tableReady(campaigns)) {
-                    const tableMissing = !tableNode && !isPageLoading;
+                    const missingNow = !tableNode && !isPageLoading;
+                    tableMissingStreak = missingNow ? (tableMissingStreak + 1) : 0;
+                    const tableMissing = missingNow && tableMissingStreak >= 3;
                     publishFeedStatus(tableMissing ? "SOURCE_ERROR" : "VERIFYING", {
                         reason: tableMissing ? "Campaign table not found in DOM" : (isPageLoading ? "CallTools page is loading" : (hasPublishedData ? "CallTools is rebuilding the campaign table" : "Waiting for the CallTools campaign table")),
                         route: route,
@@ -948,6 +961,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                     }
                     return;
                 }
+                tableMissingStreak = 0;
                 const nextSnapshot = snapshotKey(campaigns);
                 const changed = nextSnapshot !== lastSnapshot;
                 const unverified = campaigns.filter(function (c) { return c.active !== true && c.active !== false; }).length;
@@ -1026,6 +1040,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                 try {
                     window.parent.postMessage({
                         type: "CT_EAST_3_BG_INBOUND_OBSERVED",
+                        dialer: EDITION,
                         count: queues.length,
                         queues: queues,
                         observedAt: now,
@@ -1089,7 +1104,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
 
     function mutationTouchesCampaignTable(mutation) {
         if (!mutation) return false;
-        const dashboard = document.querySelector("#ct-operations-dashboard, #ct-operations-dashboard-east3, #ct-operations-dashboard-east3, [id^='ct-operations-dashboard']");
+        const dashboard = document.getElementById("ct-operations-dashboard-east3");
         if (dashboard && mutation.target && dashboard.contains(mutation.target)) return false;
 
         if (mutation.type === "childList") {
@@ -1116,7 +1131,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
 
     function mutationTouchesQueueTable(mutation) {
         if (!mutation) return false;
-        const dashboard = document.querySelector("#ct-operations-dashboard, #ct-operations-dashboard-east3, #ct-operations-dashboard-east3, [id^='ct-operations-dashboard']");
+        const dashboard = document.getElementById("ct-operations-dashboard-east3");
         if (dashboard && mutation.target && dashboard.contains(mutation.target)) return false;
         const target = mutation.target;
         const rowFromTarget = target && target.closest ? target.closest("tr.mat-row, tr.mat-mdc-row, tbody tr") : null;
@@ -1225,10 +1240,10 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         cleanup();
         if (!isMonitorPage()) return;
 
-        window.__CTOperationsFeedCleanup = cleanup;
+        window.__CTOperationsFeedCleanup_EAST3 = cleanup;
         // Proactive interactive edit form event tracking (SPA-safe: checks route on event)
-        if (!window.__CT_EDIT_EVENTS_ATTACHED) {
-            window.__CT_EDIT_EVENTS_ATTACHED = true;
+        if (!window.__CT_EDIT_EVENTS_ATTACHED_EAST3) {
+            window.__CT_EDIT_EVENTS_ATTACHED_EAST3 = true;
             ['change', 'input', 'click', 'blur'].forEach(function(evType) {
                 document.addEventListener(evType, function() {
                     if (!isCampaignEditPage()) return;
@@ -1274,8 +1289,8 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
 
         // Intercept Angular SPA Navigation
         (function interceptSpa() {
-            if (window.__CT_SPA_INTERCEPTED) return;
-            window.__CT_SPA_INTERCEPTED = true;
+            if (window.__CT_SPA_INTERCEPTED_EAST3) return;
+            window.__CT_SPA_INTERCEPTED_EAST3 = true;
             const pushStateOrig = history.pushState;
             const replaceStateOrig = history.replaceState;
             function onRouteTransition() {
@@ -1396,6 +1411,8 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
 
     window.addEventListener("message", function (event) {
         if (event.origin !== window.location.origin || !event.data) return;
+        if (window.location.hostname && window.location.hostname !== TARGET_HOST) return;
+        if (event.data.dialer && event.data.dialer !== EDITION) return;
         if (isTopLevelCampaignsPage() && event.data.type === "CT_EAST_3_BG_CAMPAIGNS_OBSERVED" && Array.isArray(event.data.campaigns)) {
             const now = Date.now();
             const incoming = event.data.campaigns;
