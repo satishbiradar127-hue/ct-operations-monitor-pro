@@ -977,7 +977,7 @@ window.CTParser = {
             }
         } catch (e) {}
 
-        // Helper to parse Angular [ngValue] option value ("23: 4125" -> "4125")
+        // Helper to parse Angular [ngValue] option value ("idx: numericId" -> "numericId")
         function extractOptionFilterId(rawVal) {
             if (!rawVal) return null;
             const m = String(rawVal).trim().match(/^(?:[0-9]+:\s*)?([0-9]+)$/);

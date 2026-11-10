@@ -385,6 +385,8 @@ CT.resolveAuthoritativeTransitionCopy = function (options = {}) {
         const prevCheck = resolveCanonical(rec.previousFilter || rec.previous, rec.previousFilterId);
         const currCheck = resolveCanonical(rec.currentFilter || rec.current, rec.currentFilterId);
         if (!prevCheck.valid || !currCheck.valid) {
+            // If newest recorded event lacks a verified previous filter (e.g., initial assignment from None),
+            // stop here rather than skipping backward over an unrelated older transition.
             if (i === 0 && !prevCheck.valid) {
                 break;
             }

@@ -575,7 +575,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             });
         }
 
-        // One-time safe upgrade of legacy non-numeric operating campaign names ("ts fresh data" -> "1716")
+        // One-time safe upgrade of legacy non-numeric operating campaign names (legacy name -> numeric ID)
         if (legacyNameToNumericId.size > 0 && Array.isArray(state.operatingCampaigns) && state.operatingCampaigns.length > 0) {
             const upgraded = state.operatingCampaigns.map(function (selId) {
                 const s = String(selId || "").trim();

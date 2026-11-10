@@ -959,7 +959,7 @@ console.log("CT Operations Monitor (" + ("EAST-2") + ") — Production live feed
                 if (!tableReady(campaigns)) {
                     const missingNow = !tableNode && !isPageLoading;
                     tableMissingStreak = missingNow ? (tableMissingStreak + 1) : 0;
-                    const tableMissing = missingNow && tableMissingStreak >= 3;
+                    const tableMissing = missingNow && tableMissingStreak >= 6;
                     publishFeedStatus(tableMissing ? "SOURCE_ERROR" : "VERIFYING", {
                         reason: tableMissing ? "Campaign table not found in DOM" : (isPageLoading ? "CallTools page is loading" : (hasPublishedData ? "CallTools is rebuilding the campaign table" : "Waiting for the CallTools campaign table")),
                         route: route,
