@@ -871,12 +871,48 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
 
     const onStorage = function (event) {
         if (!event || !event.key) return;
-        if (event.key === VERIFIED_FILTERS_KEY || event.key === LIVE_FILTERS_INVENTORY_KEY) {
+        if (event.key === VERIFIED_FILTERS_KEY || event.key === LIVE_FILTERS_INVENTORY_KEY || event.key === PREFIX + "live_filter_change_history_v1") {
             let parsed = null;
             if (event.key === VERIFIED_FILTERS_KEY && event.newValue) {
                 try { parsed = JSON.parse(event.newValue); } catch (e) {}
             }
             reconcileCampaignsWithVerifiedRegistry(parsed);
+            scheduleRender();
+            return;
+        }
+        if (event.key === "ct_east2_operating_campaigns" || event.key === "ct_east2_operating_campaign") {
+            const nextOperating = readOperatingCampaigns();
+            if (operatingSelectionKey(nextOperating) !== operatingSelectionKey(state.operatingCampaigns || [])) {
+                state.operatingCampaigns = nextOperating;
+                state.operatingCampaign = nextOperating[0] || "";
+                state.operatingBaseline = readOperatingBaseline();
+                reconcileCampaignsWithVerifiedRegistry();
+                updateOperatingSelect(state.campaigns);
+                addCurrentStateAlerts(state.campaigns);
+                if (root) {
+                    if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+                    render();
+                }
+            }
+            return;
+        }
+        if (event.key === CONTACT_THRESHOLD_KEY) {
+            state.contactThreshold = Math.max(0, numberValue(readStorage(CONTACT_THRESHOLD_KEY, "2000")));
+            if (refs && refs.threshold) refs.threshold.value = String(state.contactThreshold);
+            state.lastSeveritySignature = "";
+            addCurrentStateAlerts(state.campaigns);
+            scheduleRender();
+            return;
+        }
+        if (event.key === DISMISSED_ALERTS_KEY) {
+            state.dismissedConditions = readDismissedConditions();
+            addCurrentStateAlerts(state.campaigns);
+            scheduleRender();
+            return;
+        }
+        if (event.key === PERSISTENT_GOAL_ALERTS_KEY || event.key === ACKNOWLEDGED_GOAL_ALERTS_KEY) {
+            state.persistentGoalAlerts = readPersistentGoalAlerts();
+            state.acknowledgedGoalAlerts = readAcknowledgedGoalAlerts();
             scheduleRender();
             return;
         }

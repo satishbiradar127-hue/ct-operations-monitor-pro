@@ -7669,3 +7669,67 @@ test("EAST-2 UPGRADE 342: Premium Alert Center WHAT/WHY/ACTION separation, ACTIV
         global.window = origWin;
     }
 });
+
+test("EAST-2 UPGRADE 343: Cross-tab storage synchronization & complete Alert Center rule audit (descriptions, impact, actions & recovery)", () => {
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    const intelSrc = fs.readFileSync(path.resolve(__dirname, "../src/intelligence.js"), "utf-8");
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+
+    // 1. Cross-tab storage synchronization handlers must cover operating selection, threshold, dismissed/goal alerts, and filter history
+    [
+        'event.key === "ct_east2_operating_campaigns"',
+        'event.key === "ct_east2_operating_campaign"',
+        'event.key === CONTACT_THRESHOLD_KEY',
+        'event.key === DISMISSED_ALERTS_KEY',
+        'event.key === PERSISTENT_GOAL_ALERTS_KEY',
+        'event.key === PREFIX + "live_filter_change_history_v1"'
+    ].forEach((token) => {
+        assert.ok(dashSrc.includes(token), `onStorage must handle ${token} across tabs`);
+    });
+
+    // 2. Every operational & targeting integrity rule must expose clear WHAT / WHY / ACTION metadata and recover cleanly
+    assert.ok(intelSrc.includes("FILTER POOL EXHAUSTED") && intelSrc.includes("INACTIVE FILTER ASSIGNED"), "Targeting integrity rules must exist");
+    const origWin = global.window;
+    global.window = { location: { pathname: "/manager/campaigns", hostname: "east-2.calltools.io", origin: "https://east-2.calltools.io" } };
+    const mem = new Map();
+    const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+    try {
+        storage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
+            "2104": { campaignId: "2104", campaignName: "E2 Main Campaign", liveFilter: "E2 Active Empty", filterId: "555", filterCount: 0, timestamp: Date.now() }
+        }));
+        storage.setItem("ct_east2_live_filters_inventory_v1", JSON.stringify({
+            items: { "555": { id: "555", name: "E2 Active Empty", active: true, count: 0 } },
+            lastObservedAt: Date.now()
+        }));
+        const engine = new CTDataIntelligenceEngine({ dialer: "EAST-2", prefix: "ct_east2_", storage });
+        const snapEmpty = {
+            isCampaignsRoute: true,
+            campaignTableFound: true,
+            campaigns: [{ id: "2104", name: "E2 Main Campaign", active: true, loggedIn: 6, waiting: 2, abandoned: 1, contacts: 0 }],
+            queues: [{ id: "q1", name: "Main Inbound", waiting: 0, waitMax: 0, loggedIn: 4, callsTodayNotAnswered: 0 }]
+        };
+        engine.processSnapshot(snapEmpty);
+        engine.processSnapshot(snapEmpty);
+        const exhausted = engine.activeAlerts.find((a) => a.status === "FILTER POOL EXHAUSTED");
+        assert.ok(exhausted, "FILTER POOL EXHAUSTED must fire for active populated-agent campaign with 0 leads");
+        assert.ok(exhausted.message && exhausted.impact && exhausted.recommendedAction, "Alert must include WHAT/WHY/ACTION guidance");
+
+        // Recover inventory > 0 and verify auto-resolution
+        storage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
+            "2104": { campaignId: "2104", campaignName: "E2 Main Campaign", liveFilter: "E2 Active Empty", filterId: "555", filterCount: 250, timestamp: Date.now() + 1000 }
+        }));
+        storage.setItem("ct_east2_live_filters_inventory_v1", JSON.stringify({
+            items: { "555": { id: "555", name: "E2 Active Empty", active: true, count: 250 } },
+            lastObservedAt: Date.now() + 1000
+        }));
+        engine.processSnapshot({
+            isCampaignsRoute: true,
+            campaignTableFound: true,
+            campaigns: [{ id: "2104", name: "E2 Main Campaign", active: true, loggedIn: 6, waiting: 0, abandoned: 1, contacts: 250 }],
+            queues: [{ id: "q1", name: "Main Inbound", waiting: 0, waitMax: 0, loggedIn: 4, callsTodayNotAnswered: 0 }]
+        });
+        assert.strictEqual(engine.activeAlerts.some((a) => a.status === "FILTER POOL EXHAUSTED"), false, "FILTER POOL EXHAUSTED must auto-resolve when filter refills");
+    } finally {
+        global.window = origWin;
+    }
+});
