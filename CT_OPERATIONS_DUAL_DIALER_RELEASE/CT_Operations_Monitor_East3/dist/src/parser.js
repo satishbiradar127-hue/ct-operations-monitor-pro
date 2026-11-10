@@ -1341,15 +1341,39 @@ window.CTParser = {
             }
 
             let active = true;
-            const activeCell = row.querySelector(".cdk-column-active, [data-column='active'], .mat-column-active");
+            let activeCell = row.querySelector(".cdk-column-active, [data-column='active'], .mat-column-active");
+            if (!activeCell && this.findHeaderIndex && row.cells) {
+                const tableEl = row.closest ? row.closest("table, [role='table'], mat-table") : null;
+                const activeColIdx = tableEl ? this.findHeaderIndex(tableEl, ["active", "enabled", "status"], ["cdk-column-active", "mat-column-active"]) : -1;
+                if (activeColIdx >= 0 && row.cells[activeColIdx]) {
+                    activeCell = row.cells[activeColIdx];
+                }
+            }
+            if (!activeCell && row.cells && row.cells.length > 1 && row.cells[1].querySelector("img, mat-icon, input[type='checkbox'], mat-slide-toggle, [role='switch']")) {
+                activeCell = row.cells[1];
+            }
             if (activeCell) {
                 const toggle = activeCell.querySelector("input[type='checkbox'], mat-slide-toggle, [role='switch']");
                 if (toggle) {
                     active = toggle.checked || toggle.getAttribute("aria-checked") === "true" || (toggle.classList && toggle.classList.contains("mat-checked"));
                 } else {
-                    const txt = (activeCell.innerText || activeCell.textContent || "").toLowerCase().trim();
-                    if (txt === "inactive" || txt === "disabled" || txt === "no" || txt === "false") {
+                    const img = activeCell.querySelector("img");
+                    const icon = activeCell.querySelector("mat-icon, [class*='icon']");
+                    const imgSig = img ? (String(img.getAttribute("src") || "") + " " + String(img.getAttribute("alt") || "") + " " + String(img.getAttribute("title") || "")).toLowerCase() : "";
+                    const iconSig = icon ? (String(icon.innerText || icon.textContent || "") + " " + String(icon.className || "")).toLowerCase() : "";
+                    if (imgSig && /(cancel|close|cross|inactive|disabled|false|off|block)/.test(imgSig)) {
                         active = false;
+                    } else if (imgSig && /(check|active|enabled|true|done|yes)/.test(imgSig)) {
+                        active = true;
+                    } else if (iconSig && /(cancel|close|clear|block|remove|inactive)/.test(iconSig)) {
+                        active = false;
+                    } else if (iconSig && /(check|done|active)/.test(iconSig)) {
+                        active = true;
+                    } else {
+                        const txt = (activeCell.innerText || activeCell.textContent || "").toLowerCase().trim();
+                        if (txt === "inactive" || txt === "disabled" || txt === "no" || txt === "false") {
+                            active = false;
+                        }
                     }
                 }
             }

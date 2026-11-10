@@ -47,10 +47,14 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     const LF_INVENTORY_REFRESH_MS = 4500;
     const LF_ACTIVE_PROBE_MS = 4500;
     const LF_IDLE_PROBE_MS = 28000;
-    const LF_BETWEEN_PROBES_MS = 650;
-    const LF_PROBE_TIMEOUT_MS = 12000;
+    const LF_BETWEEN_PROBES_MS = 550;
+    const LF_PROBE_TIMEOUT_MS = 9000;
+    const MANUAL_REFRESH_TIMEOUT_MS = 10500;
     let lastInvSig = "";
     let lastInvWriteAt = 0;
+    let invCompletedEpoch = -1;
+    let editCompletedEpoch = -1;
+    let bgCampCompletedEpoch = -1;
     let lfInvInFlightStartedAt = 0;
     let lfInvLastCompletedAt = 0;
     let lfProbeInFlight = null;
@@ -61,9 +65,11 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     let lfSpaLastCompletedKind = "";
     let lfConsecutiveTimeouts = 0;
     let bgRouteEpoch = 0;
+    let manualRefreshSession = null;
 
     function isCampaignsPage() { return currentRoute() === "campaigns"; }
     function isTopLevelCampaignsPage() { return isCampaignsPage() && (typeof window === "undefined" || !window.top || window === window.top); }
+    function isBackgroundCampaignsFrame() { return isCampaignsPage() && new URLSearchParams(window.location.search).get(LF_MONITOR_PARAM) === "1" && (typeof window !== "undefined" && window.top && window !== window.top); }
     function isCampaignEditPage() { return currentRoute() === "campaign_edit"; }
     function isQueuesPage() { return currentRoute() === "queues"; }
     function isLiveFiltersPage() { return currentRoute() === "live_filters"; }
@@ -71,27 +77,50 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     function isBackgroundLiveFiltersFrame() { return isLiveFiltersPage() && new URLSearchParams(window.location.search).get(LF_MONITOR_PARAM) === "1"; }
     function isMonitorPage() { return isCampaignsPage() || isQueuesPage() || isCampaignEditPage() || isLiveFiltersPage(); }
 
+    function normFilterKey(name) {
+        return String(name || "")
+            .replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/gi, "")
+            .replace(/\s*\(\s*Not\s+Active\s*\)\s*$/i, "")
+            .trim()
+            .toLowerCase();
+    }
+
     function observeLiveFiltersPage() {
-        if (!isLiveFiltersPage()) return;
-        if (!window.CTParser || !window.CTParser.readLiveFilters) return;
+        if (!isLiveFiltersPage()) return false;
+        if (!window.CTParser || !window.CTParser.readLiveFilters) return false;
         try {
             const filters = window.CTParser.readLiveFilters(document);
             if (filters && filters.length > 0) {
                 const now = Date.now();
                 const sig = filters.map(function (f) { return [f.id, f.name, f.active ? 1 : 0, f.count, f.totalCount].join(":"); }).join("|");
-                if (sig === lastInvSig && (now - lastInvWriteAt) < 4000) {
-                    return;
+                const needEpochNotify = isBackgroundLiveFiltersFrame() && invCompletedEpoch !== bgRouteEpoch;
+                if (!needEpochNotify && sig === lastInvSig && (now - lastInvWriteAt) < 4000) {
+                    return false;
                 }
                 let inventory = {};
+                let idMap = {};
                 try {
                     inventory = JSON.parse(localStorage.getItem(LIVE_FILTERS_INVENTORY_KEY) || "{}");
                 } catch (e) {}
-                if (!inventory.items) inventory.items = {};
+                try {
+                    idMap = JSON.parse(localStorage.getItem(FILTER_ID_MAP_KEY) || "{}");
+                } catch (e) {}
+                if (!inventory.items || typeof inventory.items !== "object") inventory.items = {};
 
-                filters.forEach(f => {
-                    const fId = String(f.id);
-                    inventory.items[fId] = {
-                        id: fId,
+                const observedByNormName = new Set();
+                filters.forEach(function (f) {
+                    const nKey = normFilterKey(f.name);
+                    if (nKey) observedByNormName.add(nKey);
+                    const mapHit = nKey && idMap[nKey] ? idMap[nKey] : null;
+                    const resolvedId = (f.rawId && /^[0-9]+$/.test(String(f.rawId)))
+                        ? String(f.rawId)
+                        : (mapHit && mapHit.filterId && /^[0-9]+$/.test(String(mapHit.filterId)) ? String(mapHit.filterId) : String(f.id));
+                    const slugId = String(f.id);
+                    if (slugId !== resolvedId && inventory.items[slugId]) {
+                        delete inventory.items[slugId];
+                    }
+                    inventory.items[resolvedId] = {
+                        id: resolvedId,
                         name: f.name,
                         active: f.active,
                         count: f.count,
@@ -100,10 +129,29 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                         source: "LIVE_FILTERS_PAGE"
                     };
                 });
+
+                // Prune deleted / unreferenced stale ghost entries when we have an authoritative filter catalog map
+                const catalogKnownCount = Object.keys(idMap).length;
+                Object.keys(inventory.items).forEach(function (k) {
+                    const item = inventory.items[k];
+                    if (!item || !item.name) {
+                        delete inventory.items[k];
+                        return;
+                    }
+                    const nKey = normFilterKey(item.name);
+                    const inLiveScan = observedByNormName.has(nKey);
+                    const inCatalog = catalogKnownCount > 0 && Boolean(idMap[nKey]);
+                    const itemAge = now - (Number(item.observedAt) || 0);
+                    if (!inLiveScan && ((catalogKnownCount > 0 && !inCatalog) || itemAge > 300000)) {
+                        delete inventory.items[k];
+                    }
+                });
+
                 inventory.lastObservedAt = now;
                 inventory.totalCount = Object.keys(inventory.items).length;
                 lastInvSig = sig;
                 lastInvWriteAt = now;
+                invCompletedEpoch = bgRouteEpoch;
 
                 try {
                     localStorage.setItem(LIVE_FILTERS_INVENTORY_KEY, JSON.stringify(inventory));
@@ -124,45 +172,120 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                         document.dispatchEvent(new CustomEvent("CT_EAST_3_INVENTORY_UPDATED", { detail: { count: filters.length, observedAt: now } }));
                     }
                 } catch (e) {}
+                return true;
             }
         } catch (e) {}
+        return false;
     }
 
     function observeCampaignEditForm() {
-        if (!window.CTParser || !window.CTParser.readCampaignEditForm) return;
+        if (!window.CTParser || !window.CTParser.readCampaignEditForm) return false;
         try {
             const editData = window.CTParser.readCampaignEditForm(document);
-            if (!editData) return;
+            if (!editData) return false;
 
-            // Cache permitted dropdown filterId <-> filterName mapping observed in native DOM
+            const pathCidMatch = String(window.location.pathname || "").match(/\/manager\/campaigns\/edit\/([0-9]+)/i);
+            if (pathCidMatch && editData.campaignId && String(editData.campaignId).trim() !== pathCidMatch[1]) {
+                return false;
+            }
+
+            // Cache permitted dropdown filterId <-> filterName mapping AND sync full authoritative catalog into inventory
+            const now = Date.now();
             if (Array.isArray(editData.filterCatalog) && editData.filterCatalog.length > 0) {
                 try {
-                    const idMap = JSON.parse(localStorage.getItem(FILTER_ID_MAP_KEY) || "{}");
-                    let mapChanged = false;
+                    const idMap = {};
+                    const catById = {};
+                    const catByNorm = {};
                     editData.filterCatalog.forEach(function (f) {
                         if (f && f.filterId && f.name) {
-                            const key = String(f.name).trim().toLowerCase();
-                            if (!idMap[key] || idMap[key].filterId !== f.filterId) {
-                                idMap[key] = { filterId: String(f.filterId), name: f.name, count: f.count, active: f.active };
-                                mapChanged = true;
-                            }
+                            const key = normFilterKey(f.name);
+                            const fid = String(f.filterId).trim();
+                            const entryMap = { filterId: fid, name: f.name, count: f.count, active: f.active !== false };
+                            idMap[key] = entryMap;
+                            catById[fid] = entryMap;
+                            catByNorm[key] = entryMap;
                         }
                     });
-                    if (mapChanged) {
-                        localStorage.setItem(FILTER_ID_MAP_KEY, JSON.stringify(idMap));
+                    localStorage.setItem(FILTER_ID_MAP_KEY, JSON.stringify(idMap));
+
+                    const inv = JSON.parse(localStorage.getItem(LIVE_FILTERS_INVENTORY_KEY) || "{}");
+                    if (!inv.items || typeof inv.items !== "object") inv.items = {};
+                    let invUpdated = false;
+
+                    // Migrate slug keys to numeric filter IDs and remove deleted filters absent from catalog + recent scan
+                    Object.keys(inv.items).forEach(function (k) {
+                        const item = inv.items[k];
+                        if (!item || !item.name) {
+                            delete inv.items[k];
+                            invUpdated = true;
+                            return;
+                        }
+                        const nKey = normFilterKey(item.name);
+                        const catHit = catById[k] || catByNorm[nKey] || null;
+                        if (!catHit) {
+                            // Remove stale ghost filters that no longer exist in CallTools catalog
+                            if ((now - (Number(item.observedAt) || 0)) > 15000) {
+                                delete inv.items[k];
+                                invUpdated = true;
+                            }
+                            return;
+                        }
+                        if (k !== catHit.filterId) {
+                            if (!inv.items[catHit.filterId]) {
+                                inv.items[catHit.filterId] = Object.assign({}, item, { id: catHit.filterId });
+                            }
+                            delete inv.items[k];
+                            invUpdated = true;
+                        }
+                    });
+
+                    // Sync active flags, live counts, and page-2 items from the full unpaginated CallTools <select> catalog
+                    editData.filterCatalog.forEach(function (f) {
+                        if (!f || !f.filterId || !f.name) return;
+                        const fid = String(f.filterId).trim();
+                        const existing = inv.items[fid];
+                        const isLiveActive = f.active !== false;
+                        const prevTotal = existing && existing.totalCount !== undefined && existing.totalCount !== null ? Number(existing.totalCount) : null;
+                        const nextCount = isLiveActive ? (f.count !== null && f.count !== undefined ? Number(f.count) : (existing ? Number(existing.count) || 0 : 0)) : 0;
+                        const prevObsAt = existing ? (Number(existing.observedAt) || 0) : 0;
+                        const recentlyScannedOnPage1 = existing && existing.source === "LIVE_FILTERS_PAGE" && (now - prevObsAt) < 12000;
+                        if (!existing || existing.active !== isLiveActive || (!recentlyScannedOnPage1 && (existing.count !== nextCount || (now - prevObsAt) >= 4000))) {
+                            inv.items[fid] = {
+                                id: fid,
+                                name: f.name,
+                                active: isLiveActive,
+                                count: nextCount,
+                                totalCount: recentlyScannedOnPage1 && prevTotal !== null ? prevTotal : (prevTotal !== null && prevTotal >= nextCount ? prevTotal : nextCount),
+                                observedAt: recentlyScannedOnPage1 ? prevObsAt : now,
+                                source: recentlyScannedOnPage1 ? "LIVE_FILTERS_PAGE" : "CAMPAIGN_EDIT_CATALOG"
+                            };
+                            invUpdated = true;
+                        }
+                    });
+
+                    if (invUpdated) {
+                        inv.totalCount = Object.keys(inv.items).length;
+                        if (!inv.lastObservedAt) inv.lastObservedAt = now;
+                        localStorage.setItem(LIVE_FILTERS_INVENTORY_KEY, JSON.stringify(inv));
+                        if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
+                            const objInv = {};
+                            objInv[LIVE_FILTERS_INVENTORY_KEY] = inv;
+                            chrome.storage.local.set(objInv);
+                        }
                     }
                 } catch (e) {}
             }
 
             // Skip transient mid-load state until campaign form has actually hydrated
+            if (editData.status === "LOADING") return false;
             if (editData.campaignId && editData.campaignId !== "unknown" && (editData.liveFilter || editData.status === "NONE")) {
                 const cid = String(editData.campaignId).trim();
-                if (!cid || !/^[0-9]+$/.test(cid)) return;
+                if (!cid || !/^[0-9]+$/.test(cid)) return false;
 
-                const now = Date.now();
                 const sig = [cid, editData.campaignName || "", editData.liveFilter || "", editData.filterId || "", editData.filterCount ?? "", editData.status || ""].join("|");
-                if (sig === lastEditSig && (now - lastEditWriteAt) < 5000) {
-                    return;
+                const needEpochNotify = isBackgroundCampaignEditFrame() && editCompletedEpoch !== bgRouteEpoch;
+                if (!needEpochNotify && sig === lastEditSig && (now - lastEditWriteAt) < 5000) {
+                    return false;
                 }
 
                 let registry = {};
@@ -200,6 +323,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                 registry[cid] = entry;
                 lastEditSig = sig;
                 lastEditWriteAt = now;
+                editCompletedEpoch = bgRouteEpoch;
 
                 try {
                     localStorage.setItem(VERIFIED_FILTERS_KEY, JSON.stringify(registry));
@@ -219,8 +343,10 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                         document.dispatchEvent(new CustomEvent("CT_EAST_3_VERIFIED_FILTER_CHANGED", { detail: entry }));
                     }
                 } catch (e) {}
+                return true;
             }
         } catch (e) {}
+        return false;
     }
     function isBackgroundInboundMonitor() {
         return isQueuesPage() && new URLSearchParams(window.location.search).get(INBOUND_MONITOR_PARAM) === "1";
@@ -468,27 +594,67 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         const now = Date.now();
         if (lfProbeInFlight) {
             if ((now - lfProbeInFlight.startedAt) < LF_PROBE_TIMEOUT_MS) return;
-            // Timed out; record failure recovery and force clean reload on next step
+            // Timed out; record failure recovery with short retry backoff and force hard reload fallback
             lfConsecutiveTimeouts++;
             lfSpaBooted = false;
-            if (lfProbeInFlight.cid) lfLastProbeByCid[lfProbeInFlight.cid] = now;
+            if (lfProbeInFlight.cid) {
+                lfLastProbeByCid[lfProbeInFlight.cid] = now - LF_IDLE_PROBE_MS + 3500;
+            }
             if (lfProbeInFlight.kind === "live_filters") lfInvInFlightStartedAt = 0;
             lfLastProbeCompletedAt = now;
             lfSpaLastCompletedKind = lfProbeInFlight.kind;
             lfProbeInFlight = null;
         }
 
+        const frame = ensureOffscreenIframe(LF_EDIT_IFRAME_ID, "CT Operations Monitor Unified Live Filter SPA feed");
+        const targets = collectProbeCampaignTargets();
+
+        // Priority Manual Refresh pipeline: campaigns -> live_filters -> active/operating campaign_edit
+        if (manualRefreshSession && !manualRefreshSession.done) {
+            if (manualRefreshSession.needCampaigns && !manualRefreshSession.doneCampaigns) {
+                dispatchBgSpaStep(
+                    frame,
+                    "/manager/campaigns?" + LF_MONITOR_PARAM + "=1&ct_lf_owner=ctompro_east3",
+                    "campaigns",
+                    null,
+                    !lfSpaBooted || lfConsecutiveTimeouts > 0 || lfSpaLastCompletedKind === "campaigns"
+                );
+                return;
+            }
+            if (manualRefreshSession.needInventory && !manualRefreshSession.doneInventory) {
+                dispatchBgSpaStep(
+                    frame,
+                    "/manager/live-filters?" + LF_MONITOR_PARAM + "=1&ct_lf_owner=ctompro_east3",
+                    "live_filters",
+                    null,
+                    !lfSpaBooted || lfConsecutiveTimeouts > 0 || lfSpaLastCompletedKind === "live_filters"
+                );
+                return;
+            }
+            if (manualRefreshSession.needEdit && !manualRefreshSession.doneEdit) {
+                const editCid = manualRefreshSession.editCid || (targets[0] && targets[0].id);
+                if (editCid) {
+                    dispatchBgSpaStep(
+                        frame,
+                        "/manager/campaigns/edit/" + encodeURIComponent(editCid) + "?" + LF_MONITOR_PARAM + "=1&ct_lf_owner=ctompro_east3",
+                        "campaign_edit",
+                        editCid,
+                        !lfSpaBooted || lfConsecutiveTimeouts > 0 || lfSpaLastCompletedKind === "campaign_edit"
+                    );
+                    return;
+                }
+                manualRefreshSession.doneEdit = true;
+            }
+        }
+
         if (!forceNow && lfLastProbeCompletedAt && (now - lfLastProbeCompletedAt) < LF_BETWEEN_PROBES_MS) {
             return;
         }
 
-        const frame = ensureOffscreenIframe(LF_EDIT_IFRAME_ID, "CT Operations Monitor Unified Live Filter SPA feed");
-        const targets = collectProbeCampaignTargets();
-
         // Always alternate clean component routes: live_filters <-> campaign_edit
         // This forces Angular to destroy & recreate CampaignEditComponent cleanly with zero cross-campaign leak.
         const needInitialBootOrInv = !lfSpaBooted || !lfInvLastCompletedAt;
-        const canRunEdit = targets.length > 0 && lfSpaLastCompletedKind === "live_filters";
+        const canRunEdit = targets.length > 0 && lfSpaLastCompletedKind !== "campaign_edit";
 
         if (!needInitialBootOrInv && canRunEdit) {
             const nextCamp = pickNextCampaignToProbe(targets, now, Boolean(forceNow));
@@ -516,7 +682,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             return;
         }
 
-        // If inventory isn't due yet, check if an edit probe is due via clean live_filters alternation
+        // If inventory isn't due yet, check if an edit probe is due via clean alternation
         const fallbackCamp = pickNextCampaignToProbe(targets, now, Boolean(forceNow));
         if (fallbackCamp && lfSpaLastCompletedKind !== "campaign_edit") {
             dispatchBgSpaStep(
@@ -529,13 +695,21 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         }
     }
 
-    function requestInboundIframeRefresh() {
+    function requestInboundIframeRefresh(forceReload) {
         if (!isCampaignsPage()) return;
         ensureInboundFeedMonitor();
         const frame = document.getElementById(INBOUND_IFRAME_ID);
-        if (!frame || !frame.contentWindow) return;
+        if (!frame) return;
+        if (forceReload) {
+            try {
+                inboundIframeReady = false;
+                frame.src = INBOUND_IFRAME_URL + "&ct_ts=" + Date.now();
+                return;
+            } catch (error) {}
+        }
+        if (!frame.contentWindow) return;
         try {
-            frame.contentWindow.postMessage({ type: "CT_EAST_3_REFRESH_INBOUND_FEED" }, window.location.origin);
+            frame.contentWindow.postMessage({ type: "CT_EAST_3_REFRESH_INBOUND_FEED", manual: Boolean(forceReload) }, window.location.origin);
         } catch (error) {}
     }
 
@@ -741,6 +915,26 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                 const campaigns = window.CTParser.readCampaigns();
                 const tableNode = window.CTParser.findCampaignTable ? window.CTParser.findCampaignTable() : document.querySelector("table, mat-table");
                 const isPageLoading = typeof document !== "undefined" && document.readyState && document.readyState !== "complete";
+                if (isBackgroundCampaignsFrame()) {
+                    if (tableReady(campaigns) && window.parent && window.parent !== window) {
+                        const sig = snapshotKey(campaigns);
+                        const needNotify = bgCampCompletedEpoch !== bgRouteEpoch || sig !== lastSnapshot;
+                        if (needNotify) {
+                            lastSnapshot = sig;
+                            lastDataChangeAt = now;
+                            bgCampCompletedEpoch = bgRouteEpoch;
+                            try {
+                                window.parent.postMessage({
+                                    type: "CT_EAST_3_BG_CAMPAIGNS_OBSERVED",
+                                    campaigns: campaigns,
+                                    observedAt: now,
+                                    count: campaigns.length
+                                }, window.location.origin);
+                            } catch (e) {}
+                        }
+                    }
+                    return;
+                }
                 if (!tableReady(campaigns)) {
                     const tableMissing = !tableNode && !isPageLoading;
                     publishFeedStatus(tableMissing ? "SOURCE_ERROR" : "VERIFYING", {
@@ -821,11 +1015,24 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                 dataChangedAt: lastQueueDataChangeAt || now,
                 observationAt: now,
                 changed: queueChanged,
+                manualRefresh: reason === "manual-inbound-refresh-check" || reason === "initial",
                 status: "LIVE",
                 reason: queueChanged ? (reason || "queue-data-change") : (forcePublish ? (reason || "manual-queue-refresh") : "queue-poll-heartbeat"),
                 rowCount: queues.length,
                 unverifiedCount: 0
             }, queues);
+
+            if (isInboundMonitorFrame() && window.parent && window.parent !== window && (forcePublish || queueChanged || reason === "initial" || String(reason || "").indexOf("mount-settle") === 0)) {
+                try {
+                    window.parent.postMessage({
+                        type: "CT_EAST_3_BG_INBOUND_OBSERVED",
+                        count: queues.length,
+                        queues: queues,
+                        observedAt: now,
+                        reason: reason || "queue-poll"
+                    }, window.location.origin);
+                } catch (e) {}
+            }
 
             if (now - lastInboundHeartbeatAt >= INBOUND_HEARTBEAT_MS || queueChanged || !hasPublishedQueues) {
                 lastInboundHeartbeatAt = now;
@@ -965,7 +1172,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
 
     let fastBgRetryTimer = null;
     function scheduleBackgroundFastPoll() {
-        if (!isBackgroundCampaignEditFrame() && !isBackgroundLiveFiltersFrame()) return;
+        if (!isBackgroundCampaignEditFrame() && !isBackgroundLiveFiltersFrame() && !isBackgroundCampaignsFrame()) return;
         let ticks = 0;
         const epoch = bgRouteEpoch;
         if (fastBgRetryTimer) window.clearInterval(fastBgRetryTimer);
@@ -978,13 +1185,19 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             }
             if (isBackgroundCampaignEditFrame()) {
                 observeCampaignEditForm();
-                if (lastEditWriteAt > 0 || ticks >= 40) {
+                if (editCompletedEpoch === epoch || ticks >= 45) {
                     window.clearInterval(fastBgRetryTimer);
                     fastBgRetryTimer = null;
                 }
             } else if (isBackgroundLiveFiltersFrame()) {
                 observeLiveFiltersPage();
-                if (lastInvWriteAt > 0 || ticks >= 40) {
+                if (invCompletedEpoch === epoch || ticks >= 45) {
+                    window.clearInterval(fastBgRetryTimer);
+                    fastBgRetryTimer = null;
+                }
+            } else if (isBackgroundCampaignsFrame()) {
+                readAndPublish("bg-campaigns-fast-poll", true);
+                if (bgCampCompletedEpoch === epoch || ticks >= 45) {
                     window.clearInterval(fastBgRetryTimer);
                     fastBgRetryTimer = null;
                 }
@@ -1067,11 +1280,16 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             const replaceStateOrig = history.replaceState;
             function onRouteTransition() {
                 bgRouteEpoch++;
+                invCompletedEpoch = -1;
+                editCompletedEpoch = -1;
+                bgCampCompletedEpoch = -1;
                 lastEditSig = "";
                 lastEditWriteAt = 0;
                 lastInvSig = "";
                 lastInvWriteAt = 0;
+                const myEpoch = bgRouteEpoch;
                 window.setTimeout(function () {
+                    if (myEpoch !== bgRouteEpoch) return;
                     if (isCampaignEditPage()) {
                         observeCampaignEditForm();
                         scheduleBackgroundFastPoll();
@@ -1079,7 +1297,8 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                         observeLiveFiltersPage();
                         scheduleBackgroundFastPoll();
                     } else if (isCampaignsPage()) {
-                        readAndPublish("spa-navigation");
+                        readAndPublish("spa-navigation", isBackgroundCampaignsFrame());
+                        if (isBackgroundCampaignsFrame()) scheduleBackgroundFastPoll();
                     }
                 }, 180);
             }
@@ -1121,11 +1340,140 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         });
     }
 
+    function finalizeManualRefreshSession(timedOut) {
+        const s = manualRefreshSession;
+        if (!s || s.done) return;
+        s.done = true;
+        if (s.timer) {
+            try { window.clearTimeout(s.timer); } catch (e) {}
+            s.timer = null;
+        }
+        const completedAt = Date.now();
+        const unavailableSources = [];
+        if (s.needCampaigns && !s.doneCampaigns) unavailableSources.push("Campaigns Table");
+        if (s.needInventory && !s.doneInventory) unavailableSources.push("Live Filter Inventory");
+        if (s.needEdit && !s.doneEdit) unavailableSources.push("Campaign Edit Filter DOM");
+        if (s.needInbound && !s.doneInbound) unavailableSources.push("Inbound Queues");
+
+        const anySucceeded = Boolean(s.doneCampaigns || s.doneInventory || s.doneEdit || s.doneInbound);
+        const result = unavailableSources.length === 0 ? "SUCCESS" : (anySucceeded ? "PARTIAL" : "FAILED");
+        const totalRecords = Number(s.counts.campaigns || 0) + Number(s.counts.filters || 0) + Number(s.counts.queues || 0);
+
+        const detail = {
+            refreshId: s.id,
+            requestAt: s.startedAt,
+            completedAt: completedAt,
+            elapsedMs: Math.max(0, completedAt - s.startedAt),
+            timedOut: Boolean(timedOut),
+            source: "CallTools (Campaigns · Live Filters · Edit DOM · Queues)",
+            result: result,
+            recordsRead: totalRecords,
+            failureReason: unavailableSources.length ? ("Timed out waiting for: " + unavailableSources.join(", ")) : null,
+            unavailableSources: unavailableSources,
+            sourceDetails: {
+                campaigns: { status: s.doneCampaigns ? "SUCCESS" : "TIMEOUT", count: s.counts.campaigns || 0 },
+                liveFilters: { status: s.doneInventory ? "SUCCESS" : "TIMEOUT", count: s.counts.filters || 0 },
+                campaignEdit: { status: s.doneEdit ? "SUCCESS" : (s.needEdit ? "TIMEOUT" : "SKIPPED"), campaignId: s.editCid || null },
+                inboundQueues: { status: s.doneInbound ? "SUCCESS" : "TIMEOUT", count: s.counts.queues || 0 }
+            }
+        };
+        manualRefreshSession = null;
+        document.dispatchEvent(new CustomEvent("CT_EAST_3_REFRESH_RESULT", { detail: detail }));
+        window.setTimeout(function () { coordinateLiveFilterMonitors(false); }, 150);
+    }
+
+    function maybeCompleteManualRefreshSession() {
+        const s = manualRefreshSession;
+        if (!s || s.done) return;
+        const allDone = (!s.needCampaigns || s.doneCampaigns) &&
+                        (!s.needInventory || s.doneInventory) &&
+                        (!s.needEdit || s.doneEdit) &&
+                        (!s.needInbound || s.doneInbound);
+        if (allDone) {
+            finalizeManualRefreshSession(false);
+        }
+    }
+
     window.addEventListener("message", function (event) {
         if (event.origin !== window.location.origin || !event.data) return;
+        if (isTopLevelCampaignsPage() && event.data.type === "CT_EAST_3_BG_CAMPAIGNS_OBSERVED" && Array.isArray(event.data.campaigns)) {
+            const now = Date.now();
+            const incoming = event.data.campaigns;
+            const targets = collectProbeCampaignTargets();
+            const idByName = new Map();
+            targets.forEach(function (t) {
+                if (t.name && t.id) idByName.set(String(t.name).trim().toLowerCase(), String(t.id));
+            });
+            const merged = incoming.map(function (c) {
+                const copy = Object.assign({}, c);
+                if (!copy.rawId && copy.name) {
+                    const mId = idByName.get(String(copy.name).trim().toLowerCase());
+                    if (mId) {
+                        copy.rawId = mId;
+                        copy.id = mId;
+                    }
+                }
+                return copy;
+            });
+            lfAuthPaused = false;
+            lfSpaBooted = true;
+            lfConsecutiveTimeouts = 0;
+            lfSpaLastCompletedKind = "campaigns";
+            if (lfProbeInFlight && lfProbeInFlight.kind === "campaigns") {
+                lfProbeInFlight = null;
+                lfLastProbeCompletedAt = now;
+            }
+            if (merged.length > 0) {
+                lastSnapshot = snapshotKey(merged);
+                lastDataChangeAt = now;
+                hasPublishedData = true;
+                const unverified = merged.filter(function (c) { return c.active !== true && c.active !== false; }).length;
+                publish(merged, {
+                    sourceUpdatedAt: now,
+                    dataChangedAt: now,
+                    observationAt: now,
+                    changed: true,
+                    manualRefresh: true,
+                    verifiedFromServer: true,
+                    status: unverified ? "DATA CHECK" : "LIVE",
+                    reason: "manual-bg-campaigns-refresh",
+                    rowCount: merged.length,
+                    unverifiedCount: unverified
+                }, []);
+                publishFeedStatus(unverified ? "DATA CHECK" : "LIVE", {
+                    reason: "Fresh CallTools campaign data received",
+                    rowCount: merged.length,
+                    unverifiedCount: unverified,
+                    route: "campaigns",
+                    lastCheckAt: now
+                });
+            }
+            if (manualRefreshSession && !manualRefreshSession.done) {
+                manualRefreshSession.doneCampaigns = true;
+                manualRefreshSession.counts.campaigns = merged.length;
+                maybeCompleteManualRefreshSession();
+                if (manualRefreshSession && !manualRefreshSession.done) {
+                    window.setTimeout(function () { coordinateLiveFilterMonitors(true); }, 120);
+                }
+                return;
+            }
+            window.setTimeout(function () { coordinateLiveFilterMonitors(false); }, LF_BETWEEN_PROBES_MS);
+            return;
+        }
         if (isTopLevelCampaignsPage() && event.data.type === "CT_EAST_3_BG_FILTER_OBSERVED" && event.data.entry) {
             const entry = event.data.entry;
             const now = Date.now();
+            // Reject stale pre-transition edit payloads whose campaignId/name disagrees with active probe
+            if (lfProbeInFlight && lfProbeInFlight.kind === "campaign_edit" && lfProbeInFlight.cid) {
+                if (String(entry.campaignId) !== String(lfProbeInFlight.cid)) {
+                    return;
+                }
+                const targetObj = collectProbeCampaignTargets().find(function (t) { return String(t.id) === String(lfProbeInFlight.cid); });
+                if (targetObj && targetObj.name && entry.campaignName &&
+                    String(entry.campaignName).trim().toLowerCase() !== String(targetObj.name).trim().toLowerCase()) {
+                    return;
+                }
+            }
             lfAuthPaused = false;
             lfSpaBooted = true;
             lfConsecutiveTimeouts = 0;
@@ -1140,6 +1488,16 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             readAndPublish("bg-filter-observed", true);
             window.dispatchEvent(new CustomEvent("CT_EAST_3_VERIFIED_FILTER_CHANGED", { detail: entry }));
             document.dispatchEvent(new CustomEvent("CT_EAST_3_VERIFIED_FILTER_CHANGED", { detail: entry }));
+            if (manualRefreshSession && !manualRefreshSession.done) {
+                if (!manualRefreshSession.editCid || String(entry.campaignId) === String(manualRefreshSession.editCid)) {
+                    manualRefreshSession.doneEdit = true;
+                }
+                maybeCompleteManualRefreshSession();
+                if (manualRefreshSession && !manualRefreshSession.done) {
+                    window.setTimeout(function () { coordinateLiveFilterMonitors(true); }, 120);
+                }
+                return;
+            }
             window.setTimeout(function () { coordinateLiveFilterMonitors(false); }, LF_BETWEEN_PROBES_MS + 50);
             return;
         }
@@ -1158,7 +1516,26 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             readAndPublish("bg-inventory-observed", true);
             window.dispatchEvent(new CustomEvent("CT_EAST_3_INVENTORY_UPDATED", { detail: { count: event.data.count || 0, observedAt: event.data.observedAt || now } }));
             document.dispatchEvent(new CustomEvent("CT_EAST_3_INVENTORY_UPDATED", { detail: { count: event.data.count || 0, observedAt: event.data.observedAt || now } }));
+            if (manualRefreshSession && !manualRefreshSession.done) {
+                manualRefreshSession.doneInventory = true;
+                manualRefreshSession.counts.filters = event.data.count || 0;
+                maybeCompleteManualRefreshSession();
+                if (manualRefreshSession && !manualRefreshSession.done) {
+                    window.setTimeout(function () { coordinateLiveFilterMonitors(true); }, 120);
+                }
+                return;
+            }
             window.setTimeout(function () { coordinateLiveFilterMonitors(false); }, LF_BETWEEN_PROBES_MS + 50);
+            return;
+        }
+        if (isTopLevelCampaignsPage() && event.data.type === "CT_EAST_3_BG_INBOUND_OBSERVED") {
+            const now = Date.now();
+            lastInboundHeartbeatAt = now;
+            if (manualRefreshSession && !manualRefreshSession.done) {
+                manualRefreshSession.doneInbound = true;
+                manualRefreshSession.counts.queues = Number(event.data.count) || 0;
+                maybeCompleteManualRefreshSession();
+            }
             return;
         }
         if (!isInboundMonitorFrame()) return;
@@ -1168,50 +1545,72 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         readAndPublish("manual-inbound-refresh-check", true);
     });
 
-    document.addEventListener("CT_EAST_3_REQUEST_INBOUND_REFRESH", function () {
+    document.addEventListener("CT_EAST_3_REQUEST_INBOUND_REFRESH", function (ev) {
         if (isQueuesPage()) {
             lastSourceRefreshAt = Date.now();
             publishFeedStatus("VERIFYING", { reason: "Manual inbound feed re-check requested", route: "queues" });
             readAndPublish("manual-inbound-refresh-check", true);
             return;
         }
-        requestInboundIframeRefresh();
+        const forceReload = Boolean(ev && ev.detail && ev.detail.forceReload);
+        requestInboundIframeRefresh(forceReload);
     });
 
-    document.addEventListener("CT_EAST_3_REQUEST_REFRESH", function () {
+    document.addEventListener("CT_EAST_3_REQUEST_REFRESH", function (ev) {
         const now = Date.now();
         lastSourceRefreshAt = now;
         const route = currentRoute();
+        const refreshId = ev && ev.detail && ev.detail.refreshId ? ev.detail.refreshId : now;
+
+        if (route === "campaigns" && isTopLevelCampaignsPage()) {
+            publishFeedStatus("VERIFYING", { reason: "Refreshing CallTools Campaigns, Live Filters, Edit DOM, and Inbound Queues…", route: "campaigns" });
+            if (manualRefreshSession && manualRefreshSession.timer) {
+                try { window.clearTimeout(manualRefreshSession.timer); } catch (e) {}
+            }
+            const targets = collectProbeCampaignTargets();
+            const priorityTarget = targets.find(function (t) { return t.operating; }) || targets.find(function (t) { return t.active; }) || targets[0] || null;
+            manualRefreshSession = {
+                id: refreshId,
+                startedAt: now,
+                needCampaigns: true,
+                needInventory: true,
+                needEdit: Boolean(priorityTarget),
+                needInbound: true,
+                editCid: priorityTarget ? String(priorityTarget.id) : null,
+                doneCampaigns: false,
+                doneInventory: false,
+                doneEdit: !priorityTarget,
+                doneInbound: false,
+                counts: { campaigns: 0, filters: 0, queues: 0 },
+                done: false,
+                timer: window.setTimeout(function () { finalizeManualRefreshSession(true); }, MANUAL_REFRESH_TIMEOUT_MS)
+            };
+            lfAuthPaused = false;
+            lfProbeInFlight = null;
+            lfLastProbeCompletedAt = 0;
+            lastInvSig = "";
+            lastInvWriteAt = 0;
+            lastEditSig = "";
+            lastEditWriteAt = 0;
+            invCompletedEpoch = -1;
+            editCompletedEpoch = -1;
+            bgCampCompletedEpoch = -1;
+
+            requestInboundIframeRefresh(true);
+            coordinateLiveFilterMonitors(true);
+            return;
+        }
+
         let recordsRead = 0;
         let result = "SUCCESS";
         let failureReason = null;
         let unavailableSources = [];
-
         const sourceDetails = {};
         if (route === "campaigns") {
-            publishFeedStatus("VERIFYING", { reason: "Manual campaign feed re-check requested", route: "campaigns" });
             readAndPublish("manual-campaign-refresh", true);
             const campaigns = window.CTParser && window.CTParser.readCampaigns ? window.CTParser.readCampaigns() : [];
             recordsRead = campaigns.length;
             sourceDetails.campaigns = { status: campaigns.length > 0 ? "SUCCESS" : "EMPTY", count: campaigns.length, timestamp: now };
-            if (isTopLevelCampaignsPage()) {
-                lfAuthPaused = false;
-                coordinateLiveFilterMonitors(true);
-                sourceDetails.liveFilterMonitors = { status: "REFRESH_DISPATCHED", timestamp: now };
-            }
-            const hasInv = Boolean(localStorage.getItem(LIVE_FILTERS_INVENTORY_KEY));
-            if (!hasInv) {
-                unavailableSources = ["Live Filter Inventory (background feed initializing)"];
-            }
-
-            // Also refresh Inbound feed if iframe bridge is embedded on page
-            const inboundFrame = document.querySelector("#ct-inbound-bridge, iframe[data-ct-inbound]");
-            if (inboundFrame && inboundFrame.contentWindow) {
-                try {
-                    inboundFrame.contentWindow.postMessage({ type: "CT_EAST_3_REFRESH_INBOUND_FEED" }, window.location.origin);
-                    sourceDetails.inboundBridge = "REFRESH_DISPATCHED";
-                } catch (e) {}
-            }
         } else if (route === "live_filters") {
             observeLiveFiltersPage();
             const filters = window.CTParser && window.CTParser.readLiveFilters ? window.CTParser.readLiveFilters(document) : [];
@@ -1232,6 +1631,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         }
 
         const detail = {
+            refreshId: refreshId,
             requestAt: now,
             completedAt: Date.now(),
             source: route,

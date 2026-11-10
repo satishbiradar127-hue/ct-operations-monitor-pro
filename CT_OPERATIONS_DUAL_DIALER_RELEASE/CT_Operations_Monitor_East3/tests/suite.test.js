@@ -7188,3 +7188,60 @@ test("EAST-3 UPGRADE 333: Table row Operating/Focus and Card operate controls re
     assert.strictEqual(dashSrc.includes("refs.list.appendChild(card.node)"), false, "Must never detach & re-append already-ordered cards on 1s poll ticks");
     assert.ok(dashSrc.includes("const fTotalMatches = (invMatch && invMatch.totalCount !== undefined && invMatch.totalCount !== null)"), "Card 4 must map invMatch.totalCount with fCount fallback");
 });
+
+test("EAST-3 UPGRADE 334: CTParser.readLiveFilters detects cancel-icon.svg vs check-icon.svg active status accurately", () => {
+    const doc = new MockNode("document");
+    const table = new MockNode("table");
+    const thead = new MockNode("thead");
+    const htr = new MockNode("tr");
+    ["Name", "Active", "Count", "Ignore time zone count"].forEach(h => htr.appendChild(new MockNode("th", {}, h)));
+    thead.appendChild(htr);
+    table.appendChild(thead);
+    const tbody = new MockNode("tbody");
+
+    function mkFilterRow(name, iconSrc, count, total) {
+        const tr = new MockNode("tr");
+        const td0 = new MockNode("td", { class: "cdk-column-name" }, name);
+        const td1 = new MockNode("td", { class: "cdk-column-active" });
+        const img = new MockNode("img", { src: iconSrc });
+        td1.appendChild(img);
+        const td2 = new MockNode("td", { class: "cdk-column-count" }, String(count));
+        const td3 = new MockNode("td", { class: "cdk-column-total-count" }, String(total));
+        [td0, td1, td2, td3].forEach(c => tr.appendChild(c));
+        tr.cells = [td0, td1, td2, td3];
+        return tr;
+    }
+
+    tbody.appendChild(mkFilterRow("Active Filter A", "/assets/img/check-icon.svg", 500, 520));
+    tbody.appendChild(mkFilterRow("Inactive Filter B", "/assets/img/cancel-icon.svg", 0, 14));
+    table.appendChild(tbody);
+    doc.appendChild(table);
+
+    const parsed = global.CTParser.readLiveFilters(doc);
+    assert.strictEqual(parsed.length, 2);
+    assert.strictEqual(parsed[0].name, "Active Filter A");
+    assert.strictEqual(parsed[0].active, true);
+    assert.strictEqual(parsed[1].name, "Inactive Filter B");
+    assert.strictEqual(parsed[1].active, false, "cancel-icon.svg must mark filter inactive");
+});
+
+test("EAST-3 UPGRADE 335: Plan B background observer syncs unpaginated filterCatalog, prunes ghosts, and prevents epoch postMessage stalls", () => {
+    const code = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    assert.strictEqual((code.match(/\.click\s*\(/g) || []).length, 0);
+    assert.strictEqual((code.match(/\bfetch\s*\(/g) || []).length, 0);
+    assert.strictEqual((code.match(/new\s+XMLHttpRequest/g) || []).length, 0);
+    assert.strictEqual((code.match(/new\s+WebSocket/g) || []).length, 0);
+    assert.ok(code.includes("invCompletedEpoch !== bgRouteEpoch"), "Live filters observer must notify once per route epoch without throttling out");
+    assert.ok(code.includes("editCompletedEpoch !== bgRouteEpoch"), "Edit form observer must notify once per route epoch without stalling Plan B");
+    assert.ok(code.includes("CAMPAIGN_EDIT_CATALOG"), "Must sync unpaginated catalog filters into inventory accurately");
+});
+
+test("EAST-3 UPGRADE 336: Refresh Data runs true async multi-source session via INBOUND_IFRAME_ID and avoids fake 1ms completion", () => {
+    const code = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.ok(code.includes("finalizeManualRefreshSession"), "content.js must wait for real source completion before dispatching CT_EAST_3_REFRESH_RESULT");
+    assert.ok(code.includes("CT_EAST_3_BG_CAMPAIGNS_OBSERVED") && code.includes("CT_EAST_3_BG_INBOUND_OBSERVED"), "Background campaigns and inbound frames must report real completions");
+    assert.strictEqual(code.includes("#ct-inbound-bridge"), false, "Must never target obsolete #ct-inbound-bridge selector");
+    assert.ok(dashSrc.includes("detail.refreshId !== state.activeRefreshId"), "Dashboard must correlate Refresh Data responses with activeRefreshId");
+    assert.ok(dashSrc.includes("!shouldOperate || !drawer || drawer.open"), "focusCampaign must not yank scroll into a closed directory drawer on table Operating toggles");
+});

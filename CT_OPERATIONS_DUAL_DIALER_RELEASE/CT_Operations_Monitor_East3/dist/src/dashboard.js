@@ -771,13 +771,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             const nextQueues = detail && Array.isArray(detail.queues) ? detail.queues : [];
             const signature = queueDataSignature(nextQueues);
             const changed = signature !== queueDataSignature(state.queues);
-            if (changed || !state.queues.length) {
+            if (changed || meta.manualRefresh || !state.queues.length) {
                 state.previousQueuesById = snapshotQueuesById(state.queues);
                 state.queues = nextQueues;
-                state.queueLastUpdated = new Date(now);
-                recordInboundHistory(nextQueues, now);
+                state.queueLastUpdated = new Date(obsTime);
+                recordInboundHistory(nextQueues, obsTime);
                 addInboundAlerts(nextQueues);
-                persistLastKnownQueues(nextQueues, now);
+                persistLastKnownQueues(nextQueues, obsTime);
             }
             updateConnectionState(now);
             scheduleRender();
@@ -792,11 +792,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         reconcileCampaignsWithVerifiedRegistry(null, nextCampaigns);
         const signature = dataSignature(nextCampaigns);
         const changed = signature !== state.lastDataSignature;
+        const verifiedFreshManual = Boolean(meta.manualRefresh && meta.verifiedFromServer);
 
         state.lastFeedHeartbeatAt = obsTime;
         if (refs && refs.feedHeartbeat) setText(refs.feedHeartbeat, "0s");
 
-        if (changed || !state.campaigns.length) {
+        if (changed || verifiedFreshManual || !state.campaigns.length) {
             const previousById = state.campaigns.length ? snapshotById(state.campaigns) : new Map();
             state.previousById = previousById;
             state.campaigns = nextCampaigns;
@@ -3939,7 +3940,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         document.addEventListener("click", operatingOutsideClickHandler);
         document.addEventListener("keydown", operatingEscapeHandler);
 
+        let refreshSeq = 0;
+        let activeRefreshTimer = null;
         document.addEventListener(REFRESH_RESULT_EVENT, function (event) {
+            const detail = event.detail || {};
+            if (state.activeRefreshId && detail.refreshId && detail.refreshId !== state.activeRefreshId) {
+                return;
+            }
+            if (activeRefreshTimer) {
+                clearTimeout(activeRefreshTimer);
+                activeRefreshTimer = null;
+            }
+            state.activeRefreshId = null;
             state.isRefreshing = false;
             if (refs.refresh) {
                 refs.refresh.classList.remove("is-refreshing");
@@ -3948,23 +3960,27 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             if (refs.headerRefresh) {
                 refs.headerRefresh.classList.remove("is-refreshing");
             }
-            const detail = event.detail || {};
             if (intelligenceEngine && intelligenceEngine.recordRefreshResult) {
                 intelligenceEngine.recordRefreshResult(detail);
             }
             state.lastRefreshedAt = detail.completedAt || Date.now();
             const recordsText = detail.recordsRead !== undefined ? detail.recordsRead + " records" : "data";
-            let noticeMsg = "Refreshed " + recordsText + " from " + (detail.source || "CallTools");
+            const elapsedText = detail.elapsedMs !== undefined ? " in " + (detail.elapsedMs / 1000).toFixed(1) + "s" : "";
+            let noticeMsg = (detail.result === "FAILED" ? "Refresh failed (" : detail.result === "PARTIAL" ? "Partial refresh: " : "Refreshed ") +
+                recordsText + " from " + (detail.source || "CallTools") + (detail.result === "FAILED" ? ")" : elapsedText);
             if (detail.unavailableSources && detail.unavailableSources.length > 0) {
                 noticeMsg += " (Unavailable: " + detail.unavailableSources.join(", ") + ")";
             }
             showActionNotice(noticeMsg);
             updateConnectionState(Date.now());
-            scheduleRender();
+            if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+            render();
         });
         const requestRefresh = function () {
             if (state.isRefreshing) return;
+            const refreshId = "ref-" + Date.now() + "-" + (++refreshSeq);
             state.isRefreshing = true;
+            state.activeRefreshId = refreshId;
             if (refs.refresh) {
                 refs.refresh.classList.add("is-refreshing");
                 refs.refresh.textContent = "↻ Refreshing…";
@@ -3972,10 +3988,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             if (refs.headerRefresh) {
                 refs.headerRefresh.classList.add("is-refreshing");
             }
-            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT));
-            setTimeout(function () {
-                if (state.isRefreshing) {
+            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT, { detail: { refreshId: refreshId, requestedAt: Date.now() } }));
+            if (activeRefreshTimer) clearTimeout(activeRefreshTimer);
+            activeRefreshTimer = setTimeout(function () {
+                if (state.isRefreshing && state.activeRefreshId === refreshId) {
                     state.isRefreshing = false;
+                    state.activeRefreshId = null;
                     if (refs.refresh) {
                         refs.refresh.classList.remove("is-refreshing");
                         refs.refresh.textContent = "↻ Refresh Data";
@@ -3983,8 +4001,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                     if (refs.headerRefresh) {
                         refs.headerRefresh.classList.remove("is-refreshing");
                     }
+                    showActionNotice("Refresh timed out waiting for live CallTools sources.");
                 }
-            }, 5000);
+            }, 15000);
         };
                 if (refs.inboundSettingsBtn && refs.inboundSettingsMenu) {
             refs.inboundSettingsBtn.addEventListener("click", function (e) {
@@ -4011,7 +4030,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             });
         }
         if (refs.inboundRefresh) refs.inboundRefresh.addEventListener("click", function () {
-            document.dispatchEvent(new CustomEvent(REQUEST_INBOUND_REFRESH_EVENT));
+            document.dispatchEvent(new CustomEvent(REQUEST_INBOUND_REFRESH_EVENT, { detail: { forceReload: true } }));
         });
         refs.refresh.addEventListener("click", requestRefresh);
         if (refs.headerRefresh) refs.headerRefresh.addEventListener("click", requestRefresh);
@@ -6339,7 +6358,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         window.requestAnimationFrame(function () {
             const card = refs.list.querySelector('.ct-card[data-id="' + CSS.escape(match.__id) + '"]');
             if (card) {
-                card.scrollIntoView({ behavior: "smooth", block: "center" });
+                const drawer = card.closest ? card.closest("details.ct-directory-drawer") : null;
+                if (!shouldOperate || !drawer || drawer.open) {
+                    card.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
                 card.classList.add("ct-focus-flash");
                 window.setTimeout(function(){ card.classList.remove("ct-focus-flash"); }, 1200);
             }
@@ -7341,7 +7363,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             card.fields.dragHandle.title = "Drag to reorder";
             card.fields.dragHandle.setAttribute("aria-label", "Drag to reorder");
         }
-        card.node.classList.toggle("is-operating", (state.operatingCampaigns || []).includes(campaign.__id));
+        const isCardOperating = isCampaignSelected(campaign, new Set((state.operatingCampaigns || []).map(function (v) { return String(v || "").trim(); }).filter(Boolean)));
+        card.node.classList.toggle("is-operating", isCardOperating);
+        const opRowBtn = card.node.querySelector('[data-row-action="operate"]');
+        if (opRowBtn) {
+            opRowBtn.classList.toggle("is-operating", isCardOperating);
+            opRowBtn.setAttribute("aria-pressed", String(isCardOperating));
+            opRowBtn.title = isCardOperating ? "Operating campaign (click to toggle)" : "Toggle operating campaign";
+        }
         card.node.classList.toggle("is-data-check", Boolean(campaign.__dataCheck));
         setText(card.fields.name, safeValue(campaign.name, "Unnamed Campaign"));
         card.fields.name.title = safeValue(campaign.name, "Unnamed Campaign");

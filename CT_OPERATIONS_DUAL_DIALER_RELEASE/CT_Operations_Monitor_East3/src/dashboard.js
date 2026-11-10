@@ -771,13 +771,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             const nextQueues = detail && Array.isArray(detail.queues) ? detail.queues : [];
             const signature = queueDataSignature(nextQueues);
             const changed = signature !== queueDataSignature(state.queues);
-            if (changed || !state.queues.length) {
+            if (changed || meta.manualRefresh || !state.queues.length) {
                 state.previousQueuesById = snapshotQueuesById(state.queues);
                 state.queues = nextQueues;
-                state.queueLastUpdated = new Date(now);
-                recordInboundHistory(nextQueues, now);
+                state.queueLastUpdated = new Date(obsTime);
+                recordInboundHistory(nextQueues, obsTime);
                 addInboundAlerts(nextQueues);
-                persistLastKnownQueues(nextQueues, now);
+                persistLastKnownQueues(nextQueues, obsTime);
             }
             updateConnectionState(now);
             scheduleRender();
@@ -792,11 +792,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         reconcileCampaignsWithVerifiedRegistry(null, nextCampaigns);
         const signature = dataSignature(nextCampaigns);
         const changed = signature !== state.lastDataSignature;
+        const verifiedFreshManual = Boolean(meta.manualRefresh && meta.verifiedFromServer);
 
         state.lastFeedHeartbeatAt = obsTime;
         if (refs && refs.feedHeartbeat) setText(refs.feedHeartbeat, "0s");
 
-        if (changed || !state.campaigns.length) {
+        if (changed || verifiedFreshManual || !state.campaigns.length) {
             const previousById = state.campaigns.length ? snapshotById(state.campaigns) : new Map();
             state.previousById = previousById;
             state.campaigns = nextCampaigns;
@@ -3939,7 +3940,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         document.addEventListener("click", operatingOutsideClickHandler);
         document.addEventListener("keydown", operatingEscapeHandler);
 
+        let refreshSeq = 0;
+        let activeRefreshTimer = null;
         document.addEventListener(REFRESH_RESULT_EVENT, function (event) {
+            const detail = event.detail || {};
+            if (state.activeRefreshId && detail.refreshId && detail.refreshId !== state.activeRefreshId) {
+                return;
+            }
+            if (activeRefreshTimer) {
+                clearTimeout(activeRefreshTimer);
+                activeRefreshTimer = null;
+            }
+            state.activeRefreshId = null;
             state.isRefreshing = false;
             if (refs.refresh) {
                 refs.refresh.classList.remove("is-refreshing");
@@ -3948,23 +3960,27 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             if (refs.headerRefresh) {
                 refs.headerRefresh.classList.remove("is-refreshing");
             }
-            const detail = event.detail || {};
             if (intelligenceEngine && intelligenceEngine.recordRefreshResult) {
                 intelligenceEngine.recordRefreshResult(detail);
             }
             state.lastRefreshedAt = detail.completedAt || Date.now();
             const recordsText = detail.recordsRead !== undefined ? detail.recordsRead + " records" : "data";
-            let noticeMsg = "Refreshed " + recordsText + " from " + (detail.source || "CallTools");
+            const elapsedText = detail.elapsedMs !== undefined ? " in " + (detail.elapsedMs / 1000).toFixed(1) + "s" : "";
+            let noticeMsg = (detail.result === "FAILED" ? "Refresh failed (" : detail.result === "PARTIAL" ? "Partial refresh: " : "Refreshed ") +
+                recordsText + " from " + (detail.source || "CallTools") + (detail.result === "FAILED" ? ")" : elapsedText);
             if (detail.unavailableSources && detail.unavailableSources.length > 0) {
                 noticeMsg += " (Unavailable: " + detail.unavailableSources.join(", ") + ")";
             }
             showActionNotice(noticeMsg);
             updateConnectionState(Date.now());
-            scheduleRender();
+            if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+            render();
         });
         const requestRefresh = function () {
             if (state.isRefreshing) return;
+            const refreshId = "ref-" + Date.now() + "-" + (++refreshSeq);
             state.isRefreshing = true;
+            state.activeRefreshId = refreshId;
             if (refs.refresh) {
                 refs.refresh.classList.add("is-refreshing");
                 refs.refresh.textContent = "↻ Refreshing…";
@@ -3972,10 +3988,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             if (refs.headerRefresh) {
                 refs.headerRefresh.classList.add("is-refreshing");
             }
-            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT));
-            setTimeout(function () {
-                if (state.isRefreshing) {
+            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT, { detail: { refreshId: refreshId, requestedAt: Date.now() } }));
+            if (activeRefreshTimer) clearTimeout(activeRefreshTimer);
+            activeRefreshTimer = setTimeout(function () {
+                if (state.isRefreshing && state.activeRefreshId === refreshId) {
                     state.isRefreshing = false;
+                    state.activeRefreshId = null;
                     if (refs.refresh) {
                         refs.refresh.classList.remove("is-refreshing");
                         refs.refresh.textContent = "↻ Refresh Data";
@@ -3983,8 +4001,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                     if (refs.headerRefresh) {
                         refs.headerRefresh.classList.remove("is-refreshing");
                     }
+                    showActionNotice("Refresh timed out waiting for live CallTools sources.");
                 }
-            }, 5000);
+            }, 15000);
         };
                 if (refs.inboundSettingsBtn && refs.inboundSettingsMenu) {
             refs.inboundSettingsBtn.addEventListener("click", function (e) {
@@ -4011,7 +4030,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             });
         }
         if (refs.inboundRefresh) refs.inboundRefresh.addEventListener("click", function () {
-            document.dispatchEvent(new CustomEvent(REQUEST_INBOUND_REFRESH_EVENT));
+            document.dispatchEvent(new CustomEvent(REQUEST_INBOUND_REFRESH_EVENT, { detail: { forceReload: true } }));
         });
         refs.refresh.addEventListener("click", requestRefresh);
         if (refs.headerRefresh) refs.headerRefresh.addEventListener("click", requestRefresh);
@@ -6339,7 +6358,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         window.requestAnimationFrame(function () {
             const card = refs.list.querySelector('.ct-card[data-id="' + CSS.escape(match.__id) + '"]');
             if (card) {
-                card.scrollIntoView({ behavior: "smooth", block: "center" });
+                const drawer = card.closest ? card.closest("details.ct-directory-drawer") : null;
+                if (!shouldOperate || !drawer || drawer.open) {
+                    card.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
                 card.classList.add("ct-focus-flash");
                 window.setTimeout(function(){ card.classList.remove("ct-focus-flash"); }, 1200);
             }
@@ -7341,7 +7363,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             card.fields.dragHandle.title = "Drag to reorder";
             card.fields.dragHandle.setAttribute("aria-label", "Drag to reorder");
         }
-        card.node.classList.toggle("is-operating", (state.operatingCampaigns || []).includes(campaign.__id));
+        const isCardOperating = isCampaignSelected(campaign, new Set((state.operatingCampaigns || []).map(function (v) { return String(v || "").trim(); }).filter(Boolean)));
+        card.node.classList.toggle("is-operating", isCardOperating);
+        const opRowBtn = card.node.querySelector('[data-row-action="operate"]');
+        if (opRowBtn) {
+            opRowBtn.classList.toggle("is-operating", isCardOperating);
+            opRowBtn.setAttribute("aria-pressed", String(isCardOperating));
+            opRowBtn.title = isCardOperating ? "Operating campaign (click to toggle)" : "Toggle operating campaign";
+        }
         card.node.classList.toggle("is-data-check", Boolean(campaign.__dataCheck));
         setText(card.fields.name, safeValue(campaign.name, "Unnamed Campaign"));
         card.fields.name.title = safeValue(campaign.name, "Unnamed Campaign");
@@ -8018,5 +8047,796 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         if (refs.lfiMatrixTableBody) {
             if (matrix.length === 0) {
                 refs.lfiMatrixTableBody.innerHTML = '<tr><td colspan="11" class="ct-lfi-empty">Waiting for campaign data…</td></tr>';
-  
-... [truncated for diff preview]
+            } else {
+                refs.lfiMatrixTableBody.innerHTML = matrix.map(function (m) {
+                    const stateClass = m.state === "RUNNING" ? "is-running" : "is-idle";
+                    const usageClass = m.usageStatus === "VERIFIED ACTIVE" ? "is-verified-active" :
+                                       (m.usageStatus === "STALE" || m.usageStatus === "STALE (ACTIVE)") ? "is-stale" :
+                                       m.usageStatus === "UNASSIGNED" ? "is-unassigned" : "is-unknown";
+                    const freshClass = m.freshness === "LIVE" ? "is-live" : m.freshness === "RECENT" ? "is-recent" : m.freshness === "STALE" ? "is-stale" : "is-waiting";
+                    const freshLabel = m.freshness === "LIVE" ? "LIVE (" + (m.ageSec || 0) + "s ago)" :
+                                       m.freshness === "RECENT" ? "RECENT (" + formatAge(m.ageSec) + " ago)" :
+                                       m.freshness === "STALE" ? "STALE (" + formatAge(m.ageSec) + " ago)" : "NOT OBSERVED";
+
+                    return '<tr>' +
+                        '<td title="' + escapeHtml(m.campaignName) + '"><strong>' + escapeHtml(m.campaignName) + '</strong></td>' +
+                        '<td>' + (m.rawId ? escapeHtml(m.rawId) : '<span class="ct-campaign-id-badge is-unverified">Awaiting ID</span>') + '</td>' +
+                        '<td><span class="ct-lfi-badge ' + stateClass + '">' + escapeHtml(m.state) + '</span></td>' +
+                        '<td style="text-align:right;">' + formatNumber(m.agents) + '</td>' +
+                        '<td style="text-align:right;"><span class="ct-lfi-lead-pool" title="Campaign callable lead pool in active dialer queue">' + (m.campaignLeadPool !== "UNAVAILABLE" ? formatNumber(m.campaignLeadPool) : "—") + '</span> <small class="ct-pool-tag">Callable</small></td>' +
+                        '<td title="' + escapeHtml(m.assignedFilter || "None") + '"><strong>' + escapeHtml(m.assignedFilter || "None") + '</strong></td>' +
+                        '<td style="text-align:right;">' + (m.filterCount !== null ? '<span class="ct-lfi-filter-count" title="Filter-matching contacts from targeting snapshot">' + formatNumber(m.filterCount) + '</span>' : '<span class="ct-lfi-empty-val">—</span>') + '</td>' +
+                        '<td><span class="ct-lfi-source">' + escapeHtml(m.verification) + '</span></td>' +
+                        '<td>' + escapeHtml(m.lastObservedTimeStr || "—") + '</td>' +
+                        '<td><span class="ct-lfi-badge ' + freshClass + '">' + escapeHtml(freshLabel) + '</span></td>' +
+                        '<td><span class="ct-lfi-badge ' + usageClass + '">' + escapeHtml(m.usageStatus) + '</span></td>' +
+                    '</tr>';
+                }).join("");
+            }
+        }
+
+// Verified Change History removed from dashboard per directive
+
+        // Data Health section removed from dashboard per directive
+    }
+
+    function updateInboundPanel() {
+        const queues = Array.isArray(state.queues) ? state.queues : [];
+        const active = queues.filter(function (q) { return !isArchivedQueue(q); });
+        const archived = queues.filter(isArchivedQueue);
+        const now = Date.now();
+        const queueHeartbeatAge = state.queueLastFeedHeartbeatAt
+            ? Math.max(0, now - state.queueLastFeedHeartbeatAt.getTime())
+            : Infinity;
+        const hasLiveQueueFeed = active.length > 0 && state.queueFeedStatus === "LIVE" && queueHeartbeatAge < INBOUND_HEARTBEAT_STALE_MS;
+        const latestKnown = !hasLiveQueueFeed && state.queueLastUpdated;
+
+        if (!queues.length || state.queueFeedStatus === "AUTH_REQUIRED" || state.queueFeedStatus === "FRAME_ERROR") {
+            const connecting = state.queueFeedStatus === "VERIFYING" || state.queueFeedStatus === "WAITING";
+            const blocked = state.queueFeedStatus === "AUTH_REQUIRED" || state.queueFeedStatus === "FRAME_ERROR";
+            setText(refs.inboundStatus, connecting ? "AUTO-CONNECTING · native Queue feed" : "No verified Queue data in the current feed");
+            setText(refs.inboundLive, connecting ? "CONNECTING" : "NO DATA");
+            setClass(refs.inboundLive, "ct-inbound-live " + (connecting ? "is-warning" : "is-neutral"));
+            setText(refs.inboundHeroWaiting, "—");
+            setText(refs.inboundHeroWaitingNote, connecting ? "Waiting for native Queue data" : "No verified queue load");
+            setText(refs.inboundHeroCallsNow, "—");
+            setText(refs.inboundHeroCallsNowNote, "No verified live call count");
+            setText(refs.inboundHeroToday, "—");
+            setText(refs.inboundHeroTodayNote, "No verified daily queue totals");
+            setText(refs.inboundHeroMaxWait, "—");
+            setText(refs.inboundHeroMaxWaitNote, "No verified wait signal");
+            Object.keys(refs.inboundKpis).forEach(function (k) { updateInboundKpi(k, "—", connecting ? "Automatic Queue feed starting" : "Awaiting verified Queue data"); });
+            if (refs.inboundStaffing) refs.inboundStaffing.innerHTML = '';
+            if (refs.inboundSignals) { refs.inboundSignals.innerHTML = ''; refs.inboundSignals.style.display = 'none'; }
+            if (refs.inboundFocus) refs.inboundFocus.innerHTML = '<div class="ct-inbound-empty"><strong>' + (blocked ? (state.queueFeedStatus === "AUTH_REQUIRED" ? 'INBOUND FEED AUTH REQUIRED' : 'INBOUND FEED LOAD ERROR') : (connecting ? 'INBOUND AUTO-FEED STARTING' : 'INBOUND FEED NOT LOADED')) + '</strong><span>' + (blocked ? (state.queueFeedStatus === "AUTH_REQUIRED" ? 'The native Queue context is showing the CallTools login screen, so stale queue numbers are intentionally hidden.' : 'The native Queue context could not load. No stale queue numbers are presented as live.') : (connecting ? 'The monitor is loading the native CallTools Queues DOM. No extra tab or window is required.' : 'No verified Queue data is currently available.')) + '</span></div>';
+            if (refs.inboundTable) refs.inboundTable.innerHTML = '';
+            return;
+        }
+
+        // Build one immutable operational snapshot. Every KPI, finding,
+        // and table row below is derived from this exact snapshot.
+        const rows = active.map(function (q, index) {
+            const today = queueNumber(q, "callsTodayTotal");
+            const answered = queueNumber(q, "callsTodayAnswered");
+            const notAnswered = inboundNotAnswered(q);
+            return {
+                q: q,
+                id: q.id || q.name || "q-" + index,
+                index: index,
+                name: String(q.name || "Unnamed Queue").trim() || "Unnamed Queue",
+                loggedIn: queueNumber(q, "loggedIn"),
+                today: today,
+                answered: answered,
+                notAnswered: notAnswered,
+                waiting: queueNumber(q, "waiting"),
+                onCall: queueNumber(q, "onQueueCalls"),
+                callsNow: queueNumber(q, "callsNowTotal"),
+                maxWait: queueNumber(q, "waitMax"),
+                goals: queueNumber(q, "goals"),
+                opportunities: queueNumber(q, "opportunities"),
+                calendarEvents: queueNumber(q, "calendarEvents")
+            };
+        });
+
+        const anyNotAnswered = rows.some(function (r) { return r.notAnswered !== null; });
+        const totals = rows.reduce(function (acc, row) {
+            acc.today += row.today;
+            acc.answered += row.answered;
+            if (row.notAnswered !== null) {
+                acc.notAnswered = (acc.notAnswered ?? 0) + row.notAnswered;
+            }
+            acc.waiting += row.waiting;
+            acc.onCall += row.onCall;
+            acc.callsNow += row.callsNow;
+            acc.goals += row.goals;
+            acc.loggedMemberships += row.loggedIn;
+            if (row.waiting > 0) {
+                acc.maxWait = Math.max(acc.maxWait, row.maxWait);
+            }
+            return acc;
+        }, { today: 0, answered: 0, notAnswered: anyNotAnswered ? 0 : null, waiting: 0, onCall: 0, callsNow: 0, goals: 0, loggedMemberships: 0, maxWait: 0 });
+
+        const waitingQueues = rows.filter(function (r) { return r.waiting > 0; });
+        const noCapacityQueues = rows.filter(function (r) { return r.waiting > 0 && r.loggedIn === 0; });
+        const saturatedQueues = rows.filter(function (r) { return r.waiting > 0 && r.loggedIn > 0 && r.onCall >= r.loggedIn; });
+        const answerRate = totals.today > 0 ? totals.answered / totals.today * 100 : 0;
+        const missRate = (totals.today > 0 && totals.notAnswered !== null) ? totals.notAnswered / totals.today * 100 : null;
+        const consistency = totals.notAnswered !== null ? (totals.today === totals.answered + totals.notAnswered) : true;
+        const inState = state.inboundSourceState || getInboundState(now);
+        const inAgeSec = state.lastSuccessfulInboundAt ? Math.max(0, Math.floor((now - state.lastSuccessfulInboundAt) / 1000)) : null;
+        const inAgeStr = inAgeSec !== null ? formatAge(inAgeSec) + " old" : "not connected";
+
+        let statusText = "QUEUE FEED " + inState;
+        let badgeText = "CONNECTING";
+        let badgeClass = "ct-inbound-live is-warning";
+
+        if (inState === "LIVE") {
+            statusText = "LIVE · automatic native Queue feed (Observed " + inAgeStr + ")";
+            badgeText = "LIVE";
+            badgeClass = "ct-inbound-live is-live";
+        } else if (inState === "STALE") {
+            statusText = "STALE · Queue feed last observed " + inAgeStr;
+            badgeText = "STALE";
+            badgeClass = "ct-inbound-live is-critical";
+        } else if (inState === "AUTH LOST") {
+            statusText = "AUTH REQUIRED · Queue context showing CallTools login screen";
+            badgeText = "AUTH REQUIRED";
+            badgeClass = "ct-inbound-live is-critical";
+        } else if (inState === "WAITING") {
+            statusText = "AUTO-CONNECTING · native Queue feed";
+            badgeText = "CONNECTING";
+            badgeClass = "ct-inbound-live is-warning";
+        } else {
+            statusText = latestKnown ? "LAST VERIFIED · Queue feed " + inAgeStr : "QUEUE FEED NOT LOADED";
+            badgeText = latestKnown ? "LAST KNOWN" : "NO DATA";
+            badgeClass = "ct-inbound-live is-warning";
+        }
+
+        setText(refs.inboundStatus, statusText);
+        setText(refs.inboundLive, badgeText);
+        setClass(refs.inboundLive, badgeClass);
+
+        // Compact hero metrics:
+        setText(refs.inboundHeroWaiting, formatNumber(totals.waiting));
+        setText(refs.inboundHeroWaitingNote, totals.waiting > 0
+            ? waitingQueues.length + " active queue" + (waitingQueues.length === 1 ? "" : "s") + " holding callers"
+            : "No callers currently waiting");
+        setText(refs.inboundHeroCallsNow, formatNumber(totals.callsNow));
+        setText(refs.inboundHeroCallsNowNote, totals.onCall + " agent" + (totals.onCall === 1 ? "" : "s") + " currently on queue calls");
+        setText(refs.inboundHeroToday, formatNumber(totals.today));
+        const otherOutcomes = Math.max(0, totals.today - totals.answered - (totals.notAnswered ?? 0) - totals.machine);
+        let todayBreakdown = formatNumber(totals.answered) + " answered";
+        if (totals.notAnswered !== null) {
+            todayBreakdown += " · " + formatNumber(totals.notAnswered) + " not answered";
+        }
+        if (totals.machine > 0) {
+            todayBreakdown += " · " + formatNumber(totals.machine) + " machine";
+        }
+        if (otherOutcomes > 0) {
+            todayBreakdown += " · " + formatNumber(otherOutcomes) + " other/IVR";
+        }
+        setText(refs.inboundHeroTodayNote, todayBreakdown);
+        setText(refs.inboundHeroMaxWait, totals.waiting > 0 ? formatNumber(totals.maxWait) + "s" : "0s");
+        setText(refs.inboundHeroMaxWaitNote, totals.waiting > 0 ? "highest wait while callers are waiting" : "no callers waiting");
+        if (refs.inboundHeroWaiting) refs.inboundHeroWaiting.className = "ct-inbound-hero-value " + (totals.waiting >= 5 ? "is-critical" : totals.waiting > 0 ? "is-warning" : "is-good");
+
+        // Total strip:
+        updateInboundKpi("queues", formatNumber(active.length), active.length + " active" + (archived.length ? " · " + archived.length + " archived excluded" : ""));
+        updateInboundKpi("answeredToday", formatNumber(totals.answered), totals.today ? answerRate.toFixed(1) + "% of active-queue calls today" : "no calls today");
+        updateInboundKpi("notAnsweredToday", totals.notAnswered !== null ? formatNumber(totals.notAnswered) : "—", totals.notAnswered !== null ? (totals.today ? missRate.toFixed(1) + "% of active-queue calls today" : "no calls today") : "unexposed in queue table");
+        updateInboundKpi("answerRate", totals.today ? answerRate.toFixed(1) + "%" : "—", "answered ÷ calls today (" + formatNumber(totals.answered) + " ÷ " + formatNumber(totals.today) + ")");
+        updateInboundKpi("onQueue", formatNumber(totals.onCall), "agents currently on live queue calls");
+        updateInboundKpi("loggedMemberships", formatNumber(totals.loggedMemberships), "sum of queue logged-in · not unique agents");
+        updateInboundKpi("goalsToday", formatNumber(totals.goals), "queue outcomes · today");
+
+        if (refs.inboundStaffing) refs.inboundStaffing.innerHTML = '';
+
+        // Priority Inbound Operational Findings (compact, high-density, action-oriented)
+        if (refs.inboundFocus) {
+            const findings = [];
+            noCapacityQueues.forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-critical"><b>NO CAPACITY</b><span>' + escapeHtml(r.name) + ': ' + formatNumber(r.waiting) + ' waiting · 0 logged in</span></div>');
+            });
+            rows.filter(function(r){ return r.waiting > 0 && r.maxWait >= 60; }).forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-critical"><b>CRITICAL WAIT</b><span>' + escapeHtml(r.name) + ': ' + formatNumber(r.maxWait) + 's wait · ' + formatNumber(r.waiting) + ' waiting</span></div>');
+            });
+            rows.filter(function(r){ return r.waiting > 0 && r.maxWait >= 30 && r.maxWait < 60; }).forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-warning"><b>ELEVATED WAIT</b><span>' + escapeHtml(r.name) + ': ' + formatNumber(r.maxWait) + 's wait · ' + formatNumber(r.waiting) + ' waiting</span></div>');
+            });
+            saturatedQueues.forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-warning"><b>QUEUE SATURATED</b><span>' + escapeHtml(r.name) + ': all ' + formatNumber(r.loggedIn) + ' agents on calls · ' + formatNumber(r.waiting) + ' waiting</span></div>');
+            });
+            // CRITICAL: Any queue with callers waiting that wasn't already caught above MUST be reported!
+            // Never allow a queue with callers waiting to be omitted, which previously caused the banner to
+            // falsely claim "No callers waiting" when callers were holding!
+            rows.filter(function(r) {
+                return r.waiting > 0 && r.maxWait < 30 && r.loggedIn > 0 && (r.loggedIn > r.onCall);
+            }).forEach(function(r) {
+                findings.push('<div class="ct-finding-pill is-warning"><b>CALLERS WAITING</b><span>' + escapeHtml(r.name) + ': ' + formatNumber(r.waiting) + (r.waiting === 1 ? ' caller' : ' callers') + ' holding (' + formatNumber(r.maxWait) + 's wait) · ' + formatNumber(r.loggedIn) + ' logged in</span></div>');
+            });
+
+            const demandTone = totals.waiting > 0 ? (totals.maxWait >= 60 || noCapacityQueues.length > 0 ? 'is-critical' : 'is-warning') : 'is-good';
+            const badgeLabel = totals.waiting > 0 ? formatNumber(totals.waiting) + ' WAITING' : 'COVERED';
+            let findingsHtml = '';
+            if (findings.length > 0) {
+                findingsHtml = findings.join('');
+            } else if (totals.waiting > 0) {
+                findingsHtml = '<div class="ct-finding-pill is-warning"><b>CALLERS WAITING</b><span>' + formatNumber(totals.waiting) + ' callers waiting across queues</span></div>';
+            } else if (state.queueFeedStatus === 'WAITING' || !rows.length) {
+                findingsHtml = '<div class="ct-finding-pill"><b>AWAITING FEED</b><span>Inbound queue feed initializing…</span></div>';
+            } else {
+                findingsHtml = '<div class="ct-finding-pill is-good"><b>NORMAL OPERATIONS</b><span>All active queues covered · No callers waiting</span></div>';
+            }
+
+            refs.inboundFocus.className = 'ct-inbound-findings ' + demandTone;
+            refs.inboundFocus.innerHTML =
+                '<div class="ct-inbound-findings-head">' +
+                '<strong>INBOUND OPERATIONAL FINDINGS</strong>' +
+                '<span class="ct-inbound-findings-badge ' + demandTone + '">' + badgeLabel + '</span>' +
+                '</div>' +
+                '<div class="ct-inbound-findings-list">' + findingsHtml + '</div>';
+        }
+
+        if (refs.inboundSignals) {
+            refs.inboundSignals.innerHTML = '';
+            refs.inboundSignals.style.display = 'none';
+        }
+
+        if (refs.inboundTable) {
+            const sorted = rows.slice().sort(function (a, b) {
+                return (a.index ?? 0) - (b.index ?? 0);
+            });
+            const archivedRows = archived.map(function (q, index) {
+                return { q:q, id: queueId(q, index), index:index, name:String(q.name || "Unnamed Queue").trim() || "Unnamed Queue", loggedIn:queueNumber(q,"loggedIn"), today:queueNumber(q,"callsTodayTotal"), answered:queueNumber(q,"callsTodayAnswered"), notAnswered:inboundNotAnswered(q), waiting:queueNumber(q,"waiting"), onCall:queueNumber(q,"onQueueCalls"), maxWait:queueNumber(q,"waitMax"), goals:queueNumber(q,"goals"), archived:true };
+            });
+            refs.inboundTable.innerHTML = sorted.concat(archivedRows).map(function (row) {
+                const archivedRow = Boolean(row.archived);
+                const qWait = row.maxWait, qWaiting = row.waiting, qToday = row.today, qAnswered = row.answered, qNotAnswered = row.notAnswered, qLoggedIn = row.loggedIn;
+                const qRate = qToday > 0 ? (qAnswered / qToday * 100).toFixed(1) + "%" : "—";
+                const stateLabel = archivedRow ? "ARCHIVED" : qWaiting > 0 && qLoggedIn === 0 ? "NO CAPACITY" : qWait >= 60 && qWaiting > 0 ? "CRITICAL WAIT" : qWait >= 30 && qWaiting > 0 ? "HIGH WAIT" : qWaiting > 0 ? "CALLERS WAITING" : "READY";
+                const stateClass = archivedRow ? "is-neutral" : /CRITICAL|NO CAPACITY/.test(stateLabel) ? "is-critical" : /HIGH|WAITING/.test(stateLabel) ? "is-warning" : "is-good";
+                const loginNote = archivedRow ? "excluded from active totals" : qLoggedIn + " queue members logged in · " + qRate + " answer rate";
+                return '<div class="ct-inbound-row ' + stateClass + '" data-queue-id="' + escapeHtml(row.id || row.name) + '" data-queue-name="' + escapeHtml(row.name) + '">' +
+                    '<span class="ct-qcol-name ct-inbound-name"><b>' + escapeHtml(row.name) + '</b><small>' + loginNote + '</small></span>' +
+                    '<span class="ct-qcol-logged">' + formatNumber(qLoggedIn) + '</span>' +
+                    '<span class="ct-qcol-today">' + formatNumber(qToday) + '</span>' +
+                    '<span class="ct-qcol-answered">' + formatNumber(qAnswered) + '</span>' +
+                    '<span class="ct-qcol-notans">' + formatNumber(qNotAnswered) + '</span>' +
+                    '<span class="ct-qcol-wait ' + (qWaiting >= 5 ? 'is-critical' : qWaiting > 0 ? 'is-warning' : '') + '">' + formatNumber(qWaiting) + '</span>' +
+                    '<span class="ct-qcol-oncall">' + formatNumber(row.onCall) + '</span>' +
+                    '<span class="ct-qcol-maxwait ' + (qWait >= 60 && qWaiting > 0 ? 'is-critical' : qWait >= 30 && qWaiting > 0 ? 'is-warning' : '') + '">' + formatNumber(qWait) + 's</span>' +
+                    '<span class="ct-qcol-goals">' + formatNumber(row.goals) + '</span>' +
+                    '<span class="ct-qcol-state"><em>' + stateLabel + '</em></span>' +
+                    '</div>';
+            }).join('');
+        }
+
+        if (refs.inboundNote) {
+            const consistencyNote = totals.notAnswered === null
+                ? "Notice: Inbound Not Answered column not exposed in native CallTools Queue table; reporting verified raw counts without synthesis."
+                : (consistency ? "Native CallTools Queue totals reconcile (Total = Answered + Not Answered)." : "Notice: CallTools native Total does not equal Answered + Not Answered; reporting verified raw counts without synthesis.");
+            setText(refs.inboundNote, "Source: native CallTools Queues DOM · " + consistencyNote + " Scope: active queues only; archived queues excluded. Calls Today is the sum of active queue rows shown in Queue Detail. Logged In is queue membership, not a unique-agent count." );
+        }
+    }
+
+    function signedValue(value) {
+        const n = Number(value) || 0;
+        return (n > 0 ? "+" : "") + formatNumber(n);
+    }
+
+    function inboundSignal(label, value, note, tone) {
+        return '<div class="ct-inbound-signal is-' + escapeHtml(tone || "info") + '"><b>' + escapeHtml(label) + '</b><strong>' + escapeHtml(value) + '</strong><small>' + escapeHtml(note || "") + '</small></div>';
+    }
+
+    function inboundRiskTone(waiting, noCapacity, saturated, maxWait) {
+        if ((waiting > 0 && noCapacity > 0) || (waiting > 0 && maxWait >= 60)) return "critical";
+        if ((waiting > 0 && saturated > 0) || (waiting > 0 && maxWait >= 30)) return "warning";
+        return "good";
+    }
+
+    function inboundRiskLabel(waiting, noCapacity, saturated, maxWait) {
+        const tone = inboundRiskTone(waiting, noCapacity, saturated, maxWait);
+        return tone === "critical" ? "CRITICAL" : tone === "warning" ? "WATCH" : "STABLE";
+    }
+
+    function inboundRiskNote(waiting, noCapacity, saturated, maxWait, trend) {
+        if (waiting > 0 && noCapacity > 0) return noCapacity + " queue" + (noCapacity === 1 ? " has" : "s have") + " waiting callers with zero logged-in agents";
+        if (waiting > 0 && maxWait >= 60) return maxWait + "s max wait with callers still waiting";
+        if (waiting > 0 && saturated > 0) return saturated + " queue" + (saturated === 1 ? " is" : "s are") + " fully occupied while callers wait";
+        if (waiting > 0 && maxWait >= 30) return maxWait + "s max wait with active caller load";
+        if (trend && trend.waitDelta !== null && trend.waitDelta >= 10) return "wait is rising " + signedValue(trend.waitDelta) + "s over the trend window";
+        return "No current native queue risk condition";
+    }
+
+    function inboundTrendMetrics(queues) {
+        const history = state.inboundHistory || [];
+        if (history.length < 2) return { waitDelta:null, waitingDelta:null, demandPerMin:null, missedPerMin:null, answeredPerMin:null, waitTone:"good", waitingTone:"good" };
+        const nowSample = history[history.length - 1];
+        let baseline = null;
+        for (let i = history.length - 2; i >= 0; i--) {
+            const age = nowSample.at - history[i].at;
+            if (age >= INBOUND_TREND_BASELINE_MS && age <= INBOUND_TREND_MAX_BASELINE_MS) { baseline = history[i]; break; }
+        }
+        if (!baseline) return { waitDelta:null, waitingDelta:null, demandPerMin:null, missedPerMin:null, answeredPerMin:null, waitTone:"good", waitingTone:"good" };
+        const mins = Math.max(1 / 60, (nowSample.at - baseline.at) / 60000);
+        const waitDelta = nowSample.maxWait - baseline.maxWait;
+        const waitingDelta = nowSample.waiting - baseline.waiting;
+        const demandPerMin = Math.max(0, nowSample.totalToday - baseline.totalToday) / mins;
+        const missedPerMin = (nowSample.notAnswered !== null && baseline.notAnswered !== null)
+            ? Math.max(0, nowSample.notAnswered - baseline.notAnswered) / mins
+            : null;
+        const answeredPerMin = Math.max(0, nowSample.answeredToday - baseline.answeredToday) / mins;
+        return {
+            waitDelta: waitDelta, waitingDelta: waitingDelta, demandPerMin: demandPerMin, missedPerMin: missedPerMin, answeredPerMin: answeredPerMin,
+            waitTone: waitDelta >= 10 ? "critical" : waitDelta >= 5 ? "warning" : "good",
+            waitingTone: waitingDelta > 0 ? "warning" : waitingDelta < 0 ? "good" : "good"
+        };
+    }
+
+    function recordInboundHistory(queues, timestamp) {
+        const active = (queues || []).filter(function(q){ return !isArchivedQueue(q); });
+        var hasAnyNotAnswered = false;
+        var notAnsweredSum = 0;
+        active.forEach(function(q) {
+            var v = inboundNotAnswered(q);
+            if (v !== null) {
+                hasAnyNotAnswered = true;
+                notAnsweredSum += v;
+            }
+        });
+        const sample = {
+            at: Number(timestamp) || Date.now(),
+            totalToday: active.reduce(function(sum,q){ return sum + queueNumber(q,"callsTodayTotal"); },0),
+            answeredToday: active.reduce(function(sum,q){ return sum + queueNumber(q,"callsTodayAnswered"); },0),
+            notAnswered: hasAnyNotAnswered ? notAnsweredSum : null,
+            waiting: active.reduce(function(sum,q){ return sum + queueNumber(q,"waiting"); },0),
+            maxWait: active.reduce(function(max,q){ return Math.max(max, queueNumber(q,"waitMax")); },0)
+        };
+        const last = state.inboundHistory[state.inboundHistory.length - 1];
+        if (last && last.at === sample.at && last.totalToday === sample.totalToday && last.answeredToday === sample.answeredToday && last.notAnswered === sample.notAnswered && last.waiting === sample.waiting && last.maxWait === sample.maxWait) return;
+        state.inboundHistory.push(sample);
+        const cutoff = sample.at - INBOUND_HISTORY_WINDOW_MS;
+        state.inboundHistory = state.inboundHistory.filter(function(item){ return item.at >= cutoff; }).slice(-180);
+    }
+
+    function inboundKpiShell(key, label) {
+        return '<div class="ct-inbound-kpi" data-inbound-kpi="' + escapeHtml(key) + '"><div class="ct-inbound-kpi-label">' + escapeHtml(label) + '</div><div class="ct-inbound-kpi-value">—</div><div class="ct-inbound-kpi-note">—</div></div>';
+    }
+
+    function inboundKpiRefs(key) {
+        const node = root.querySelector('[data-inbound-kpi="' + key + '"]');
+        return { value: node ? node.querySelector('.ct-inbound-kpi-value') : null, note: node ? node.querySelector('.ct-inbound-kpi-note') : null };
+    }
+
+    function updateInboundKpi(key, value, note) {
+        const item = refs.inboundKpis && refs.inboundKpis[key];
+        if (!item) return;
+        setText(item.value, String(value));
+        setText(item.note, String(note || ""));
+    }
+
+    function updateKpi(key, value, note, title) {
+        if (!refs.kpis || !refs.kpis[key]) return;
+        setText(refs.kpis[key].value, String(value));
+        setText(refs.kpis[key].note, note);
+        if (title !== undefined && refs.kpis[key].card) {
+            refs.kpis[key].card.title = title;
+        }
+    }
+
+    function updateStatus(key, value) {
+        setText(refs.status[key].value, formatNumber(value));
+    }
+
+    function updateInsight(key, value) {
+        setText(refs.insights[key].value, value);
+        refs.insights[key].value.title = value;
+    }
+
+    function opsMetricShell(key, label) {
+        return `
+            <div class="ct-ops-metric" data-ops-metric="${escapeHtml(key)}">
+                <div class="ct-ops-label">${escapeHtml(label)}</div>
+                <div class="ct-ops-value">-</div>
+            </div>
+        `;
+    }
+
+    function opsMetricRefs(key) {
+        const node = root.querySelector(`[data-ops-metric="${key}"]`);
+
+        return {
+            value: node ? node.querySelector(".ct-ops-value") : null
+        };
+    }
+
+    function updateOpsMetric(key, value) {
+        const metric = refs.ops && refs.ops.metrics ? refs.ops.metrics[key] : null;
+
+        if (metric) {
+            setText(metric.value, value);
+        }
+    }
+
+    function operationsHealth(stats) {
+        const waiting = numberValue(stats.waiting);
+        const loggedIn = numberValue(stats.loggedIn);
+        const onCall = numberValue(stats.onCall);
+        const averageWait = numberValue(stats.averageWait);
+        const critical = numberValue(stats.critical);
+        const warning = numberValue(stats.warning);
+
+        const utilization = utilizationPercent(loggedIn, onCall);
+        const queuePressure = loggedIn > 0
+            ? Math.round((waiting / loggedIn) * 100)
+            : (waiting > 0 ? 100 : 0);
+
+        const capacityLabel = loggedIn === 0
+            ? (waiting > 0 ? "No capacity" : "No agents")
+            : utilization >= 100
+                ? "Full"
+                : utilization >= 85
+                    ? "Tight"
+                    : "Available";
+
+        let score = 100;
+        score -= Math.min(35, averageWait * 0.45);
+        score -= Math.min(30, waiting * 5);
+        score -= Math.min(25, critical * 12);
+        score -= Math.min(10, warning * 3);
+
+        if (loggedIn === 0 && waiting > 0) {
+            score -= 30;
+        } else if (loggedIn > 0 && onCall >= loggedIn && waiting > 0) {
+            score -= 15;
+        }
+
+        score = Math.max(0, Math.min(100, Math.round(score)));
+
+        let tone = "healthy";
+        let label = "Healthy";
+        let actionState = "Normal";
+        let action = "No immediate action indicated by current parser data.";
+
+        if (score < 50) {
+            tone = "critical";
+            label = "Critical";
+            actionState = "Critical";
+            action = loggedIn === 0 && waiting > 0
+                ? "Agents are not logged in while calls are waiting. Restore agent capacity."
+                : "Operations are under significant pressure. Review the highest-wait and critical campaigns.";
+        } else if (score < 70) {
+            tone = "warning";
+            label = "Watch";
+            actionState = "Attention";
+            action = "Queue pressure or campaign health is elevated. Monitor wait time and available agent capacity.";
+        } else if (score < 90) {
+            tone = "good";
+            label = "Good";
+            actionState = "Monitor";
+            action = "Operations are stable, with some pressure visible in the current parser data.";
+        }
+
+        return {
+            score: score,
+            tone: tone,
+            label: label,
+            actionState: actionState,
+            action: action,
+            queuePressure: queuePressure + "%",
+            agentCapacity: capacityLabel
+        };
+    }
+
+    function kpiShell(key, label) {
+        return `
+            <div class="ct-kpi" data-kpi="${escapeHtml(key)}">
+                <div class="ct-kpi-label">${escapeHtml(label)}</div>
+                <div class="ct-kpi-value">0</div>
+                <div class="ct-kpi-note">-</div>
+            </div>
+        `;
+    }
+
+    function statusShell(key, label) {
+        return `
+            <div class="ct-status" data-status="${escapeHtml(key)}">
+                <div class="ct-status-label">${escapeHtml(label)}</div>
+                <div class="ct-status-value is-${escapeHtml(key)}">0</div>
+            </div>
+        `;
+    }
+
+    function insightShell(key, label) {
+        return `
+            <div class="ct-insight is-neutral" data-insight="${escapeHtml(key)}">
+                <div class="ct-insight-accent"></div>
+                <div class="ct-insight-top"><div class="ct-insight-label">${escapeHtml(label)}</div><span class="ct-insight-state">LIVE</span></div>
+                <div class="ct-insight-value">—</div>
+                <div class="ct-insight-campaign">Waiting for data</div>
+            </div>
+        `;
+    }
+
+    function quickMetricShell(key, label) {
+        return `
+            <div class="ct-quick-item" data-quick="${escapeHtml(key)}">
+                <div class="ct-quick-label">${escapeHtml(label)}</div>
+                <div class="ct-quick-value">-</div>
+            </div>
+        `;
+    }
+
+    function metricShell(metric) {
+        return `
+            <div class="ct-metric" data-metric="${escapeHtml(metric.key)}" title="${escapeHtml(metric.group + ": " + metric.label)}">
+                <div class="ct-metric-label">${escapeHtml(metric.label)}</div>
+                <div class="ct-metric-value">
+                    <span class="ct-value-text"></span>
+                    <span class="ct-trend"></span>
+                </div>
+            </div>
+        `;
+    }
+
+    function kpiRefs(key) {
+        const node = root.querySelector(`[data-kpi="${key}"]`);
+
+        return {
+            card: node,
+            value: node ? node.querySelector(".ct-kpi-value") : null,
+            note: node ? node.querySelector(".ct-kpi-note") : null
+        };
+    }
+
+    function statusRefs(key) {
+        const node = root.querySelector(`[data-status="${key}"]`);
+
+        return {
+            value: node.querySelector(".ct-status-value")
+        };
+    }
+
+    function insightRefs(key) {
+        const node = root.querySelector(`[data-insight="${key}"]`);
+
+        return {
+            node: node,
+            label: node ? node.querySelector(".ct-insight-label") : null,
+            value: node ? node.querySelector(".ct-insight-value") : null,
+            campaign: node ? node.querySelector(".ct-insight-campaign") : null,
+            state: node ? node.querySelector(".ct-insight-state") : null
+        };
+    }
+
+    function emptyState(message) {
+        const empty = document.createElement("div");
+        empty.className = "ct-empty";
+        empty.textContent = message;
+
+        return empty;
+    }
+
+    function severityRank(severity) {
+        return severity === "critical" ? 0 : 1;
+    }
+
+    function abandonedCount(value) {
+        const match = String(value || "").match(/^\s*([\d,]+)/);
+
+        return match ? numberValue(match[1]) : 0;
+    }
+
+    function numberValue(value) {
+        const number = parseFloat(String(value ?? "").replace(/,/g, ""));
+
+        return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatNumber(value, fallback) {
+        if (value === null || value === undefined || String(value).trim() === "") {
+            return fallback !== undefined ? fallback : "—";
+        }
+        const num = parseFloat(String(value).replace(/,/g, ""));
+        if (!Number.isFinite(num)) {
+            return String(value).trim() || (fallback !== undefined ? fallback : "—");
+        }
+        return num.toLocaleString();
+    }
+
+    function safeValue(value, fallback) {
+        const text = String(value ?? "").trim();
+
+        return text || (fallback || EMPTY);
+    }
+
+        function formatRatePercent(numerator, denominator) {
+        if (denominator === null || denominator === undefined || denominator <= 0 || numerator === null || numerator === undefined) {
+            return "—";
+        }
+        const num = Number(numerator);
+        const den = Number(denominator);
+        if (!Number.isFinite(num) || !Number.isFinite(den) || den <= 0) return "—";
+        const rate = (num / den) * 100;
+        if (rate === 0) return "0.00%";
+        if (rate > 0 && rate < 0.01) return "<0.01%";
+        return rate.toFixed(2) + "%";
+    }
+
+    function formatDateTime(date) {
+        return date.toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+            second: "2-digit"
+        });
+    }
+
+    function setText(node, value) {
+        const nextValue = String(value ?? "");
+
+        if (node && node.textContent !== nextValue) {
+            node.textContent = nextValue;
+        }
+    }
+
+    function setClass(node, value) {
+        if (node && node.className !== value) {
+            node.className = value;
+        }
+    }
+
+    function setWidth(node, value) {
+        const nextValue = Math.max(0, Math.min(100, value)) + "%";
+
+        if (node && node.style.width !== nextValue) {
+            node.style.width = nextValue;
+        }
+    }
+
+    function readDismissedConditions() {
+        const map = new Map();
+        try {
+            const raw = JSON.parse(localStorage.getItem(DISMISSED_ALERTS_KEY) || "{}");
+            Object.keys(raw || {}).forEach(function (key) {
+                const item = raw[key];
+                if (!item || !item.signature) return;
+                map.set(key, String(item.signature));
+            });
+        } catch (error) {}
+        return map;
+    }
+
+    function persistDismissedConditions() {
+        try {
+            const now = Date.now();
+            const payload = {};
+            state.dismissedConditions.forEach(function (signature, key) {
+                payload[key] = { signature: signature, savedAt: now };
+            });
+            localStorage.setItem(DISMISSED_ALERTS_KEY, JSON.stringify(payload));
+        } catch (error) {}
+    }
+
+    function readCampaignOrder() {
+        try {
+            const value = JSON.parse(localStorage.getItem(ORDER_KEY) || "[]");
+            return Array.isArray(value) ? value.filter(function (id) { return typeof id === "string" && id; }) : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function readLayout() {
+        try {
+            const storedVersion = Number(localStorage.getItem(LAYOUT_VERSION_KEY) || 0);
+            if (storedVersion !== LAYOUT_VERSION) {
+                const fresh = defaultLayout();
+                localStorage.setItem(LAYOUT_KEY, JSON.stringify(fresh));
+                localStorage.setItem(LAYOUT_VERSION_KEY, String(LAYOUT_VERSION));
+                return fresh;
+            }
+            return normalizeLayout(JSON.parse(localStorage.getItem(LAYOUT_KEY) || "null"));
+        } catch (error) {
+            return defaultLayout();
+        }
+    }
+
+    function defaultLayout() {
+        const padding = 14;
+        const maxWidth = Math.max(980, window.innerWidth - (padding * 2));
+        const targetWidth = window.innerWidth >= 1680 ? 1560 : window.innerWidth >= 1400 ? 1420 : window.innerWidth >= 1200 ? 1280 : Math.min(DEFAULT_LAYOUT.width, maxWidth);
+        // Automatically adjust to fill the available desktop viewport (matching Image 2)
+        const autoWidth = Math.max(targetWidth, window.innerWidth - (padding * 2));
+        const width = Math.min(autoWidth, maxWidth);
+        const autoHeight = Math.max(720, window.innerHeight - (padding * 2));
+        const height = Math.min(autoHeight, Math.max(540, window.innerHeight - (padding * 2)));
+
+        return {
+            left: padding,
+            top: padding,
+            width: width,
+            height: height,
+            collapsed: DEFAULT_LAYOUT.collapsed,
+            isAutoAdjusted: true,
+            isCustom: false
+        };
+    }
+
+    function normalizeLayout(layout) {
+        const def = defaultLayout();
+        if (!layout) return def;
+
+        // If the layout was auto-adjusted or not explicitly customized by the user,
+        // auto-adjust to current screen dimensions across refresh (Point 1)!
+        if (layout.isAutoAdjusted || !layout.isCustom) {
+            return def;
+        }
+
+        const source = Object.assign(def, layout || {});
+        const zoom = (state && state.zoom) ? state.zoom : (Number(readStorage(ZOOM_KEY, "1")) || 1);
+        const padding = 14;
+        const maxWidth = Math.max(980, Math.floor((window.innerWidth - (padding * 2)) / zoom));
+        const maxHeight = Math.max(540, Math.floor((window.innerHeight - (padding * 2)) / zoom));
+        const effectiveMinWidth = maxWidth >= 1280 ? 1200 : 980;
+        const width = clamp(numberValue(source.width) || def.width, effectiveMinWidth, maxWidth);
+        const height = clamp(numberValue(source.height) || def.height, 540, maxHeight);
+        const maxLeft = Math.max(0, Math.floor((window.innerWidth - (padding * 2)) / zoom - width + padding));
+        const maxTop = Math.max(0, Math.floor((window.innerHeight - (padding * 2)) / zoom - height + padding));
+
+        return {
+            left: clamp(numberValue(source.left), 0, maxLeft),
+            top: clamp(numberValue(source.top), 0, maxTop),
+            width: width,
+            height: height,
+            collapsed: Boolean(source.collapsed),
+            isAutoAdjusted: false,
+            isCustom: true
+        };
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function readStorage(key, fallback) {
+        try {
+            return localStorage.getItem(key) || fallback;
+        } catch (error) {
+            return fallback;
+        }
+    }
+
+    function writeStorage(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        } catch (error) {
+            return;
+        }
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function themeIcon() {
+        return `
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3v2.2M12 18.8V21M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M3 12h2.2M18.8 12H21M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="12" r="4.2" stroke="currentColor" stroke-width="2"/>
+            </svg>
+        `;
+    }
+
+    function chevronIcon() {
+        return `
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+        `;
+    }
+})();
