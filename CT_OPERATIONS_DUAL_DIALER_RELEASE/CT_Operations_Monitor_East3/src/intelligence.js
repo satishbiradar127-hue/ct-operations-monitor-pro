@@ -185,14 +185,32 @@
         }
 
         loadState() {
+            const sameCanonicalFilter = (a, b) => {
+                const canon = (v) => String(v || "")
+                    .replace(/\s*[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/gi, "")
+                    .replace(/\s*\(\s*Not\s+Active\s*\)\s*$/gi, "")
+                    .trim().toLowerCase();
+                const ca = canon(a), cb = canon(b);
+                return Boolean(ca && cb && ca === cb);
+            };
+            const isValidAlert = (a) => {
+                if (!a || a.metric === "Failed Call Volume" || a.profileKey === "outbound_failed_calls") return false;
+                if (a.category === "LIVE_FILTER" && sameCanonicalFilter(a.previousFilter || a.previous, a.currentFilter || a.current)) return false;
+                return true;
+            };
+            const isValidHistory = (h) => {
+                if (!h) return false;
+                if (h.category === "LIVE_FILTER" && sameCanonicalFilter(h.previousFilter || h.previous, h.currentFilter || h.current)) return false;
+                return true;
+            };
             if (this.storage) {
                 try {
                     this.baselines = JSON.parse(this.storage.getItem(this.BASELINES_KEY) || "{}");
                     this.filterBaselines = JSON.parse(this.storage.getItem(this.FILTER_BASELINES_KEY) || "{}");
                     this.pendingConfirmations = JSON.parse(this.storage.getItem(this.PENDING_KEY) || "{}");
-                    this.activeAlerts = (JSON.parse(this.storage.getItem(this.ALERTS_KEY) || "[]") || []).filter(a => a && a.metric !== "Failed Call Volume" && a.profileKey !== "outbound_failed_calls");
-                    this.history = JSON.parse(this.storage.getItem(this.HISTORY_KEY) || "[]");
-                    this.liveFilterChangeHistory = JSON.parse(this.storage.getItem(this.CHANGE_HISTORY_KEY) || "[]");
+                    this.activeAlerts = (JSON.parse(this.storage.getItem(this.ALERTS_KEY) || "[]") || []).filter(isValidAlert);
+                    this.history = (JSON.parse(this.storage.getItem(this.HISTORY_KEY) || "[]") || []).filter(isValidHistory);
+                    this.liveFilterChangeHistory = (JSON.parse(this.storage.getItem(this.CHANGE_HISTORY_KEY) || "[]") || []).filter(h => h && !sameCanonicalFilter(h.previousFilter, h.currentFilter));
                 } catch (e) {
                     console.error("CTDataIntelligence failed to load state from storage:", e);
                     this.baselines = {};
@@ -210,11 +228,13 @@
                             if (items[this.BASELINES_KEY]) this.baselines = Object.assign(this.baselines, items[this.BASELINES_KEY]);
                             if (items[this.FILTER_BASELINES_KEY]) this.filterBaselines = Object.assign(this.filterBaselines, items[this.FILTER_BASELINES_KEY]);
                             if (items[this.PENDING_KEY]) this.pendingConfirmations = Object.assign(this.pendingConfirmations, items[this.PENDING_KEY]);
-                            if (Array.isArray(items[this.CHANGE_HISTORY_KEY])) this.liveFilterChangeHistory = items[this.CHANGE_HISTORY_KEY];
+                            if (Array.isArray(items[this.CHANGE_HISTORY_KEY])) {
+                                this.liveFilterChangeHistory = items[this.CHANGE_HISTORY_KEY].filter(h => h && !sameCanonicalFilter(h.previousFilter, h.currentFilter));
+                            }
                             if (Array.isArray(items[this.ALERTS_KEY]) && items[this.ALERTS_KEY].length) {
                                 const currentIds = new Set(this.activeAlerts.map(a => a.id));
                                 items[this.ALERTS_KEY].forEach(a => {
-                                    if (a && a.id && !currentIds.has(a.id) && !a.acknowledged) {
+                                    if (isValidAlert(a) && a.id && !currentIds.has(a.id) && !a.acknowledged) {
                                         this.activeAlerts.push(a);
                                     }
                                 });
@@ -232,7 +252,7 @@
                     this.storage.setItem(this.FILTER_BASELINES_KEY, JSON.stringify(this.filterBaselines));
                     this.storage.setItem(this.PENDING_KEY, JSON.stringify(this.pendingConfirmations));
                     this.storage.setItem(this.ALERTS_KEY, JSON.stringify(this.activeAlerts));
-                    this.storage.setItem(this.HISTORY_KEY, JSON.stringify(this.history.slice(-500))); // Keep last 500 events
+                    this.storage.setItem(this.HISTORY_KEY, JSON.stringify(this.history.slice(0, 500))); // Keep newest 500 unshifted events
                     this.storage.setItem(this.CHANGE_HISTORY_KEY, JSON.stringify(this.liveFilterChangeHistory.slice(0, 100)));
                 } catch (e) {
                     console.error("CTDataIntelligence failed to persist state:", e);
@@ -253,15 +273,20 @@
         }
 
         updateVerifiedCampaignFilter(campaignId, campaignName, filterName, source = "CAMPAIGN_EDIT_DOM", timestamp = Date.now(), filterCount = null) {
-            if (!campaignId) return;
+            if (!campaignId || !/^[0-9]+$/.test(String(campaignId).trim())) return;
+            const cid = String(campaignId).trim();
             try {
                 let registry = {};
                 if (this.storage) {
                     const raw = this.storage.getItem(this.VERIFIED_FILTERS_KEY);
                     if (raw) registry = JSON.parse(raw);
                 }
-                registry[String(campaignId)] = {
-                    campaignId: String(campaignId),
+                // Purge non-numeric keys
+                Object.keys(registry).forEach(function(k) {
+                    if (!/^[0-9]+$/.test(k)) delete registry[k];
+                });
+                registry[cid] = {
+                    campaignId: cid,
                     campaignName: campaignName || "",
                     liveFilter: filterName || "",
                     cleanFilterName: filterName ? String(filterName).replace(/\s*\(Count:\s*[\d,]+\)/i, "").trim() : "",
@@ -1003,6 +1028,163 @@
         }
 
         /**
+         * Immediately records a verified targeting transition (e.g. from CAMPAIGN_EDIT_DOM)
+         * and updates the live filter baseline so history & transition banners reflect changes instantly.
+         */
+        recordTargetingTransition(cidOrOpts, cNameArg, prevFilterArg, currFilterArg, currCountArg, sourceArg, prevCountArg) {
+            const opts = (cidOrOpts && typeof cidOrOpts === "object") ? cidOrOpts : {
+                cid: cidOrOpts,
+                cName: cNameArg,
+                prevFilter: prevFilterArg,
+                currFilter: currFilterArg,
+                currCount: currCountArg,
+                source: sourceArg,
+                prevCount: prevCountArg
+            };
+            const cid = String(opts.cid || "").trim();
+            if (!cid || !/^[0-9]+$/.test(cid)) return null;
+
+            const cleanCurr = String(opts.currFilter || "").trim();
+            if (!cleanCurr) return null;
+
+            const bKey = `campaign_filter_${cid}`;
+            const baseline = this.filterBaselines[bKey];
+            const previousFilter = String(opts.prevFilter || (baseline ? baseline.filter : "") || "").trim();
+            const now = Number(opts.now) || Date.now();
+            const timeStr = new Date(now).toLocaleTimeString();
+            const cName = String(opts.cName || `Campaign ${cid}`).trim();
+            const source = opts.source || "CAMPAIGN_EDIT_DOM";
+            const currCount = (opts.currCount !== undefined && opts.currCount !== null && !Number.isNaN(Number(opts.currCount))) ? Number(opts.currCount) : null;
+            const prevCount = (opts.prevCount !== undefined && opts.prevCount !== null && !Number.isNaN(Number(opts.prevCount)))
+                ? Number(opts.prevCount)
+                : (baseline && baseline.count !== undefined ? baseline.count : null);
+
+            const canonicalFilterKey = (s) => String(s || "")
+                .replace(/\s*[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/gi, "")
+                .replace(/\s*\(\s*Not\s+Active\s*\)\s*$/gi, "")
+                .trim().toLowerCase();
+
+            if (!baseline && !previousFilter) {
+                this.filterBaselines[bKey] = {
+                    filter: cleanCurr,
+                    count: currCount,
+                    status: "ASSIGNED",
+                    source: source,
+                    updatedAt: now
+                };
+                this.saveState();
+                return null;
+            }
+
+            if (previousFilter === cleanCurr || (previousFilter && canonicalFilterKey(previousFilter) === canonicalFilterKey(cleanCurr))) {
+                if (baseline) {
+                    baseline.filter = cleanCurr;
+                    baseline.count = currCount;
+                    baseline.updatedAt = now;
+                    baseline.source = source;
+                }
+                this.saveState();
+                return null;
+            }
+
+            const recentDup = (this.history || []).find(h =>
+                h && h.category === "LIVE_FILTER" &&
+                String(h.targetId || h.campaignId || "") === cid &&
+                String(h.previousFilter || h.previous || "") === previousFilter &&
+                String(h.currentFilter || h.current || "") === cleanCurr &&
+                h.timestamp && Math.abs(now - Number(h.timestamp)) < 5000
+            );
+            if (recentDup) {
+                this.filterBaselines[bKey] = {
+                    filter: cleanCurr,
+                    count: currCount,
+                    status: "ASSIGNED",
+                    source: source,
+                    updatedAt: now
+                };
+                return null;
+            }
+
+            const isPrevEmpty = !previousFilter || previousFilter === "None" || previousFilter === "Unassigned" || previousFilter === "—";
+            const alertStatus = isPrevEmpty ? "LIVE FILTER ASSIGNED" : "LIVE FILTER CHANGED";
+            const severity = isPrevEmpty ? "warning" : "critical";
+            const message = isPrevEmpty
+                ? `LIVE FILTER ASSIGNED — Campaign: ${cName} — Filter: ${cleanCurr}`
+                : `LIVE FILTER CHANGED — Campaign: ${cName} — From: [${previousFilter}] — To: [${cleanCurr}]`;
+
+            const alertId = `${this.dialer}_FILTER_CHANGED_${cid}_${encodeURIComponent(previousFilter)}_${encodeURIComponent(cleanCurr)}_${now}`;
+            const alertObj = {
+                id: alertId,
+                dialer: this.dialer,
+                category: "LIVE_FILTER",
+                direction: "OUTBOUND",
+                targetId: cid,
+                campaignId: cid,
+                targetName: cName,
+                metric: "Live Filter",
+                status: alertStatus,
+                previous: previousFilter || "None",
+                previousFilter: previousFilter || "None",
+                current: cleanCurr,
+                currentFilter: cleanCurr,
+                previousCount: prevCount,
+                currentCount: currCount,
+                source: source,
+                confidence: "VERIFIED",
+                severity: severity,
+                message: message,
+                firstDetectedAt: timeStr,
+                confirmedAt: timeStr,
+                timestamp: now,
+                acknowledged: false
+            };
+
+            const pKey = `filter_change_${cid}`;
+            if (this.pendingConfirmations[pKey]) delete this.pendingConfirmations[pKey];
+
+            // Supersede any older active LIVE_FILTER alert for this campaign so real A->B->A reversions never get suppressed
+            if (Array.isArray(this.activeAlerts)) {
+                this.activeAlerts = this.activeAlerts.filter(a => !(a && a.category === "LIVE_FILTER" && String(a.targetId || a.campaignId || "") === cid));
+            }
+            const prevHistLen = Array.isArray(this.history) ? this.history.length : 0;
+            this.pushActiveAlert(alertObj);
+            if (!Array.isArray(this.history)) this.history = [];
+            if (this.history.length === prevHistLen) {
+                this.history.unshift(Object.assign({}, alertObj));
+            }
+
+            const historyEntry = {
+                campaignId: cid,
+                campaignName: cName,
+                previousFilter: previousFilter || "None",
+                currentFilter: cleanCurr,
+                previousCount: prevCount,
+                currentCount: currCount,
+                status: alertStatus,
+                confirmedAt: timeStr,
+                timestamp: now,
+                source: source,
+                dialer: this.dialer,
+                severity: severity
+            };
+            if (!this.liveFilterChangeHistory) this.liveFilterChangeHistory = [];
+            this.liveFilterChangeHistory.unshift(historyEntry);
+            if (this.liveFilterChangeHistory.length > 100) {
+                this.liveFilterChangeHistory = this.liveFilterChangeHistory.slice(0, 100);
+            }
+
+            this.filterBaselines[bKey] = {
+                filter: cleanCurr,
+                count: currCount,
+                status: "ASSIGNED",
+                source: source,
+                updatedAt: now
+            };
+            this.saveState();
+            return alertObj;
+        }
+
+        /**
          * ENGINE A: Sales & Goals immediate increase detection.
          * Bypasses 2-observation delay; fires immediately on any verified increase.
          */
@@ -1298,10 +1480,9 @@
 
             const matrix = campaigns.map((c, idx) => {
                 // Strict Real ID: Never fabricate synthetic campaign-0
-                const realId = (c.id && String(c.id).trim() !== "") ? String(c.id).trim() :
-                               (c.rawId && String(c.rawId).trim() !== "") ? String(c.rawId).trim() :
-                               (c.__id && !String(c.__id).startsWith("campaign-") ? String(c.__id).trim() : null);
-                const displayId = realId || "Awaiting ID";
+                let realId = (c.id && String(c.id).trim() !== "") ? String(c.id).trim() :
+                             (c.rawId && String(c.rawId).trim() !== "") ? String(c.rawId).trim() :
+                             (c.__id && !String(c.__id).startsWith("campaign-") ? String(c.__id).trim() : null);
                 const cName = String(c.name || c.__name || (realId ? `Campaign ${realId}` : "Unnamed Campaign")).trim();
 
                 // Robust running state calculation
@@ -1311,23 +1492,22 @@
                 const isRunning = isActiveBool || rawState === "ACTIVE" || rawState === "RUNNING" || agents > 0;
                 if (isRunning) runningCampaignsCount++;
 
-                // Lookup verified assignment by real ID first, then name
+                // Lookup verified assignment by real numeric ID, OR exact unambiguous campaignName if table DOM omits IDs
                 let entry = null;
                 if (realId && verifiedRegistry[realId]) {
                     entry = verifiedRegistry[realId];
-                } else if (cName) {
-                    if (verifiedRegistry[cName]) {
-                        entry = verifiedRegistry[cName];
-                    } else {
-                        for (const k of Object.keys(verifiedRegistry)) {
-                            if (verifiedRegistry[k] && verifiedRegistry[k].campaignName &&
-                                String(verifiedRegistry[k].campaignName).trim().toLowerCase() === cName.toLowerCase()) {
-                                entry = verifiedRegistry[k];
-                                break;
-                            }
-                        }
+                } else if (!realId && cName && cName !== "Unnamed Campaign") {
+                    const normName = cName.toLowerCase();
+                    const matches = Object.values(verifiedRegistry).filter(e =>
+                        e && e.campaignId && /^[0-9]+$/.test(String(e.campaignId).trim()) &&
+                        e.campaignName && String(e.campaignName).trim().toLowerCase() === normName
+                    );
+                    if (matches.length === 1) {
+                        entry = matches[0];
+                        realId = String(entry.campaignId).trim();
                     }
                 }
+                const displayId = realId || "Awaiting ID";
 
                 let assignedFilter = null;
                 let rawFilter = null;
@@ -1365,13 +1545,16 @@
                 } else if (c.liveFilter) {
                     rawFilter = c.liveFilter;
                     assignedFilter = c.liveFilter;
+                    filterCount = (c.liveFilterCount !== undefined && c.liveFilterCount !== null) ? Number(c.liveFilterCount) : null;
+                    filterId = c.liveFilterId || null;
                     const mCount = String(assignedFilter).match(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*([0-9,]+)\s*[\)\]]/i);
                     if (mCount && mCount[1]) {
-                        filterCount = Number(mCount[1].replace(/,/g, ""));
+                        if (filterCount === null) filterCount = Number(mCount[1].replace(/,/g, ""));
                         assignedFilter = String(assignedFilter).replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
                     }
                     verification = c.liveFilterSource === "ACTIVE_OVERLAY" ? "VERIFIED (Overlay)" :
                                    c.liveFilterSource === "TABLE_COLUMN" ? "VERIFIED (Table)" :
+                                   c.liveFilterSource === "CAMPAIGN_EDIT_DOM" ? "VERIFIED (Edit)" :
                                    (c.liveFilterSource || "VERIFIED");
                     observationTime = c.liveFilterTimestamp || now;
                 }
@@ -1419,6 +1602,7 @@
                     campaignLeadPool: leadsVal !== null ? leadsVal : "UNAVAILABLE",
                     assignedFilter: hasFilter ? assignedFilter : (assignedFilter === "None" ? "None Assigned" : "Filter Unavailable"),
                     rawAssignedFilter: rawFilter,
+                    filterId: filterId,
                     filterCount: filterCount,
                     filterCountSource: filterCount !== null ? "TARGETING_SNAPSHOT" : "UNAVAILABLE",
                     leadList: c.leadList || "UNAVAILABLE",

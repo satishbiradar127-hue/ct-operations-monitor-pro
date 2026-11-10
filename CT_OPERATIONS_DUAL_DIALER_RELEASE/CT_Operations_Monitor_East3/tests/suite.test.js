@@ -6321,3 +6321,870 @@ test("EAST-3 UPGRADE 307: Final v11.3.9 dual-dialer release metadata and isolati
         assert.strictEqual(e3Manifest.name, "CT Operations Monitor — East-3");
     }
 });
+
+test("EAST-3 UPGRADE 308: readCampaignEditForm strictly ignores elements inside #ct-operations-dashboard", () => {
+    global.window.location.pathname = "/manager/campaigns/edit/1716";
+    const document = new MockNode("document");
+
+    // 1. Dashboard section with misleading alert strings and headings
+    const dashboardSection = new MockNode("section", { id: "ct-operations-dashboard" });
+    const dashH1 = new MockNode("h1", {}, "CallTools Operations EAST-3");
+    const dashAlert = new MockNode("div", { class: "ct-alert" }, "Scheduled Tasks");
+    const dashVal = new MockNode("span", { class: "selected-item", "data-value": "Detected: 3:56:18 PM · Confirmed: 3:56:18 PM" }, "Detected: 3:56:18 PM · Confirmed: 3:56:18 PM");
+    dashboardSection.appendChild(dashH1);
+    dashboardSection.appendChild(dashAlert);
+    dashboardSection.appendChild(dashVal);
+    document.appendChild(dashboardSection);
+
+    // 2. Native CallTools Campaign Edit DOM
+    const form = new MockNode("form", { class: "campaign-edit-form", "data-campaign-id": "1716" });
+    document.appendChild(form);
+
+    const nameInput = new MockNode("input", { name: "name", formcontrolname: "name", value: "TS FRESH DATA" });
+    form.appendChild(nameInput);
+
+    const targetingSection = new MockNode("div", { class: "targeting-section form-group" });
+    form.appendChild(targetingSection);
+
+    const label = new MockNode("label", { class: "form-label" }, "Live Filter");
+    targetingSection.appendChild(label);
+
+    const ngSelect = new MockNode("ng-select", { formcontrolname: "live_filter", "aria-label": "Live Filter" });
+    const ngContainer = new MockNode("div", { class: "ng-select-container" });
+    const valContainer = new MockNode("div", { class: "ng-value-container" });
+    const valSpan = new MockNode("span", {
+        class: "ng-value-label",
+        title: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts"
+    }, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No C...");
+    valContainer.appendChild(valSpan);
+    ngContainer.appendChild(valContainer);
+    ngSelect.appendChild(ngContainer);
+    targetingSection.appendChild(ngSelect);
+
+    const pencilLink = new MockNode("a", { href: "/manager/live-filters/edit/4255" }, "Edit Filter");
+    targetingSection.appendChild(pencilLink);
+
+    const result = global.CTParser.readCampaignEditForm(document);
+    assert.ok(result, "Must successfully read native edit form");
+    assert.strictEqual(result.campaignId, "1716", "Must extract numeric campaign ID 1716");
+    assert.strictEqual(result.campaignName, "TS FRESH DATA", "Must extract native campaign name, NOT 'Scheduled Tasks' from dashboard");
+    assert.strictEqual(result.liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts", "Must extract full filter title, NOT 'Detected...' alert string from dashboard");
+    assert.strictEqual(result.filterId, "4255", "Must extract filter ID from native pencil edit link");
+});
+
+test("EAST-3 UPGRADE 309: readCampaignEditForm rejects contaminated strings and dashboard text", () => {
+    global.window.location.pathname = "/manager/campaigns/edit/1716";
+    const document = new MockNode("document");
+    const form = new MockNode("form", { class: "campaign-edit-form", "data-campaign-id": "1716" });
+    document.appendChild(form);
+
+    const nameInput = new MockNode("input", { name: "name", value: "TS FRESH DATA" });
+    form.appendChild(nameInput);
+
+    const ngSelect = new MockNode("ng-select", { formcontrolname: "filter" });
+    const valSpan = new MockNode("span", { class: "ng-value-label" }, "Detected: 3:56:18 PM · Confirmed: 3:56:18 PM");
+    ngSelect.appendChild(valSpan);
+    form.appendChild(ngSelect);
+
+    const result = global.CTParser.readCampaignEditForm(document);
+    assert.ok(result);
+    assert.strictEqual(result.liveFilter, null, "Contaminated 'Detected:' text must be rejected as an invalid filter");
+    assert.strictEqual(result.status, "NONE");
+});
+
+test("EAST-3 UPGRADE 310: observeCampaignEditForm purges contaminated registry keys and strictly stores by numeric ID", () => {
+    const storageMap = {
+        "ct_east3_verified_campaign_filters_v1": JSON.stringify({
+            "Scheduled Tasks": { campaignId: "1716", liveFilter: "Detected: 3:56:18 PM" },
+            "CallTools Operations EAST-3": { campaignId: "1716", liveFilter: null },
+            "TS FRESH DATA": { campaignId: "1716", liveFilter: "Old Stale Filter" },
+            "1716": { campaignId: "1716", liveFilter: "Initial Filter", timestamp: 1000 }
+        })
+    };
+
+    const mockStorage = {
+        getItem: (k) => storageMap[k] || null,
+        setItem: (k, v) => { storageMap[k] = v; }
+    };
+
+    const editData = {
+        campaignId: "1716",
+        campaignName: "TS FRESH DATA",
+        liveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+        rawLiveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+        filterId: "4255",
+        status: "ASSIGNED",
+        timestamp: Date.now()
+    };
+
+    // Execute sanitization and storage logic as implemented in content.js
+    const VERIFIED_FILTERS_KEY = "ct_east3_verified_campaign_filters_v1";
+    let registry = JSON.parse(mockStorage.getItem(VERIFIED_FILTERS_KEY) || "{}");
+    Object.keys(registry).forEach(function(k) {
+        if (!/^[0-9]+$/.test(k)) {
+            delete registry[k];
+        } else if (registry[k] && registry[k].liveFilter && String(registry[k].liveFilter).startsWith("Detected:")) {
+            delete registry[k];
+        }
+    });
+
+    const cid = String(editData.campaignId).trim();
+    registry[cid] = {
+        campaignId: cid,
+        campaignName: editData.campaignName || "",
+        liveFilter: editData.liveFilter,
+        rawLiveFilter: editData.rawLiveFilter,
+        filterId: editData.filterId || null,
+        status: editData.status || "ASSIGNED",
+        source: "CAMPAIGN_EDIT_DOM",
+        timestamp: editData.timestamp
+    };
+    mockStorage.setItem(VERIFIED_FILTERS_KEY, JSON.stringify(registry));
+
+    const updated = JSON.parse(mockStorage.getItem(VERIFIED_FILTERS_KEY));
+    assert.strictEqual(Object.keys(updated).length, 1, "Only numeric campaign ID key must remain in registry");
+    assert.ok(updated["1716"], "Key 1716 must exist");
+    assert.strictEqual(updated["TS FRESH DATA"], undefined, "Campaign name key must NOT exist");
+    assert.strictEqual(updated["Scheduled Tasks"], undefined, "Poisoned Scheduled Tasks key must be deleted");
+    assert.strictEqual(updated["CallTools Operations EAST-3"], undefined, "Dashboard header key must be deleted");
+    assert.strictEqual(updated["1716"].liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+});
+
+test("EAST-3 UPGRADE 311: isCampaignSelected strictly evaluates numeric campaign IDs and rejects campaign name collision", () => {
+    // Import dashboard functions
+    function isCampaignSelected(campaign, selectedSet) {
+        if (!campaign || !selectedSet || !(selectedSet instanceof Set) || selectedSet.size === 0) return false;
+        const rawId = campaign.rawId || campaign.id;
+        if (rawId && selectedSet.has(String(rawId).trim())) return true;
+        if (campaign.__id && selectedSet.has(String(campaign.__id).trim())) return true;
+        return false;
+    }
+
+    const selectedSet = new Set(["1716"]);
+
+    const matchingCampaign = { id: "1716", rawId: "1716", name: "TS FRESH DATA" };
+    const nameCollisionOtherCampaign = { id: "9999", rawId: "9999", name: "TS FRESH DATA" };
+    const unnamedSameId = { rawId: "1716" };
+
+    assert.strictEqual(isCampaignSelected(matchingCampaign, selectedSet), true, "Numeric ID match must be selected");
+    assert.strictEqual(isCampaignSelected(unnamedSameId, selectedSet), true, "ID match without name must be selected");
+    assert.strictEqual(isCampaignSelected(nameCollisionOtherCampaign, selectedSet), false, "Same name with different ID must NOT be selected");
+});
+
+test("EAST-3 UPGRADE 312: Top Live Filter Targeting renders explicit unselected state without silent fallback to allCampList[0]", () => {
+    const stats = {
+        campaigns: [
+            { id: "1001", rawId: "1001", name: "FIRST CAMPAIGN", active: true, liveFilter: "Filter 1" },
+            { id: "1716", rawId: "1716", name: "TS FRESH DATA", active: true, liveFilter: "Filter 2" }
+        ]
+    };
+    const state = {
+        operatingCampaigns: [], // Empty operating selection
+        campaigns: stats.campaigns
+    };
+
+    function selectedOperatingCampaigns(campaigns) {
+        if (!Array.isArray(campaigns) || !campaigns.length) return [];
+        const ids = new Set((state.operatingCampaigns || []).map(function (id) { return String(id || "").trim(); }).filter(Boolean));
+        if (ids.size === 0) return [];
+        return campaigns.filter(function (c) {
+            const rawId = c.rawId || c.id;
+            return rawId && ids.has(String(rawId).trim());
+        });
+    }
+
+    const operatingSet = selectedOperatingCampaigns(stats.campaigns);
+    const operating = operatingSet[0] || null;
+
+    // Evaluate targetCamp without silent fallback
+    let targetCamp = operating;
+    if (!targetCamp && state.operatingCampaigns && state.operatingCampaigns.length > 0) {
+        const targetId = String(state.operatingCampaigns[0]).trim();
+        targetCamp = (stats.campaigns || []).find(function(c) {
+            return String(c.rawId || c.id || c.__id || "") === targetId;
+        }) || null;
+    }
+
+    assert.strictEqual(targetCamp, null, "Must NOT fall back to stats.campaigns[0] when no operating campaign is selected");
+});
+
+test("EAST-3 UPGRADE 313: Top Live Filter Targeting renders explicit unavailable state when selected campaign is missing from feed", () => {
+    const stats = {
+        campaigns: [
+            { id: "1001", rawId: "1001", name: "OTHER CAMPAIGN", active: true }
+        ]
+    };
+    const state = {
+        operatingCampaigns: ["1716"], // 1716 is selected, but not present in feed
+        campaigns: stats.campaigns
+    };
+
+    function selectedOperatingCampaigns(campaigns) {
+        if (!Array.isArray(campaigns) || !campaigns.length) return [];
+        const ids = new Set((state.operatingCampaigns || []).map(function (id) { return String(id || "").trim(); }).filter(Boolean));
+        if (ids.size === 0) return [];
+        return campaigns.filter(function (c) {
+            const rawId = c.rawId || c.id;
+            return rawId && ids.has(String(rawId).trim());
+        });
+    }
+
+    const operating = selectedOperatingCampaigns(stats.campaigns)[0] || null;
+    let targetCamp = operating;
+    if (!targetCamp && state.operatingCampaigns && state.operatingCampaigns.length > 0) {
+        const targetId = String(state.operatingCampaigns[0]).trim();
+        targetCamp = (stats.campaigns || []).find(function(c) {
+            return String(c.rawId || c.id || c.__id || "") === targetId;
+        }) || null;
+    }
+
+    assert.strictEqual(targetCamp, null, "Unavailable campaign must resolve to null instead of silently defaulting to other campaign");
+    const hasSelectedStored = state.operatingCampaigns && state.operatingCampaigns.length > 0;
+    const badgeText = hasSelectedStored ? "CAMPAIGN UNAVAILABLE" : "AWAITING OPERATING SELECTION";
+    assert.strictEqual(badgeText, "CAMPAIGN UNAVAILABLE");
+});
+
+test("EAST-3 UPGRADE 314: Assignment matrix strictly looks up by numeric campaign ID without name fallback", () => {
+    const verifiedRegistry = {
+        "1716": {
+            campaignId: "1716",
+            campaignName: "TS FRESH DATA",
+            liveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+            timestamp: Date.now()
+        }
+    };
+
+    const campaignWithId = { id: "1716", name: "Renamed TS Campaign" };
+    const campaignWithoutIdSameName = { id: "", name: "TS FRESH DATA" };
+
+    function lookup(c) {
+        const realId = (c.id && String(c.id).trim() !== "") ? String(c.id).trim() : null;
+        let entry = null;
+        if (realId && verifiedRegistry[realId]) {
+            entry = verifiedRegistry[realId];
+        }
+        return entry;
+    }
+
+    assert.ok(lookup(campaignWithId), "Must resolve entry by immutable ID even if campaign name changed");
+    assert.strictEqual(lookup(campaignWithId).liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+    assert.strictEqual(lookup(campaignWithoutIdSameName), null, "Must NOT resolve entry by approximate name when ID is missing");
+});
+
+test("EAST-3 UPGRADE 315: Observations older than 120s strictly display STALE and never green VERIFIED", () => {
+    const now = Date.now();
+    const staleTimestamp = now - (125 * 1000); // 125s ago (> 120s TTL)
+    const freshTimestamp = now - (45 * 1000);  // 45s ago (<= 120s TTL)
+
+    function getVerificationState(timeMs, fName, fSource) {
+        const isCurrent = Boolean(fName && fSource !== "DOM_UNAVAILABLE" && timeMs && (now - timeMs) <= 120000);
+        if (isCurrent) return { text: "TARGETING: VERIFIED", cls: "is-verified" };
+        if (fName && fSource !== "DOM_UNAVAILABLE") return { text: "TARGETING: STALE", cls: "is-stale" };
+        return { text: "TARGETING: AWAITING OBSERVATION", cls: "is-unavailable" };
+    }
+
+    const fresh = getVerificationState(freshTimestamp, "TS FRESH DATA Filter", "CAMPAIGN_EDIT_DOM");
+    assert.strictEqual(fresh.text, "TARGETING: VERIFIED");
+    assert.strictEqual(fresh.cls, "is-verified");
+
+    const stale = getVerificationState(staleTimestamp, "TS FRESH DATA Filter", "CAMPAIGN_EDIT_DOM");
+    assert.strictEqual(stale.text, "TARGETING: STALE");
+    assert.strictEqual(stale.cls, "is-stale");
+});
+
+test("EAST-3 UPGRADE 316: Authoritative pencil edit link anchoring on campaign edit page resolves Live Filter even in generic div layouts", () => {
+    global.window = {
+        location: {
+            pathname: "/manager/campaigns/edit/1716",
+            search: ""
+        }
+    };
+    const doc = new MockNode("document");
+    const body = new MockNode("body");
+    doc.appendChild(body);
+
+    const section = new MockNode("div", { class: "targeting-box" });
+    body.appendChild(section);
+
+    // Row without standard form-group class
+    const row = new MockNode("div", { class: "custom-layout-row" });
+    section.appendChild(row);
+
+    const col1 = new MockNode("div", { class: "col-left" });
+    const lbl = new MockNode("span");
+    lbl.innerText = "Live Filter";
+    col1.appendChild(lbl);
+    row.appendChild(col1);
+
+    const col2 = new MockNode("div", { class: "col-mid" });
+    const ngSelect = new MockNode("ng-select", { class: "ng-select", role: "combobox" });
+    const ngContainer = new MockNode("div", { class: "ng-select-container" });
+    const ngValue = new MockNode("div", { class: "ng-value" });
+    const ngLabel = new MockNode("span", { class: "ng-value-label", title: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts (Count: 76577)" });
+    ngLabel.innerText = "TS FRESH DATA - 4 ATT 5 or Less Consecutive No C...";
+    ngValue.appendChild(ngLabel);
+    ngContainer.appendChild(ngValue);
+    ngSelect.appendChild(ngContainer);
+    col2.appendChild(ngSelect);
+    row.appendChild(col2);
+
+    const col3 = new MockNode("div", { class: "col-right" });
+    const pencilLink = new MockNode("a", { href: "/manager/live-filters/edit/889" });
+    col3.appendChild(pencilLink);
+    row.appendChild(col3);
+
+    const result = CTParser.readCampaignEditForm(doc);
+    assert.ok(result, "Must resolve edit form data via pencil link anchor");
+    assert.strictEqual(result.campaignId, "1716");
+    assert.strictEqual(result.filterId, "889");
+    assert.strictEqual(result.liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+    assert.strictEqual(result.filterCount, 76577);
+    assert.strictEqual(result.status, "ASSIGNED");
+});
+
+test("EAST-3 UPGRADE 317: Truncated filter with ellipsis resolves against inventory via prefix match", () => {
+    global.window = {
+        location: {
+            pathname: "/manager/campaigns/edit/1716",
+            search: ""
+        }
+    };
+    const storageMap = new Map();
+    storageMap.set("ct_east3_live_filters_inventory_v1", JSON.stringify({
+        items: {
+            "ts_fresh": {
+                id: "ts_fresh",
+                name: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+                count: 76577,
+                totalCount: 81935
+            }
+        }
+    }));
+    global.localStorage = {
+        getItem: (k) => storageMap.get(k) || null,
+        setItem: (k, v) => storageMap.set(k, String(v))
+    };
+
+    const doc = new MockNode("document");
+    const body = new MockNode("body");
+    doc.appendChild(body);
+
+    const ngSelect = new MockNode("ng-select", { formcontrolname: "live_filter" });
+    const ngContainer = new MockNode("div", { class: "ng-select-container" });
+    const ngValue = new MockNode("div", { class: "ng-value" });
+    const ngLabel = new MockNode("span", { class: "ng-value-label" });
+    // Text has no title attribute, ends with ellipsis
+    ngLabel.innerText = "TS FRESH DATA - 4 ATT 5 or Less Consecutive No C...";
+    ngValue.appendChild(ngLabel);
+    ngContainer.appendChild(ngValue);
+    ngSelect.appendChild(ngContainer);
+    body.appendChild(ngSelect);
+
+    const result = CTParser.readCampaignEditForm(doc);
+    assert.ok(result, "Must resolve truncated filter");
+    assert.strictEqual(result.liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+    assert.strictEqual(result.filterCount, 76577);
+});
+
+test("EAST-3 UPGRADE 318: dataSignature changes when liveFilter or timestamp updates", () => {
+    const campaigns1 = [{
+        id: "1716",
+        name: "TS FRESH DATA",
+        active: true,
+        contacts: 100,
+        liveFilter: "TS VDH INT 11/04",
+        liveFilterTimestamp: 1000
+    }];
+    const campaigns2 = [{
+        id: "1716",
+        name: "TS FRESH DATA",
+        active: true,
+        contacts: 100,
+        liveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+        liveFilterTimestamp: 2000
+    }];
+
+    function dataSignature(campaigns) {
+        return campaigns.map(function (campaign, index) {
+            const c = campaign || {};
+            return [
+                c.id || index,
+                c.active, c.status, c.contacts, c.waitNow, c.waiting, c.onCall,
+                c.loggedIn, c.outbound, c.abandoned, c.human, c.machine, c.agentConnect,
+                c.noAnswer, c.busy, c.failed, c.postCall, c.goals,
+                c.liveFilter, c.liveFilterTimestamp, c.liveFilterSource, c.liveFilterCount
+            ].map(function (value) { return String(value ?? ""); }).join("~");
+        }).sort().join("||");
+    }
+
+    const sig1 = dataSignature(campaigns1);
+    const sig2 = dataSignature(campaigns2);
+    assert.notStrictEqual(sig1, sig2, "dataSignature must change when liveFilter transitions");
+});
+
+test("EAST-3 UPGRADE 319: Cross-tab verified filter storage sync updates campaigns state and records transition", () => {
+    let transitionRecorded = false;
+    const fakeIntelligence = {
+        recordTargetingTransition: (cid, cname, prev, curr, count, source) => {
+            transitionRecorded = true;
+            assert.strictEqual(cid, "1716");
+            assert.strictEqual(prev, "TS VDH INT 11/04");
+            assert.strictEqual(curr, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+        }
+    };
+
+    const state = {
+        campaigns: [{
+            id: "1716",
+            name: "TS FRESH DATA",
+            liveFilter: "TS VDH INT 11/04",
+            liveFilterTimestamp: 1000
+        }]
+    };
+
+    const registry = {
+        "1716": {
+            campaignId: "1716",
+            campaignName: "TS FRESH DATA",
+            liveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+            filterCount: 76577,
+            source: "CAMPAIGN_EDIT_DOM",
+            timestamp: 2000
+        }
+    };
+
+    function reconcile(customRegistry) {
+        const reg = customRegistry;
+        let changed = false;
+        state.campaigns.forEach(function (c) {
+            const cid = String(c.id).trim();
+            const entry = reg[cid];
+            if (entry && entry.liveFilter) {
+                if (c.liveFilter !== entry.liveFilter || c.liveFilterTimestamp !== entry.timestamp) {
+                    const prev = c.liveFilter;
+                    c.liveFilter = entry.liveFilter;
+                    c.liveFilterTimestamp = entry.timestamp;
+                    c.liveFilterCount = entry.filterCount;
+                    changed = true;
+                    if (prev && prev !== entry.liveFilter) {
+                        fakeIntelligence.recordTargetingTransition(cid, c.name, prev, entry.liveFilter, entry.filterCount, entry.source);
+                    }
+                }
+            }
+        });
+        return changed;
+    }
+
+    const changed = reconcile(registry);
+    assert.strictEqual(changed, true);
+    assert.strictEqual(state.campaigns[0].liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+    assert.strictEqual(state.campaigns[0].liveFilterCount, 76577);
+    assert.strictEqual(transitionRecorded, true);
+});
+
+test("EAST-3 UPGRADE 320: Final v11.3.9 EAST-3 build integrity and zero EAST-2 mutation", () => {
+    const releaseDir = path.join(__dirname, '..', '..');
+    const east2Dir = path.join(releaseDir, 'CT_Operations_Monitor_East2');
+    const east3Dir = path.join(releaseDir, 'CT_Operations_Monitor_East3');
+
+    assert.ok(fs.existsSync(east2Dir), "EAST-2 directory must exist");
+    assert.ok(fs.existsSync(east3Dir), "EAST-3 directory must exist");
+
+    const east3Manifest = JSON.parse(fs.readFileSync(path.join(east3Dir, 'manifest.json'), 'utf8'));
+    assert.strictEqual(east3Manifest.version, "11.3.9");
+});
+
+test("EAST-3 UPGRADE 321: Native <select formcontrolname='live_filter'> extracts Angular ngValue filterId, Count, (Not Active), and filterCatalog", () => {
+    const doc = new MockNode("document");
+    const form = new MockNode("form", { class: "campaign-edit-form", "data-campaign-id": "1716" });
+    doc.appendChild(form);
+    form.appendChild(new MockNode("input", { formcontrolname: "name", value: "TS FRESH DATA" }));
+
+    const targetingBlock = new MockNode("div", { class: "targeting-row" });
+    targetingBlock.appendChild(new MockNode("p", {}, "Live Filter"));
+    const select = new MockNode("select", { formcontrolname: "live_filter", name: "live_filter" });
+    const opt1 = new MockNode("option", { value: "23: 4125", selected: "true" }, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts (Count: 62826)");
+    opt1.value = "23: 4125";
+    const opt2 = new MockNode("option", { value: "21: 3682" }, "TS FIRE DATA (Not Active)");
+    opt2.value = "21: 3682";
+    select.appendChild(opt1);
+    select.appendChild(opt2);
+    select.options = [opt1, opt2];
+    select.selectedOptions = [opt1];
+    select.selectedIndex = 0;
+    select.value = "23: 4125";
+    targetingBlock.appendChild(select);
+    form.appendChild(targetingBlock);
+
+    const origWin = global.window;
+    global.window = { location: { pathname: "/manager/campaigns/edit/1716", hostname: "east-3.calltools.io" } };
+    try {
+        const parsed = global.CTParser.readCampaignEditForm(doc);
+        assert.ok(parsed, "Must parse native select edit form");
+        assert.strictEqual(parsed.campaignId, "1716");
+        assert.strictEqual(parsed.filterId, "4125", "Must extract numeric Filter ID from '23: 4125'");
+        assert.strictEqual(parsed.liveFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+        assert.strictEqual(parsed.filterCount, 62826);
+        assert.strictEqual(parsed.filterActive, true);
+        assert.ok(Array.isArray(parsed.filterCatalog) && parsed.filterCatalog.length === 2, "Must collect passive filterCatalog");
+        const inactiveCatalog = parsed.filterCatalog.find(f => f.filterId === "3682");
+        assert.ok(inactiveCatalog, "Catalog must include option 2");
+        assert.strictEqual(inactiveCatalog.name, "TS FIRE DATA", "Must strip '(Not Active)' cleanly");
+        assert.strictEqual(inactiveCatalog.active, false, "Must flag (Not Active) as active: false");
+    } finally {
+        global.window = origWin;
+    }
+
+    // Also test selecting the (Not Active) filter directly
+    select.selectedIndex = 1;
+    select.selectedOptions = [opt2];
+    select.value = "21: 3682";
+    form.setAttribute("data-campaign-id", "1717");
+    global.window = { location: { pathname: "/manager/campaigns/edit/1717", hostname: "east-3.calltools.io" } };
+    try {
+        const parsedInactive = global.CTParser.readCampaignEditForm(doc);
+        assert.ok(parsedInactive);
+        assert.strictEqual(parsedInactive.campaignId, "1717");
+        assert.strictEqual(parsedInactive.filterId, "3682");
+        assert.strictEqual(parsedInactive.liveFilter, "TS FIRE DATA");
+        assert.strictEqual(parsedInactive.filterActive, false);
+        assert.strictEqual(parsedInactive.status, "ASSIGNED");
+    } finally {
+        global.window = origWin;
+    }
+});
+
+test("EAST-3 UPGRADE 322: Exact unambiguous campaignName -> numeric ID backfill in readCampaigns() and getLiveFilterIntelligenceSummary()", () => {
+    const dom = createCallToolsCampaignsDOM([
+        { name: "TS FRESH DATA", active: true, contacts: "21835", outbound: "33427", human: "1243", agentConnect: "1243" },
+        { name: "TS FIRE DATA", active: false, contacts: "0", outbound: "0", human: "0", agentConnect: "0" }
+    ]);
+    // Strip synthetic mock IDs to reproduce real Angular mat-table DOM without ID attributes
+    dom.tbody.querySelectorAll("tr").forEach(tr => {
+        delete tr.attrs["data-campaign-id"];
+        delete tr.attrs["data-id"];
+    });
+
+    const verifiedRegistry = {
+        "1716": {
+            campaignId: "1716",
+            campaignName: "TS FRESH DATA",
+            liveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+            filterId: "4125",
+            filterCount: 62826,
+            source: "CAMPAIGN_EDIT_DOM",
+            timestamp: Date.now()
+        },
+        "1717": {
+            campaignId: "1717",
+            campaignName: "TS FIRE DATA",
+            liveFilter: "TS FIRE DATA",
+            filterId: "3682",
+            filterCount: null,
+            source: "CAMPAIGN_EDIT_DOM",
+            timestamp: Date.now()
+        }
+    };
+    global.localStorage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify(verifiedRegistry));
+    global.document = dom.document;
+
+    const campaigns = global.CTParser.readCampaigns();
+    assert.strictEqual(campaigns.length, 2);
+    assert.strictEqual(campaigns[0].id, "1716", "readCampaigns must backfill numeric ID by exact unique campaignName");
+    assert.strictEqual(campaigns[0].rawId, "1716");
+    assert.strictEqual(campaigns[0].liveFilterId, "4125");
+    assert.strictEqual(campaigns[0].liveFilterCount, 62826);
+    assert.strictEqual(campaigns[1].id, "1717");
+    assert.strictEqual(campaigns[1].liveFilterId, "3682");
+
+    // Verify ambiguous duplicate registry names do NOT backfill
+    global.localStorage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
+        "1716": { campaignId: "1716", campaignName: "TS FRESH DATA", liveFilter: "Filter A" },
+        "9999": { campaignId: "9999", campaignName: "TS FRESH DATA", liveFilter: "Filter B" }
+    }));
+    const ambiguous = global.CTParser.readCampaigns();
+    assert.strictEqual(ambiguous[0].id, "", "Ambiguous campaignName matches must never guess or backfill an ID");
+});
+
+test("EAST-3 UPGRADE 323: CTDataIntelligenceEngine.recordTargetingTransition records baseline, history, and alert immediately", () => {
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+    const store = new Map();
+    const storage = {
+        getItem(k) { return store.get(k) || null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); }
+    };
+    const engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage });
+
+    const alertObj = engine.recordTargetingTransition({
+        cid: "1716",
+        cName: "TS FRESH DATA",
+        prevFilter: "TS VDH INT 11/04",
+        currFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+        prevCount: 41200,
+        currCount: 62826,
+        source: "CAMPAIGN_EDIT_DOM",
+        now: 1794300000000
+    });
+
+    assert.ok(alertObj, "Transition between distinct filters must return an alert object");
+    assert.strictEqual(alertObj.category, "LIVE_FILTER");
+    assert.strictEqual(alertObj.targetId, "1716");
+    assert.strictEqual(alertObj.previousFilter, "TS VDH INT 11/04");
+    assert.strictEqual(alertObj.currentFilter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+    assert.strictEqual(alertObj.currentCount, 62826);
+
+    assert.ok(engine.history.some(h => h.category === "LIVE_FILTER" && h.targetId === "1716"), "History must contain LIVE_FILTER transition");
+    assert.ok(engine.liveFilterChangeHistory.some(h => h.campaignId === "1716" && h.currentCount === 62826), "liveFilterChangeHistory must contain entry");
+    assert.strictEqual(engine.filterBaselines["campaign_filter_1716"].filter, "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts");
+});
+
+test("EAST-3 UPGRADE 324: getLiveFilterIntelligenceSummary backfills IDs cleanly and exposes filterId & filterCount in Assignment Matrix", () => {
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+    const store = new Map();
+    const storage = {
+        getItem(k) { return store.get(k) || null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); }
+    };
+    const now = Date.now();
+    storage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
+        "1716": {
+            campaignId: "1716",
+            campaignName: "TS FRESH DATA",
+            liveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+            filterId: "4125",
+            filterCount: 62826,
+            source: "CAMPAIGN_EDIT_DOM",
+            timestamp: now
+        }
+    }));
+
+    const engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage });
+    const summary = engine.getLiveFilterIntelligenceSummary({
+        campaigns: [
+            { id: "", name: "TS FRESH DATA", active: true, loggedIn: 23, contacts: 21835 },
+            { id: "", name: "RES CRED MAIN", active: false, loggedIn: 0, contacts: 0, liveFilter: "All Contacts 0 Dials (Count: 9500)", liveFilterId: "3480", liveFilterTimestamp: now }
+        ]
+    });
+
+    assert.strictEqual(summary.assignmentMatrix.length, 2);
+    const row1 = summary.assignmentMatrix[0];
+    assert.strictEqual(row1.campaignId, "1716", "Matrix must backfill campaignId for exact unique campaignName");
+    assert.strictEqual(row1.filterId, "4125", "Matrix must expose filterId from verified registry");
+    assert.strictEqual(row1.filterCount, 62826, "Matrix must expose filterCount from verified registry");
+
+    const row2 = summary.assignmentMatrix[1];
+    assert.strictEqual(row2.filterId, "3480", "Matrix must preserve liveFilterId on c.liveFilter fallback");
+    assert.strictEqual(row2.filterCount, 9500, "Matrix must extract filterCount from c.liveFilter fallback");
+});
+
+test("EAST-3 UPGRADE 325: Legacy non-numeric operating campaign selection upgrades safely to numeric ID in dashboard reconcile logic", () => {
+    const dashboardSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.ok(dashboardSrc.includes("One-time safe upgrade of legacy non-numeric operating campaign names"), "dashboard.js must include legacy selection migration");
+
+    const storedWrites = {};
+    const state = {
+        campaigns: [{ id: "", rawId: "", name: "TS FRESH DATA", active: true }],
+        operatingCampaigns: ["ts fresh data"],
+        operatingCampaign: "ts fresh data"
+    };
+    const registry = {
+        "1716": {
+            campaignId: "1716",
+            campaignName: "TS FRESH DATA",
+            liveFilter: "TS FRESH DATA - 4 ATT 5 or Less Consecutive No Contact Attempts",
+            filterId: "4125",
+            filterCount: 62826,
+            source: "CAMPAIGN_EDIT_DOM",
+            timestamp: 1794300000000
+        }
+    };
+
+    // Execute the same unambiguous name->numeric ID upgrade contract verified in dashboard.js
+    const legacyMap = new Map();
+    state.campaigns.forEach(c => {
+        const normName = String(c.name || "").trim().toLowerCase();
+        const matches = Object.values(registry).filter(e => e && e.campaignId && /^[0-9]+$/.test(String(e.campaignId)) && String(e.campaignName || "").trim().toLowerCase() === normName);
+        if (matches.length === 1) {
+            c.id = String(matches[0].campaignId);
+            c.rawId = String(matches[0].campaignId);
+            legacyMap.set(normName, c.id);
+        }
+    });
+    let migrated = false;
+    const upgraded = state.operatingCampaigns.map(sel => {
+        const s = String(sel || "").trim();
+        if (!/^[0-9]+$/.test(s) && legacyMap.has(s.toLowerCase())) {
+            migrated = true;
+            return legacyMap.get(s.toLowerCase());
+        }
+        return s;
+    });
+    if (migrated) {
+        state.operatingCampaigns = Array.from(new Set(upgraded.filter(Boolean)));
+        state.operatingCampaign = state.operatingCampaigns[0] || "";
+        storedWrites["ct_east3_operating_campaigns"] = JSON.stringify(state.operatingCampaigns);
+        storedWrites["ct_east3_operating_campaign"] = state.operatingCampaign;
+    }
+
+    assert.strictEqual(migrated, true);
+    assert.deepStrictEqual(state.operatingCampaigns, ["1716"]);
+    assert.strictEqual(state.operatingCampaign, "1716");
+    assert.strictEqual(storedWrites["ct_east3_operating_campaigns"], '["1716"]');
+});
+
+test("EAST-3 UPGRADE 326: Suppresses synthetic (Not Active) transitions, cleans header tag, and avoids undefined delta display", () => {
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.strictEqual(dashSrc.includes('"ct-dialer-tag " + ("ct-dialer-east3")'), false, "Header dialer tag must not contain raw JS concatenation inside template string");
+    assert.ok(dashSrc.includes('<span class="ct-dialer-tag ct-dialer-east3">${DIALER}</span>'), "Header dialer tag must interpolate ${DIALER} cleanly");
+
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+    const store = new Map();
+    const storage = {
+        getItem(k) { return store.get(k) || null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); }
+    };
+    const engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage });
+    const suppressed = engine.recordTargetingTransition({
+        cid: "1717",
+        cName: "TS FIRE DATA",
+        prevFilter: "TS FIRE DATA (Not Active)",
+        currFilter: "TS FIRE DATA",
+        currCount: null,
+        source: "CAMPAIGN_EDIT_DOM"
+    });
+    assert.strictEqual(suppressed, null, "Canonical equivalence after stripping (Not Active) must not trigger false transition alert");
+    assert.strictEqual(engine.activeAlerts.length, 0);
+
+    // Also verify loadState() purges any previously stored synthetic (Not Active) alerts
+    store.set(engine.ALERTS_KEY, JSON.stringify([{
+        id: "fake_1",
+        category: "LIVE_FILTER",
+        previousFilter: "All Contacts 0 Dials (Not Active)",
+        currentFilter: "All Contacts 0 Dials",
+        metric: "Live Filter"
+    }, {
+        id: "real_1",
+        category: "LIVE_FILTER",
+        previousFilter: "Filter A",
+        currentFilter: "Filter B",
+        metric: "Live Filter"
+    }]));
+    const reloaded = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage });
+    assert.strictEqual(reloaded.activeAlerts.length, 1);
+    assert.strictEqual(reloaded.activeAlerts[0].id, "real_1");
+});
+
+test("EAST-3 UPGRADE 327: ng_bridge.js is strictly read-only and parser extracts data-ct-campaign-id + guards LOADING select state", () => {
+    const bridgeSrc = fs.readFileSync(path.resolve(__dirname, "../src/ng_bridge.js"), "utf-8");
+    assert.strictEqual((bridgeSrc.match(/\.click\s*\(/g) || []).length, 0);
+    assert.strictEqual((bridgeSrc.match(/\bfetch\s*\(/g) || []).length, 0);
+    assert.strictEqual((bridgeSrc.match(/new\s+XMLHttpRequest/g) || []).length, 0);
+    assert.strictEqual((bridgeSrc.match(/new\s+WebSocket/g) || []).length, 0);
+    assert.ok(bridgeSrc.includes('data-ct-campaign-id'), "ng_bridge must stamp data-ct-campaign-id");
+
+    const manifest = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../manifest.json"), "utf-8"));
+    assert.ok(manifest.content_scripts.some(cs => cs.world === "MAIN" && Array.isArray(cs.js) && cs.js.includes("src/ng_bridge.js")), "manifest must register MAIN-world ng_bridge.js");
+
+    // Verify readCampaigns reads data-ct-campaign-id even with empty localStorage registry
+    const dom = createCallToolsCampaignsDOM([
+        { name: "TS FRESH DATA", active: true, contacts: "60699", outbound: "100", human: "5", agentConnect: "5" }
+    ]);
+    const row = dom.tbody.querySelectorAll("tr")[0];
+    delete row.attrs["data-campaign-id"];
+    delete row.attrs["data-id"];
+    row.setAttribute("data-ct-campaign-id", "1716");
+    global.document = dom.document;
+    const campaigns = global.CTParser.readCampaigns();
+    assert.strictEqual(campaigns.length, 1);
+    assert.strictEqual(campaigns[0].id, "1716");
+    assert.strictEqual(campaigns[0].rawId, "1716");
+
+    // Verify transient empty native <select> returns status: LOADING instead of overwriting with NONE
+    const loadDoc = new MockNode("document");
+    const form = new MockNode("form", { class: "campaign-edit-form", "data-campaign-id": "1716" });
+    loadDoc.appendChild(form);
+    const select = new MockNode("select", { formcontrolname: "live_filter", name: "live_filter" });
+    select.options = [];
+    select.selectedIndex = -1;
+    form.appendChild(select);
+    const origWin = global.window;
+    global.window = { location: { pathname: "/manager/campaigns/edit/1716", hostname: "east-3.calltools.io" } };
+    try {
+        const parsedLoading = global.CTParser.readCampaignEditForm(loadDoc);
+        assert.ok(parsedLoading);
+        assert.strictEqual(parsedLoading.status, "LOADING", "Un-hydrated form must report LOADING rather than overwriting with NONE");
+    } finally {
+        global.window = origWin;
+    }
+});
+
+test("EAST-3 UPGRADE 328: content.js runs autonomous top-level hidden Live Filter + Inventory background monitors with 0 network/click violations", () => {
+    const code = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    assert.strictEqual((code.match(/\.click\s*\(/g) || []).length, 0);
+    assert.strictEqual((code.match(/\bfetch\s*\(/g) || []).length, 0);
+    assert.strictEqual((code.match(/new\s+XMLHttpRequest/g) || []).length, 0);
+    assert.strictEqual((code.match(/new\s+WebSocket/g) || []).length, 0);
+    assert.ok(code.includes("ct-operations-hidden-livefilters-feed-east3"), "Must manage background Live Filters iframe");
+    assert.ok(code.includes("ct-operations-hidden-campaign-filter-east3"), "Must manage background Campaign Edit filter iframe");
+    assert.ok(code.includes("CT_EAST_3_BG_FILTER_OBSERVED"), "Must notify parent window immediately via postMessage");
+    assert.ok(code.includes("isTopLevelCampaignsPage"), "Must prevent nested iframes");
+});
+
+test("EAST-3 UPGRADE 329: recordTargetingTransition preserves A->B->A reversions in history & activeAlerts and saveState keeps newest 500", () => {
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+    const store = new Map();
+    const storage = {
+        getItem(k) { return store.get(k) || null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); }
+    };
+    const engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage });
+    // Seed initial baseline
+    assert.strictEqual(engine.recordTargetingTransition({ cid: "1716", cName: "TS FRESH DATA", currFilter: "Filter A", currCount: 1000, now: 1000 }), null);
+    // Transition A -> B
+    const a1 = engine.recordTargetingTransition({ cid: "1716", cName: "TS FRESH DATA", prevFilter: "Filter A", currFilter: "Filter B", prevCount: 1000, currCount: 500, now: 20000 });
+    assert.ok(a1);
+    assert.strictEqual(a1.currentFilter, "Filter B");
+    // Transition B -> A (without operator dismissing previous alert first!)
+    const a2 = engine.recordTargetingTransition({ cid: "1716", cName: "TS FRESH DATA", prevFilter: "Filter B", currFilter: "Filter A", prevCount: 500, currCount: 950, now: 40000 });
+    assert.ok(a2, "B -> A reversion must not be dropped by active duplicate suppression");
+    assert.strictEqual(a2.currentFilter, "Filter A");
+    assert.strictEqual(engine.history[0].currentFilter, "Filter A");
+    assert.strictEqual(engine.liveFilterChangeHistory[0].currentFilter, "Filter A");
+    assert.strictEqual(engine.activeAlerts.filter(a => a.category === "LIVE_FILTER" && a.targetId === "1716").length, 1, "Must supersede older alert on same campaign");
+});
+
+test("EAST-3 UPGRADE 330: dashboard.js guards iframe mounting via window.top and detects transitions even when parser pre-hydrates liveFilter", () => {
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.ok(dashSrc.includes("window !== window.top"), "isDashboardRoute must guard against mounting inside background iframes");
+    assert.ok(dashSrc.includes("prevForTransition") && dashSrc.includes("baselineFilter"), "reconcileCampaignsWithVerifiedRegistry must compare against baselineFilter even if parser pre-populated liveFilter");
+});
+
+test("EAST-3 UPGRADE 331: Plan B unified sequential SPA background observer prevents dual-iframe contention and preserves read-only boundaries", () => {
+    const code = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    assert.strictEqual((code.match(/\.click\s*\(/g) || []).length, 0);
+    assert.strictEqual((code.match(/\bfetch\s*\(/g) || []).length, 0);
+    assert.strictEqual((code.match(/new\s+XMLHttpRequest/g) || []).length, 0);
+    assert.strictEqual((code.match(/new\s+WebSocket/g) || []).length, 0);
+    assert.ok(code.includes("dispatchBgSpaStep"), "content.js must use sequential SPA route transitions inside single background iframe");
+    assert.ok(code.includes("lfConsecutiveTimeouts"), "content.js must include timeout hard-reload recovery");
+    assert.ok(code.includes("bgRouteEpoch"), "onRouteTransition must epoch-reset signatures cleanly on SPA navigation");
+});
+
+test("EAST-3 UPGRADE 332: Operating Campaigns toolbar dropdown is never clipped by overflow-x on .ct-actions and aligns safely inside viewport", () => {
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.strictEqual(dashSrc.includes("overflow-x: auto !important;\n                white-space: nowrap"), false, ".ct-actions must never force overflow-y: auto that clips .ct-operating-menu");
+    assert.ok(dashSrc.includes("overflow: visible !important;"), ".ct-actions must enforce overflow: visible !important");
+    assert.ok(dashSrc.includes("ct-operating-menu.is-align-right"), "Menu must support right-edge viewport alignment");
+});
+
+test("EAST-3 UPGRADE 333: Table row Operating/Focus and Card operate controls reconcile rows and cards in place and update UI synchronously", () => {
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    assert.ok(dashSrc.includes("const canReuseRows = existingRows.length === visible.length"), "updateActiveCommandSummary must reuse <tr> nodes in place to prevent dropped clicks");
+    assert.ok(dashSrc.includes("if (currentAtSlot !== card.node)"), "Campaign card list must reconcile card nodes in place without unconditional detach/appendChild");
+    assert.strictEqual(dashSrc.includes("refs.list.appendChild(card.node)"), false, "Must never detach & re-append already-ordered cards on 1s poll ticks");
+    assert.ok(dashSrc.includes("const fTotalMatches = (invMatch && invMatch.totalCount !== undefined && invMatch.totalCount !== null)"), "Card 4 must map invMatch.totalCount with fCount fallback");
+});

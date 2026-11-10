@@ -1,4 +1,4 @@
-console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ") v11.3.8");
+console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ") v11.3.9"); // compat v11.3.8
 
 (function () {
     "use strict";
@@ -389,7 +389,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         }
     }
 
-    const root = ensureRoot();
+    // Route guard: Only mount dashboard UI on /manager/campaigns or /manager/queues (never in background iframes or on /edit, /live-filters, or /login)
+    function isDashboardRoute() {
+        if (typeof window !== "undefined" && window.top && window !== window.top) return false;
+        if (typeof window === "undefined" || !window.location || !window.location.pathname) return true;
+        const p = window.location.pathname.replace(/\/+$/, "");
+        if (p.includes("/manager/campaigns/edit/") || p.includes("/manager/live-filters") || p.includes("/login")) return false;
+        return p === "/manager/campaigns" || p === "/manager/queues" || p === "";
+    }
+    let root = isDashboardRoute() ? ensureRoot() : null;
     const cardCache = new Map();
     let refs = {};
     let operatingOutsideClickHandler = null;
@@ -398,12 +406,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
 
     state.allCollapsed = Boolean(state.layout.collapsed);
 
-    ensureStyles();
-    mount();
-    applyLayout(state.layout);
-    applyZoom();
-    installGlobalInteractions();
+    if (root) {
+        ensureStyles();
+        mount();
+        applyLayout(state.layout);
+        applyZoom();
+        installGlobalInteractions();
+        scheduleRender();
+    }
     window.addEventListener("resize", function () {
+        if (!root) return;
         const next = normalizeLayout(state.layout);
         state.layout.left = next.left;
         state.layout.top = next.top;
@@ -412,7 +424,6 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         applyLayout(state.layout);
         persistLayout();
     });
-    scheduleRender();
 
     function hydrateInboundFromExtensionStorage() {
         if (typeof chrome === "undefined" || !chrome.storage || !chrome.storage.local) return;
@@ -444,6 +455,144 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         } catch (error) {}
     }
 
+    function reconcileCampaignsWithVerifiedRegistry(customRegistry, targetCampaignList) {
+        let registry = customRegistry || null;
+        if (!registry) {
+            try {
+                registry = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}");
+            } catch (e) {
+                registry = {};
+            }
+        }
+        if (!registry || typeof registry !== "object") return false;
+
+        let filterIdMap = {};
+        try {
+            filterIdMap = JSON.parse(localStorage.getItem("ct_east3_filter_id_map_v1") || "{}");
+        } catch (e) {}
+
+        const list = Array.isArray(targetCampaignList) ? targetCampaignList : state.campaigns;
+        let changed = false;
+        let migratedSelection = false;
+        const legacyNameToNumericId = new Map();
+
+        if (Array.isArray(list)) {
+            list.forEach(function (c) {
+                if (!c) return;
+                let cid = String(c.rawId || c.id || (c.__id && !String(c.__id).startsWith("campaign-") ? c.__id : "") || "").trim();
+                let entry = (cid && /^[0-9]+$/.test(cid) && registry[cid]) ? registry[cid] : null;
+                if (!entry && (!cid || !/^[0-9]+$/.test(cid)) && c.name) {
+                    const normName = String(c.name).trim().toLowerCase();
+                    const matches = Object.values(registry).filter(function (e) {
+                        return e && e.campaignId && /^[0-9]+$/.test(String(e.campaignId).trim()) &&
+                            e.campaignName && String(e.campaignName).trim().toLowerCase() === normName;
+                    });
+                    if (matches.length === 1) {
+                        entry = matches[0];
+                        cid = String(entry.campaignId).trim();
+                        if (!c.id) { c.id = cid; changed = true; }
+                        if (!c.rawId) { c.rawId = cid; changed = true; }
+                        legacyNameToNumericId.set(normName, cid);
+                    }
+                } else if (entry && entry.campaignName) {
+                    legacyNameToNumericId.set(String(entry.campaignName).trim().toLowerCase(), cid);
+                }
+
+                if (entry) {
+                    const baselineKey = "campaign_filter_" + cid;
+                    const baselineEntry = (intelligenceEngine && intelligenceEngine.filterBaselines)
+                        ? intelligenceEngine.filterBaselines[baselineKey]
+                        : null;
+                    const previousFilter = c.liveFilter || (baselineEntry ? baselineEntry.filter : null);
+                    const previousCount = (c.liveFilterCount !== undefined && c.liveFilterCount !== null)
+                        ? c.liveFilterCount
+                        : (baselineEntry && baselineEntry.count !== undefined ? baselineEntry.count : null);
+
+                    let resolvedFid = entry.filterId ? String(entry.filterId).trim() : null;
+                    if (!resolvedFid && entry.liveFilter) {
+                        const mapped = filterIdMap[String(entry.liveFilter).trim().toLowerCase()];
+                        if (mapped && mapped.filterId) resolvedFid = String(mapped.filterId);
+                    }
+
+                    if (entry.liveFilter) {
+                        const canonCmp = (s) => String(s || "")
+                            .replace(/\s*[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/gi, "")
+                            .replace(/\s*\(\s*Not\s+Active\s*\)\s*$/gi, "")
+                            .trim().toLowerCase();
+                        const baselineFilter = (baselineEntry && baselineEntry.filter) ? baselineEntry.filter : null;
+                        const baselineCount = (baselineEntry && baselineEntry.count !== undefined) ? baselineEntry.count : null;
+                        const prevForTransition = (c.liveFilter && canonCmp(c.liveFilter) !== canonCmp(entry.liveFilter))
+                            ? c.liveFilter
+                            : baselineFilter;
+                        const prevCountForTransition = (prevForTransition && baselineFilter && canonCmp(prevForTransition) === canonCmp(baselineFilter) && baselineCount !== null)
+                            ? baselineCount
+                            : previousCount;
+
+                        if (c.liveFilter !== entry.liveFilter ||
+                            c.liveFilterTimestamp !== entry.timestamp ||
+                            c.liveFilterId !== resolvedFid ||
+                            c.liveFilterCount !== entry.filterCount) {
+                            c.liveFilter = entry.liveFilter;
+                            c.liveFilterSource = entry.source || "CAMPAIGN_EDIT_DOM";
+                            c.liveFilterTimestamp = entry.timestamp || Date.now();
+                            c.liveFilterCount = entry.filterCount !== undefined ? entry.filterCount : null;
+                            c.liveFilterId = resolvedFid || c.liveFilterId || null;
+                            c.liveFilterStatus = entry.status || "ASSIGNED";
+                            c.liveFilterConfidence = "VERIFIED";
+                            changed = true;
+                        }
+
+                        // Always evaluate baseline vs entry (even if parser.js pre-hydrated c.liveFilter before onCtUpdate)
+                        if (intelligenceEngine && intelligenceEngine.recordTargetingTransition) {
+                            if (!baselineEntry || (prevForTransition && canonCmp(prevForTransition) !== canonCmp(entry.liveFilter))) {
+                                intelligenceEngine.recordTargetingTransition({
+                                    cid: cid,
+                                    cName: c.name || entry.campaignName || ("Campaign " + cid),
+                                    prevFilter: prevForTransition,
+                                    currFilter: entry.liveFilter,
+                                    prevCount: prevCountForTransition,
+                                    currCount: entry.filterCount,
+                                    source: entry.source || "CAMPAIGN_EDIT_DOM",
+                                    now: entry.timestamp || Date.now()
+                                });
+                            }
+                        }
+                    } else if (entry.status === "NONE") {
+                        c.liveFilter = null;
+                        c.liveFilterStatus = "NONE";
+                        c.liveFilterSource = entry.source || "CAMPAIGN_EDIT_DOM";
+                        c.liveFilterTimestamp = entry.timestamp || Date.now();
+                        c.liveFilterCount = null;
+                        c.liveFilterId = null;
+                        changed = true;
+                    }
+                }
+            });
+        }
+
+        // One-time safe upgrade of legacy non-numeric operating campaign names ("ts fresh data" -> "1716")
+        if (legacyNameToNumericId.size > 0 && Array.isArray(state.operatingCampaigns) && state.operatingCampaigns.length > 0) {
+            const upgraded = state.operatingCampaigns.map(function (selId) {
+                const s = String(selId || "").trim();
+                if (!/^[0-9]+$/.test(s)) {
+                    const mappedId = legacyNameToNumericId.get(s.toLowerCase());
+                    if (mappedId) {
+                        migratedSelection = true;
+                        return mappedId;
+                    }
+                }
+                return s;
+            });
+            if (migratedSelection) {
+                state.operatingCampaigns = Array.from(new Set(upgraded.filter(Boolean)));
+                state.operatingCampaign = state.operatingCampaigns[0] || "";
+                writeStorage("ct_east3_operating_campaigns", JSON.stringify(state.operatingCampaigns));
+                writeStorage("ct_east3_operating_campaign", state.operatingCampaign);
+            }
+        }
+        return changed;
+    }
+
     function onInboundExtensionStorageChanged(changes, areaName) {
         if (areaName !== "local" || !changes) return;
         const dataChange = changes[INBOUND_STORAGE_DATA_KEY];
@@ -470,19 +619,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         }
         if (changes && (changes[VERIFIED_FILTERS_KEY] || changes[LIVE_FILTERS_INVENTORY_KEY])) {
             if (changes[VERIFIED_FILTERS_KEY] && changes[VERIFIED_FILTERS_KEY].newValue) {
-                const reg = changes[VERIFIED_FILTERS_KEY].newValue;
-                if (Array.isArray(state.campaigns)) {
-                    state.campaigns.forEach(function (c) {
-                        const cid = c.rawId || c.id || c.__id;
-                        const entry = (cid && reg[String(cid)]) || (c.name && reg[String(c.name).trim()]) || null;
-                        if (entry && entry.liveFilter) {
-                            c.liveFilter = entry.liveFilter;
-                            c.liveFilterSource = entry.source || "VERIFIED_REGISTRY";
-                            c.liveFilterTimestamp = entry.timestamp || null;
-                            c.liveFilterCount = entry.filterCount !== undefined ? entry.filterCount : null;
-                        }
-                    });
-                }
+                reconcileCampaignsWithVerifiedRegistry(changes[VERIFIED_FILTERS_KEY].newValue);
             }
             scheduleRender();
         }
@@ -562,16 +699,30 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         }
 
         updateConnectionState(now);
+        scheduleRender();
     }, 1000);
     const routeTimer = setInterval(function () {
         const path = window.location.pathname.replace(/\/+$/, "");
         const route = path === "/manager/queues" ? "queues" : path === "/manager/campaigns" ? "campaigns" : "other";
-        const visible = route === "campaigns" || route === "queues";
+        const visible = (route === "campaigns" || route === "queues") && isDashboardRoute();
+        if (visible && !root) {
+            root = ensureRoot();
+            if (root) {
+                ensureStyles();
+                mount();
+                applyLayout(state.layout);
+                applyZoom();
+                installGlobalInteractions();
+            }
+        }
         if (route === state.route && visible === state.routeVisible) return;
         state.route = route;
         state.routeVisible = visible;
-        root.style.display = visible ? "flex" : "none";
-        if (visible) scheduleRender();
+        if (root) root.style.display = visible ? "flex" : "none";
+        if (visible) {
+            reconcileCampaignsWithVerifiedRegistry();
+            scheduleRender();
+        }
     }, 1000);
     // Local runway sampling uses already-parsed state only: no API, no DOM scan,
     // and no extra CallTools activity. It supplies elapsed-time anchors even
@@ -638,6 +789,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         const nextCampaigns = Array.isArray(detail)
             ? detail
             : (detail && Array.isArray(detail.campaigns) ? detail.campaigns : []);
+        reconcileCampaignsWithVerifiedRegistry(null, nextCampaigns);
         const signature = dataSignature(nextCampaigns);
         const changed = signature !== state.lastDataSignature;
 
@@ -694,10 +846,27 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         updateConnectionState(now);
     };
     document.addEventListener(FEED_STATUS_EVENT, onCtFeedStatus);
+    function onLiveFilterSyncEvent() {
+        reconcileCampaignsWithVerifiedRegistry();
+        if (root) {
+            if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+            render();
+        }
+    }
+    document.addEventListener("CT_EAST_3_VERIFIED_FILTER_CHANGED", onLiveFilterSyncEvent);
+    window.addEventListener("CT_EAST_3_VERIFIED_FILTER_CHANGED", onLiveFilterSyncEvent);
+    document.addEventListener("CT_EAST_3_INVENTORY_UPDATED", onLiveFilterSyncEvent);
+    window.addEventListener("CT_EAST_3_INVENTORY_UPDATED", onLiveFilterSyncEvent);
+
 
     const onStorage = function (event) {
         if (!event || !event.key) return;
         if (event.key === VERIFIED_FILTERS_KEY || event.key === LIVE_FILTERS_INVENTORY_KEY) {
+            let parsed = null;
+            if (event.key === VERIFIED_FILTERS_KEY && event.newValue) {
+                try { parsed = JSON.parse(event.newValue); } catch (e) {}
+            }
+            reconcileCampaignsWithVerifiedRegistry(parsed);
             scheduleRender();
             return;
         }
@@ -737,6 +906,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         if (document.visibilityState === "visible") {
             secondsUntilNextMonitoring = 0;
             state.nextMonitoringCheckIn = 0;
+            reconcileCampaignsWithVerifiedRegistry();
             hydrateInboundFromExtensionStorage();
             trigger15sMonitoringRefresh("visibility-change-recovery");
             updateConnectionState(Date.now());
@@ -876,7 +1046,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             #${DASHBOARD_ID} .ct-summary {
                 position: sticky;
                 top: 0;
-                z-index: 3;
+                z-index: 80;
                 display: grid;
                 gap: 9px;
                 padding: 11px;
@@ -2065,20 +2235,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             #${DASHBOARD_ID} .ct-alert-action { font-size: 11px; line-height: 1.3; }
             #${DASHBOARD_ID} .ct-actions {
                 display: flex !important;
-                flex-wrap: nowrap !important;
-                overflow-x: auto !important;
-                white-space: nowrap !important;
+                flex-wrap: wrap !important;
+                overflow: visible !important;
                 align-items: center !important;
                 gap: 6px !important;
-                scrollbar-width: none !important;
-                -ms-overflow-style: none !important;
             }
-            #${DASHBOARD_ID} .ct-actions::-webkit-scrollbar { display: none !important; }
             #${DASHBOARD_ID} .ct-actions > .ct-btn { flex: 0 0 auto !important; white-space: nowrap !important; }
             #${DASHBOARD_ID} .ct-reset-btn { flex-shrink: 0 !important; white-space: nowrap !important; }
             #${DASHBOARD_ID} .ct-search { flex: 1 1 180px !important; min-width: 130px !important; }
             #${DASHBOARD_ID} .ct-threshold-wrap { flex: 0 0 88px !important; min-width: 80px !important; }
-            #${DASHBOARD_ID} .ct-operating-wrap { flex: 0 1 190px !important; min-width: 160px !important; z-index: 40 !important; }
+            #${DASHBOARD_ID} .ct-operating-wrap { flex: 0 1 225px !important; min-width: 205px !important; display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 2px !important; position: relative !important; z-index: 40 !important; }
             #${DASHBOARD_ID} .ct-threshold-label, #${DASHBOARD_ID} .ct-operating-label { display:block; margin: 0 0 2px 2px; color: rgba(255,255,255,.68); font-size:8px; font-weight:900; text-transform:uppercase; }
             #${DASHBOARD_ID} .ct-threshold, #${DASHBOARD_ID} .ct-operating { height: 31px; width:100%; padding: 0 8px; border:1px solid rgba(255,255,255,.22); border-radius:7px; color:#fff; background:rgba(255,255,255,.12); outline:none; }
             #${DASHBOARD_ID} .ct-operating option { color:#111827; background:#fff; }
@@ -2399,7 +2565,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             #${DASHBOARD_ID} .ct-threshold-wrap { flex:0 0 92px; }
             #${DASHBOARD_ID} .ct-operating-wrap { flex:1 1 220px; min-width:190px; z-index:30; }
             #${DASHBOARD_ID} .ct-refresh-btn, #${DASHBOARD_ID} .ct-manage-order-btn, #${DASHBOARD_ID} .ct-order-reset-btn, #${DASHBOARD_ID} .ct-theme-btn, #${DASHBOARD_ID} .ct-reset-btn { flex:0 0 auto; }
-            #${DASHBOARD_ID} .ct-operating-menu { z-index:100001; }
+            #${DASHBOARD_ID} .ct-operating-menu { z-index:60; }
 
             /* Stronger operating-set hierarchy */
             #${DASHBOARD_ID} .ct-operating-panel { position:relative; overflow:hidden; border:1px solid rgba(148,163,184,.28); }
@@ -2502,24 +2668,21 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             /* v11.1.25 final layout authority — prevent control overlap and make multi-campaign/insight scanning readable. */
             #${DASHBOARD_ID} .ct-actions {
                 display: flex !important;
-                flex-wrap: nowrap !important;
-                overflow-x: auto !important;
-                white-space: nowrap !important;
+                flex-wrap: wrap !important;
+                overflow: visible !important;
                 align-items: center !important;
                 gap: 6px !important;
-                scrollbar-width: none !important;
-                -ms-overflow-style: none !important;
             }
-            #${DASHBOARD_ID} .ct-actions::-webkit-scrollbar { display: none !important; }
             #${DASHBOARD_ID} .ct-actions > .ct-btn { flex: 0 0 auto !important; white-space: nowrap !important; }
             #${DASHBOARD_ID} .ct-reset-btn { flex-shrink: 0 !important; white-space: nowrap !important; }
             #${DASHBOARD_ID} .ct-search { flex: 1 1 180px !important; min-width: 130px !important; }
             #${DASHBOARD_ID} .ct-threshold-wrap { flex: 0 0 88px !important; min-width: 80px !important; }
-            #${DASHBOARD_ID} .ct-operating-wrap { flex: 0 1 190px !important; min-width: 160px !important; z-index: 40 !important; }
+            #${DASHBOARD_ID} .ct-operating-wrap { flex: 0 1 225px !important; min-width: 205px !important; display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 2px !important; position: relative !important; z-index: 40 !important; }
             #${DASHBOARD_ID} .ct-operating-label,
             #${DASHBOARD_ID} .ct-threshold-label { display:block; min-height:12px; white-space:nowrap; }
             #${DASHBOARD_ID} .ct-operating-trigger { position:relative; z-index:41; }
-            #${DASHBOARD_ID} .ct-operating-menu { z-index:60; }
+            #${DASHBOARD_ID} .ct-operating-menu { z-index:75 !important; }
+            #${DASHBOARD_ID} .ct-operating-menu.is-align-right { left:auto !important; right:0 !important; }
 
             #${DASHBOARD_ID} .ct-operating-panel {
                 grid-template-columns:250px minmax(0,1fr);
@@ -2990,13 +3153,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
     }
 
     function mount() {
+        if (!root) return;
         root.dataset.theme = state.theme;
         root.innerHTML = `
             <div class="ct-shell">
                 <header class="ct-summary">
                     <div class="ct-row">
                         <div class="ct-title">
-                            <h2>CallTools Operations <span class="ct-dialer-tag " + ("ct-dialer-east3") + "">" + ("EAST-3") + "</span></h2>
+                            <h2>CallTools Operations <span class="ct-dialer-tag ct-dialer-east3">${DIALER}</span></h2>
                             <span class="ct-updated">Waiting for verified CallTools data</span>
                         </div>
                         <div class="ct-summary-controls">
@@ -3676,6 +3840,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             refs.operatingTrigger.setAttribute("aria-expanded", String(willOpen));
             if (willOpen) {
                 updateOperatingSelect(state.campaigns);
+                refs.operatingMenu.classList.remove("is-align-right");
+                try {
+                    const menuRect = refs.operatingMenu.getBoundingClientRect();
+                    const rootRect = root.getBoundingClientRect();
+                    const maxRight = Math.min(window.innerWidth || 99999, rootRect.right || 99999) - 12;
+                    if (menuRect.right > maxRight) {
+                        refs.operatingMenu.classList.add("is-align-right");
+                    }
+                } catch (e) {}
             }
         });
         refs.operatingMenu.addEventListener("click", function (event) {
@@ -3691,7 +3864,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 addCurrentStateAlerts(state.campaigns);
                 showActionNotice("All visible campaigns selected.");
                 updateOperatingSelect(state.campaigns);
-                scheduleRender();
+                if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+                render();
                 return;
             }
             const clear = event.target.closest('[data-operating-action="clear"]');
@@ -3701,7 +3875,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 addCurrentStateAlerts(state.campaigns);
                 showActionNotice("Operating campaign selection cleared.");
                 updateOperatingSelect(state.campaigns);
-                scheduleRender();
+                if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+                render();
                 return;
             }
             const option = event.target.closest('[data-operating-id]');
@@ -3712,16 +3887,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             let adding = true;
             const all = state.campaigns || [];
             const targetCampaign = all.find(function(c) {
-                const cid = c.rawId || c.id || c.__id || campaignId(c);
-                return (cid && cid === id) || (c.name && String(c.name).trim().toLowerCase() === id.toLowerCase());
+                const cid = String(c.rawId || c.id || c.__id || "");
+                return cid && cid === id;
             });
-            const canonicalId = targetCampaign ? (targetCampaign.rawId ? String(targetCampaign.rawId) : targetCampaign.id ? String(targetCampaign.id) : targetCampaign.__id ? String(targetCampaign.__id) : String(targetCampaign.name || "").trim().toLowerCase()) : id;
+            const canonicalId = targetCampaign ? String(targetCampaign.rawId || targetCampaign.id || targetCampaign.__id || id) : id;
             if (targetCampaign) {
                 if (isCampaignSelected(targetCampaign, next)) {
-                    if (targetCampaign.rawId) next.delete(String(targetCampaign.rawId));
-                    if (targetCampaign.id) next.delete(String(targetCampaign.id));
-                    if (targetCampaign.__id) next.delete(String(targetCampaign.__id));
-                    if (targetCampaign.name) next.delete(String(targetCampaign.name).trim().toLowerCase());
+                    if (targetCampaign.rawId) next.delete(String(targetCampaign.rawId).trim());
+                    if (targetCampaign.id) next.delete(String(targetCampaign.id).trim());
+                    if (targetCampaign.__id) next.delete(String(targetCampaign.__id).trim());
                     next.delete(canonicalId);
                     next.delete(id);
                     adding = false;
@@ -3746,7 +3920,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             addCurrentStateAlerts(state.campaigns);
             showActionNotice(adding ? (targetCampaign ? safeValue(targetCampaign.name) : "Campaign") + " added to operating set." : (targetCampaign ? safeValue(targetCampaign.name) : "Campaign") + " removed from operating set.");
             updateOperatingSelect(state.campaigns);
-            scheduleRender();
+            if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+            render();
         });
         operatingOutsideClickHandler = function (event) {
             if (!refs.operatingMenu || refs.operatingMenu.hidden) return;
@@ -4350,14 +4525,36 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 if (!card) return;
                 if (action.dataset.rowAction === "focus") focusCampaign(cardNode.dataset.id, true);
                 else if (action.dataset.rowAction === "operate") {
-                    const id = cardNode.dataset.id;
-                    const next = new Set(state.operatingCampaigns || []);
-                    const adding = !next.has(id);
-                    if (adding) next.add(id); else next.delete(id);
+                    const id = String(cardNode.dataset.id || "").trim();
+                    const prepared = prepareCampaigns(state.campaigns);
+                    const match = prepared.find(function (c) {
+                        return (c.__id && String(c.__id).trim() === id) ||
+                               (c.rawId && String(c.rawId).trim() === id) ||
+                               (c.id && String(c.id).trim() === id);
+                    });
+                    const canonicalId = match ? String(match.rawId || match.id || match.__id || id) : id;
+                    const next = new Set((state.operatingCampaigns || []).map(function (v) { return String(v || "").trim(); }).filter(Boolean));
+                    const already = match ? isCampaignSelected(match, next) : next.has(canonicalId);
+                    if (already) {
+                        if (match) {
+                            if (match.rawId) next.delete(String(match.rawId).trim());
+                            if (match.id) next.delete(String(match.id).trim());
+                            if (match.__id) next.delete(String(match.__id).trim());
+                            if (match.name) next.delete(String(match.name).trim().toLowerCase());
+                        }
+                        next.delete(canonicalId);
+                        next.delete(id);
+                    } else {
+                        next.add(canonicalId);
+                    }
                     writeOperatingCampaigns(Array.from(next));
                     addCurrentStateAlerts(state.campaigns);
-                    showActionNotice(adding ? "Campaign added to the operating set." : "Campaign removed from the operating set.");
-                    scheduleRender();
+                    showActionNotice(!already
+                        ? (match ? safeValue(match.name) + " selected as operating campaign." : "Campaign added to the operating set.")
+                        : (match ? safeValue(match.name) + " removed from operating set." : "Campaign removed from the operating set."));
+                    updateOperatingSelect(state.campaigns);
+                    if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+                    render();
                 } else if (action.dataset.rowAction === "details") {
                     card.collapsed = !card.collapsed;
                     card.node.classList.toggle("is-collapsed", card.collapsed || state.allCollapsed);
@@ -4821,6 +5018,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             layout.isCustom = false;
         }
 
+        if (!root) return;
         root.style.left = next.left + "px";
         root.style.top = next.top + "px";
         root.style.right = "auto";
@@ -4837,7 +5035,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
     }
 
     function scheduleRender() {
-        if (state.pendingRender) {
+        if (!root || state.pendingRender) {
             return;
         }
 
@@ -4848,6 +5046,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
     }
 
     function render() {
+        if (!root) return;
         const prepared = prepareCampaigns(state.campaigns);
         const ordered = orderCampaigns(prepared);
         const filtered = filterCampaigns(ordered);
@@ -4970,10 +5169,18 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         // Update Live Filter Targeting Command Center Panel
         if (refs.topLiveFilterPanel || refs.topFilterCampaign) {
             const allCampList = stats.campaigns || state.campaigns || [];
-            let targetCamp = operating || (allCampList.find(function(c) { return c && c.active !== false; })) || allCampList[0] || null;
+            let targetCamp = operating;
+            if (!targetCamp && state.operatingCampaigns && state.operatingCampaigns.length > 0) {
+                const targetId = String(state.operatingCampaigns[0]).trim();
+                targetCamp = allCampList.find(function(c) {
+                    return String(c.rawId || c.id || c.__id || "") === targetId;
+                }) || null;
+            }
 
             if (targetCamp) {
-                const cId = targetCamp.rawId || targetCamp.id || "";
+                reconcileCampaignsWithVerifiedRegistry(null, allCampList);
+                const cId = (targetCamp.rawId && /^[0-9]+$/.test(String(targetCamp.rawId))) ? String(targetCamp.rawId) :
+                            (targetCamp.id && /^[0-9]+$/.test(String(targetCamp.id))) ? String(targetCamp.id) : "";
                 const cName = safeValue(targetCamp.name, cId ? "Campaign #" + cId : "Unnamed Campaign");
                 let fRaw = targetCamp.liveFilter || null;
                 let fName = fRaw;
@@ -4985,21 +5192,37 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                         fCount = Number(mCount[1].replace(/,/g, ""));
                         fName = String(fRaw).replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
                     }
+                    fName = String(fName).replace(/\s*\(\s*Not\s+Active\s*\)\s*$/i, "").trim();
                 }
 
                 const pool = (targetCamp.contacts !== undefined && targetCamp.contacts !== null)
                     ? (typeof targetCamp.contacts === "object" ? targetCamp.contacts.value : targetCamp.contacts)
                     : (targetCamp.__contacts || null);
 
+                // Query real inventory summary (CTDataIntelligenceEngine exposes inventory via getLiveFilterIntelligenceSummary())
+                const lfiData = (intelligenceEngine && intelligenceEngine.getLiveFilterIntelligenceSummary)
+                    ? intelligenceEngine.getLiveFilterIntelligenceSummary({ campaigns: allCampList })
+                    : null;
+                const invList = (lfiData && Array.isArray(lfiData.inventory)) ? lfiData.inventory : [];
+                const invLastObsMs = (lfiData && lfiData.health) ? lfiData.health.lastObservedAt : null;
+
                 let invMatch = null;
-                if (fName && intelligenceEngine && intelligenceEngine.inventory) {
+                if (fName && invList.length > 0) {
                     const normFName = String(fName).trim().toLowerCase();
-                    invMatch = intelligenceEngine.inventory.find(function(inv) {
+                    invMatch = invList.find(function(inv) {
                         return inv && String(inv.name || "").trim().toLowerCase() === normFName;
-                    });
+                    }) || null;
                 }
-                const fAvailContacts = invMatch ? (invMatch.count !== undefined ? invMatch.count : invMatch.totalCount) : null;
-                const fId = targetCamp.liveFilterId || (invMatch ? invMatch.id : null);
+                const fAvailContacts = invMatch ? (invMatch.count !== undefined ? invMatch.count : invMatch.totalCount) : (targetCamp.filterActive !== false ? fCount : null);
+                const fTotalMatches = (invMatch && invMatch.totalCount !== undefined && invMatch.totalCount !== null) ? Number(invMatch.totalCount) : fCount;
+                let fId = targetCamp.liveFilterId || (invMatch && invMatch.rawId ? invMatch.rawId : null);
+                if (!fId && fName) {
+                    try {
+                        const fidMap = JSON.parse(localStorage.getItem("ct_east3_filter_id_map_v1") || "{}");
+                        const m = fidMap[String(fName).trim().toLowerCase()];
+                        if (m && m.filterId) fId = String(m.filterId);
+                    } catch (e) {}
+                }
 
                 const fSource = targetCamp.liveFilterSource || "DOM_UNAVAILABLE";
                 const fTimeMs = targetCamp.liveFilterTimestamp || null;
@@ -5009,11 +5232,11 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 let lastChangeHtml = "No verified targeting transitions recorded";
                 let changeFound = false;
                 if (intelligenceEngine && intelligenceEngine.history) {
+                    const normCampName = cName ? String(cName).trim().toLowerCase() : "";
                     const recentChange = intelligenceEngine.history.find(function(h) {
-                        return h.category === "LIVE_FILTER" && (
-                            (cId && String(h.targetId) === String(cId)) ||
-                            (cId && String(h.campaignId) === String(cId)) ||
-                            String(h.targetName || "").trim().toLowerCase() === String(targetCamp.name || "").trim().toLowerCase()
+                        return h && h.category === "LIVE_FILTER" && (
+                            (cId && (String(h.targetId) === String(cId) || String(h.campaignId) === String(cId))) ||
+                            (normCampName && h.targetName && String(h.targetName).trim().toLowerCase() === normCampName)
                         );
                     });
                     if (recentChange) {
@@ -5086,16 +5309,23 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
 
                 // 4. Card 3: Filter Available Contacts
                 if (refs.topFilterAvailableContacts) {
-                    setText(refs.topFilterAvailableContacts, fAvailContacts !== null ? formatNumber(fAvailContacts) : (fName ? "Nav required" : "—"));
+                    const availFallback = fName
+                        ? (invList.length > 0 ? "Inactive Rule" : "Syncing...")
+                        : "—";
+                    setText(refs.topFilterAvailableContacts, fAvailContacts !== null ? formatNumber(fAvailContacts) : availFallback);
                 }
                 if (refs.topFilterAvailableTime) {
-                    const invFresh = (intelligenceEngine && intelligenceEngine.lastObservedAt) ? formatAge(Math.floor((Date.now() - intelligenceEngine.lastObservedAt)/1000)) + " ago" : "Awaiting /manager/live-filters";
+                    const invFresh = invLastObsMs
+                        ? (fAvailContacts === null && fName && invList.length > 0
+                            ? "Not in active inventory · " + formatAge(Math.floor(Math.max(0, Date.now() - invLastObsMs)/1000)) + " ago"
+                            : formatAge(Math.floor(Math.max(0, Date.now() - invLastObsMs)/1000)) + " ago")
+                        : "Background inventory syncing…";
                     setText(refs.topFilterAvailableTime, invFresh);
                 }
 
                 // 5. Card 4: Filter Total Matches
                 if (refs.topFilterMatch) {
-                    setText(refs.topFilterMatch, fCount !== null ? formatNumber(fCount) : "—");
+                    setText(refs.topFilterMatch, fTotalMatches !== null ? formatNumber(fTotalMatches) : "—");
                 }
 
                 // 6. Card 5: Targeting Verification
@@ -5222,14 +5452,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
             refs.activeSummaryRows.innerHTML = '<tr><td colspan="18" class="ct-active-empty">No campaigns match current filters.</td></tr>';
             return;
         }
-        const fragment = document.createDocumentFragment();
-        visible.forEach(function (c) {
-            const isSelected = Boolean(state.selectedCampaignIds && state.selectedCampaignIds.has(c.__id));
-            const tr = document.createElement("tr");
-            tr.className = "ct-active-row is-" + (c.__health || "good") + (isSelected ? " is-selected" : "");
-            tr.dataset.campaignId = c.__id;
-            tr.draggable = false;
+        const existingRows = Array.from(refs.activeSummaryRows.querySelectorAll("tr.ct-active-row"));
+        const canReuseRows = existingRows.length === visible.length && existingRows.every(function (tr, idx) {
+            return tr.dataset.campaignId === String(visible[idx].__id || "");
+        });
+        const fragment = canReuseRows ? null : document.createDocumentFragment();
+        const opSet = new Set((state.operatingCampaigns || []).map(function(id) { return String(id || "").trim(); }).filter(Boolean));
 
+        visible.forEach(function (c, idx) {
+            const isSelected = Boolean(state.selectedCampaignIds && state.selectedCampaignIds.has(c.__id));
             const runway = estimateCampaignRunway(c);
             const agentsText = c.__loggedInAvailable ? formatNumber(c.__loggedIn) : "—";
             const agentsTitle = c.__loggedInAvailable ? c.__loggedIn + " logged in" : "Not exposed in Campaigns feed";
@@ -5261,12 +5492,105 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 : "No outbound attempts recorded today";
             const connectRateClass = c.__outbound > 0 ? (connectRate >= 3 ? "is-good" : connectRate >= 1.5 ? "is-highlight" : "is-warning") : "";
 
-                const isOperating = isCampaignSelected(c, new Set((state.operatingCampaigns || []).map(function(id) { return String(id || "").trim(); }).filter(Boolean)));
-                const focusBtnClass = "ct-active-focus-btn" + (isOperating ? " is-operating" : "");
-                const focusBtnText = isOperating ? "Operating ✓" : "Focus";
-                const focusBtnTitle = isOperating ? "Operating campaign (click to toggle)" : "Click to select and operate " + escapeHtml(c.name);
+            const isOperating = isCampaignSelected(c, opSet);
+            const focusBtnClass = "ct-active-focus-btn" + (isOperating ? " is-operating" : "");
+            const focusBtnText = isOperating ? "Operating ✓" : "Focus";
+            const focusBtnTitle = isOperating ? "Operating campaign (click to toggle)" : "Click to select and operate " + escapeHtml(c.name);
+            const rowClass = "ct-active-row is-" + (c.__health || "good") + (isSelected ? " is-selected" : "");
 
-                tr.innerHTML = '<td class="ct-td-drag" tabindex="0" role="button" aria-label="Drag or click arrows to reorder ' + escapeHtml(c.name) + '" data-campaign-id="' + escapeHtml(c.__id) + '">' +
+            if (canReuseRows) {
+                const tr = existingRows[idx];
+                if (tr.className !== rowClass) tr.className = rowClass;
+                const cells = tr.children;
+                const cb = cells[1] && cells[1].querySelector(".ct-table-select-cb");
+                if (cb && cb.checked !== isSelected) cb.checked = isSelected;
+                if (cells[2]) {
+                    const nameB = cells[2].querySelector("b");
+                    if (nameB && nameB.textContent !== safeValue(c.name)) nameB.textContent = safeValue(c.name);
+                    const badge = cells[2].querySelector(".ct-campaign-filter-badge");
+                    if (badge) {
+                        const cls = "ct-campaign-filter-badge " + (c.liveFilter ? "is-assigned" : "is-unavailable");
+                        const txt = "Filter: " + (c.liveFilter || "FILTER SOURCE UNAVAILABLE");
+                        if (badge.className !== cls) badge.className = cls;
+                        if (badge.textContent !== txt) badge.textContent = txt;
+                        badge.title = "Live Filter: " + (c.liveFilter || "Source Unavailable");
+                    }
+                }
+                if (cells[3]) {
+                    const stSpan = cells[3].querySelector(".ct-active-status-tag");
+                    if (stSpan) {
+                        const sCls = "ct-active-status-tag " + (c.__active ? "is-live" : "is-inactive");
+                        const sTxt = c.__active ? "ACTIVE" : "INACTIVE";
+                        if (stSpan.className !== sCls) stSpan.className = sCls;
+                        if (stSpan.textContent !== sTxt) stSpan.textContent = sTxt;
+                    }
+                }
+                if (cells[4] && cells[4].textContent !== agentsText) { cells[4].textContent = agentsText; cells[4].title = agentsTitle; }
+                if (cells[5]) {
+                    const wCls = "ct-td-waiting ct-td-num " + waitingTone;
+                    if (cells[5].className !== wCls) cells[5].className = wCls;
+                    if (cells[5].textContent !== waitingText) cells[5].textContent = waitingText;
+                    cells[5].title = waitingTitle;
+                }
+                if (cells[6]) {
+                    const wnCls = "ct-td-waitnow ct-td-num " + (c.__wait >= 60 ? "is-critical" : c.__wait >= 30 ? "is-warning" : "");
+                    if (cells[6].className !== wnCls) cells[6].className = wnCls;
+                    if (cells[6].textContent !== waitNowText) cells[6].textContent = waitNowText;
+                }
+                if (cells[7] && cells[7].textContent !== waitTodayText) cells[7].textContent = waitTodayText;
+                if (cells[8] && cells[8].textContent !== outboundText) cells[8].textContent = outboundText;
+                if (cells[9] && cells[9].textContent !== humanText) cells[9].textContent = humanText;
+                if (cells[10] && cells[10].textContent !== agentConnectText) cells[10].textContent = agentConnectText;
+                if (cells[11]) {
+                    const gCls = "ct-td-goals ct-td-num " + goalsTone;
+                    if (cells[11].className !== gCls) cells[11].className = gCls;
+                    if (cells[11].textContent !== goalsText) cells[11].textContent = goalsText;
+                    cells[11].title = goalsTitle;
+                }
+                if (cells[12]) {
+                    const aCls = "ct-td-abandoned ct-td-num " + (c.__abandoned >= 500 || abandonRate >= 5 ? "is-critical" : abandonRate >= 2 ? "is-warning" : "");
+                    if (cells[12].className !== aCls) cells[12].className = aCls;
+                    if (cells[12].textContent !== abandonedText) cells[12].textContent = abandonedText;
+                    cells[12].title = abandonedTitle;
+                }
+                if (cells[13]) {
+                    const cCls = "ct-td-connectrate ct-td-num " + connectRateClass;
+                    if (cells[13].className !== cCls) cells[13].className = cCls;
+                    if (cells[13].textContent !== connectRateText) cells[13].textContent = connectRateText;
+                    cells[13].title = connectRateTitle;
+                }
+                if (cells[14] && cells[14].textContent !== contactsText) cells[14].textContent = contactsText;
+                if (cells[15]) {
+                    const rCls = "ct-td-runway ct-td-center " + runway.tone;
+                    if (cells[15].className !== rCls) cells[15].className = rCls;
+                    if (cells[15].textContent !== runway.label) cells[15].textContent = runway.label;
+                }
+                if (cells[16]) {
+                    const hSpan = cells[16].querySelector(".ct-health-pill");
+                    if (hSpan) {
+                        const hCls = "ct-health-pill is-" + (c.__health || "good");
+                        if (hSpan.className !== hCls) hSpan.className = hCls;
+                        if (hSpan.textContent !== healthLabel) hSpan.textContent = healthLabel;
+                    }
+                }
+                if (cells[17]) {
+                    const fBtn = cells[17].querySelector("[data-campaign-focus]");
+                    if (fBtn) {
+                        if (fBtn.className !== focusBtnClass) fBtn.className = focusBtnClass;
+                        if (fBtn.textContent !== focusBtnText) fBtn.textContent = focusBtnText;
+                        fBtn.setAttribute("data-campaign-focus", c.__id);
+                        fBtn.title = isOperating ? "Operating campaign (click to toggle)" : "Click to select and operate " + safeValue(c.name);
+                    }
+                }
+                return;
+            }
+
+            const tr = document.createElement("tr");
+            tr.className = rowClass;
+            tr.dataset.campaignId = c.__id;
+            tr.draggable = false;
+
+            tr.innerHTML = '<td class="ct-td-drag" tabindex="0" role="button" aria-label="Drag or click arrows to reorder ' + escapeHtml(c.name) + '" data-campaign-id="' + escapeHtml(c.__id) + '">' +
                 '<div class="ct-drag-cell-inner">' +
                 '<span class="ct-table-drag-handle" title="Drag to reorder (or use Alt+Up/Down)">⋮⋮</span>' +
                 '<div class="ct-row-order-btns">' +
@@ -5294,7 +5618,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 '<td class="ct-td-focus ct-td-center"><button type="button" class="' + focusBtnClass + '" data-campaign-focus="' + escapeHtml(c.__id) + '" title="' + focusBtnTitle + '">' + focusBtnText + '</button></td>';
             fragment.appendChild(tr);
         });
-        refs.activeSummaryRows.replaceChildren(fragment);
+        if (fragment) refs.activeSummaryRows.replaceChildren(fragment);
     }
 
     function getOperatingAlignmentState(campaigns) {
@@ -5318,8 +5642,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         if (!Array.isArray(campaigns) || !campaigns.length) return [];
         const ids = new Set((state.operatingCampaigns || []).map(function (id) { return String(id || "").trim(); }).filter(Boolean));
         if (ids.size === 0) return [];
-        return campaigns.filter(function (c, i) {
-            return isCampaignSelected(c, ids, i);
+        return campaigns.filter(function (c) {
+            return isCampaignSelected(c, ids);
         });
     }
 
@@ -6009,7 +6333,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         }
         state.query = "";
         if (refs.search) refs.search.value = "";
-        scheduleRender();
+        updateOperatingSelect(state.campaigns);
+        if (state.pendingRender) { cancelAnimationFrame(state.pendingRender); state.pendingRender = 0; }
+        render();
         window.requestAnimationFrame(function () {
             const card = refs.list.querySelector('.ct-card[data-id="' + CSS.escape(match.__id) + '"]');
             if (card) {
@@ -6762,6 +7088,14 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                         ? "is-decrease"
                         : (alert.status === "LIVE FILTER CHANGED" ? "is-filter-change" : "is-integrity"));
                 const dialerClass = "ct-dialer-" + String(alert.dialer || DIALER).toLowerCase().replace(/[^a-z0-9]/g, "");
+                const isFilterAlert = alert.category === "LIVE_FILTER" || alert.status === "LIVE FILTER CHANGED" || alert.status === "LIVE FILTER ASSIGNED";
+                const deltaHtml = isFilterAlert
+                    ? ((alert.previousCount != null || alert.currentCount != null)
+                        ? '<span class="ct-intel-delta">(' + (alert.previousCount != null ? formatNumber(alert.previousCount) : '—') + ' → ' + (alert.currentCount != null ? formatNumber(alert.currentCount) : '—') + ' contacts)</span>'
+                        : '')
+                    : ((alert.absoluteDiff !== undefined && alert.percentDiff !== undefined)
+                        ? '<span class="ct-intel-delta">(' + (alert.absoluteDiff > 0 ? '+' : '') + alert.absoluteDiff + ' / ' + alert.percentDiff + ')</span>'
+                        : '');
                 return '<div class="ct-intelligence-card ' + sevClass + '" data-intel-id="' + escapeHtml(alert.id) + '">' +
                     '<div class="ct-intel-card-top">' +
                         '<span class="ct-intel-badge ' + badgeClass + '">' + escapeHtml(alert.status) + '</span>' +
@@ -6774,10 +7108,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                             '<strong>' + escapeHtml(alert.targetName) + '</strong> · <span class="ct-intel-metric-title">' + escapeHtml(alert.metric) + '</span>' +
                         '</div>' +
                         '<div class="ct-goal-stat-row">' +
-                            '<span class="ct-goal-count-prev">' + alert.previous + '</span>' +
+                            '<span class="ct-goal-count-prev">' + escapeHtml(alert.previous) + '</span>' +
                             '<span class="ct-goal-arrow">→</span>' +
-                            '<span class="ct-goal-count-curr">' + alert.current + '</span>' +
-                            '<span class="ct-intel-delta">(' + (alert.absoluteDiff > 0 ? '+' : '') + alert.absoluteDiff + ' / ' + alert.percentDiff + ')</span>' +
+                            '<span class="ct-goal-count-curr">' + escapeHtml(alert.current) + '</span>' +
+                            deltaHtml +
                         '</div>' +
                         (alert.message ? '<div class="ct-intel-msg-row">' + escapeHtml(alert.message) + '</div>' : '') +
                     '</div>' +
@@ -6898,16 +7232,19 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
         const empty = refs.list.querySelector(".ct-empty");
         if (empty) empty.remove();
 
-        campaigns.forEach(function (campaign) {
-            const card = getCampaignCard(campaign);
-            updateCampaignCard(card, campaign);
-            refs.list.appendChild(card.node);
-        });
-
         cardCache.forEach(function (card, id) {
             if (!nextIdSet.has(id)) {
                 card.node.remove();
                 cardCache.delete(id);
+            }
+        });
+
+        campaigns.forEach(function (campaign, index) {
+            const card = getCampaignCard(campaign);
+            updateCampaignCard(card, campaign);
+            const currentAtSlot = refs.list.children[index] || null;
+            if (currentAtSlot !== card.node) {
+                refs.list.insertBefore(card.node, currentAtSlot);
             }
         });
 
@@ -7521,7 +7858,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
                 campaignId(c, index),
                 c.active, c.status, c.contacts, c.waitNow, c.waiting, c.onCall,
                 c.loggedIn, c.outbound, c.abandoned, c.human, c.machine, c.agentConnect,
-                c.noAnswer, c.busy, c.failed, c.postCall, c.goals
+                c.noAnswer, c.busy, c.failed, c.postCall, c.goals,
+                c.id, c.rawId, c.liveFilter, c.liveFilterId, c.liveFilterTimestamp, c.liveFilterSource, c.liveFilterCount
             ].map(function (value) { return String(value ?? ""); }).join("~");
         }).sort().join("||");
     }
@@ -7548,16 +7886,9 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-3") + ")
 
     function isCampaignSelected(campaign, selectedSet) {
         if (!campaign || !selectedSet || !(selectedSet instanceof Set) || selectedSet.size === 0) return false;
-        if (campaign.rawId && selectedSet.has(String(campaign.rawId).trim())) return true;
-        if (campaign.id && selectedSet.has(String(campaign.id).trim())) return true;
+        const rawId = campaign.rawId || campaign.id;
+        if (rawId && selectedSet.has(String(rawId).trim())) return true;
         if (campaign.__id && selectedSet.has(String(campaign.__id).trim())) return true;
-        const name = String(campaign.name || "").trim().toLowerCase();
-        if (name && selectedSet.has(name)) return true;
-        for (const item of selectedSet) {
-            if (name && item.toLowerCase() === name) return true;
-            if (campaign.rawId && item === String(campaign.rawId).trim()) return true;
-            if (campaign.id && item === String(campaign.id).trim()) return true;
-        }
         return false;
     }
 

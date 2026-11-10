@@ -1,4 +1,4 @@
-console.log("CT Operations Monitor parser loaded (" + ("EAST-3") + ") — v11.3.8");
+console.log("CT Operations Monitor parser loaded (" + ("EAST-3") + ") — v11.3.9"); // compat v11.3.8
 
 const CT_ACTIVE_IMAGE_STATE_CACHE = new Map();
 
@@ -620,7 +620,7 @@ window.CTParser = {
                 if (/^[0-9]+$/.test(rawAttr)) id = rawAttr;
             }
             if (!id) {
-                const rowAttr = (row.getAttribute("data-campaign-id") || row.getAttribute("data-id") || "").trim();
+                const rowAttr = (row.getAttribute("data-ct-campaign-id") || row.getAttribute("data-campaign-id") || row.getAttribute("data-id") || "").trim();
                 if (/^[0-9]+$/.test(rowAttr)) id = rowAttr;
             }
             if (!id) {
@@ -745,6 +745,8 @@ window.CTParser = {
             }
             // Check verified registry if not found directly in current table row
             let verifiedTimestamp = null;
+            let resolvedFilterId = null;
+            let resolvedFilterCount = null;
             const storageObj = (typeof localStorage !== "undefined" ? localStorage : null) || (typeof window !== "undefined" && window.localStorage ? window.localStorage : null);
             if (!rawLiveFilter && storageObj) {
                 try {
@@ -754,22 +756,19 @@ window.CTParser = {
                     if (id && regData[String(id)]) {
                         entry = regData[String(id)];
                     } else if (!id && rawName) {
-                        const cleanName = String(rawName).trim();
-                        if (regData[cleanName]) {
-                            entry = regData[cleanName];
-                        } else {
-                            for (const k of Object.keys(regData)) {
-                                if (regData[k] && regData[k].campaignName && String(regData[k].campaignName).trim().toLowerCase() === cleanName.toLowerCase()) {
-                                    entry = regData[k];
-                                    break;
-                                }
-                            }
+                        // CallTools /manager/campaigns mat-table rows omit numeric campaign IDs in DOM attributes.
+                        // Deterministically resolve exact unambiguous campaignName match to real numeric campaignId.
+                        const normName = String(rawName).trim().toLowerCase();
+                        const exactMatches = Object.values(regData).filter(function (e) {
+                            return e && e.campaignId && /^[0-9]+$/.test(String(e.campaignId).trim()) &&
+                                e.campaignName && String(e.campaignName).trim().toLowerCase() === normName;
+                        });
+                        if (exactMatches.length === 1) {
+                            entry = exactMatches[0];
+                            id = String(entry.campaignId).trim();
                         }
                     }
                     if (entry) {
-                        if (!id && entry.campaignId && /^[0-9]+$/.test(String(entry.campaignId).trim())) {
-                            id = String(entry.campaignId).trim();
-                        }
                         const entryAge = entry.timestamp ? (Date.now() - entry.timestamp) : 0;
                         const isStale = entryAge > 120000;
                         const fVal = entry.liveFilter || entry.filter;
@@ -777,7 +776,13 @@ window.CTParser = {
                             rawLiveFilter = fVal;
                             filterSource = isStale ? "STALE_REGISTRY" : (entry.source || "VERIFIED_REGISTRY");
                             verifiedTimestamp = entry.timestamp || null;
+                        } else if (entry.status === "NONE") {
+                            rawLiveFilter = "None";
+                            filterSource = isStale ? "STALE_REGISTRY" : (entry.source || "VERIFIED_REGISTRY");
+                            verifiedTimestamp = entry.timestamp || null;
                         }
+                        if (entry.filterId) resolvedFilterId = String(entry.filterId).trim();
+                        if (entry.filterCount !== undefined && entry.filterCount !== null) resolvedFilterCount = Number(entry.filterCount);
                     }
                 } catch (e) {}
             }
@@ -815,6 +820,8 @@ window.CTParser = {
                 goals: rawGoals !== "" ? rawGoals : null,
                 sales: rawSales !== "" ? rawSales : null,
                 liveFilter: liveFilter,
+                liveFilterId: resolvedFilterId,
+                liveFilterCount: resolvedFilterCount,
                 liveFilterStatus: liveFilterStatus,
                 liveFilterSource: liveFilterSource,
                 liveFilterConfidence: liveFilterConfidence,
@@ -851,11 +858,17 @@ window.CTParser = {
         const targetDoc = (doc && doc.document) ? doc.document : (doc || (typeof document !== "undefined" ? document : null));
         if (!targetDoc || !targetDoc.querySelector) return null;
 
+        // Helper: Ensure element is NOT inside CT Operations Monitor dashboard
+        function notDashboard(el) {
+            if (!el) return false;
+            return !el.closest || !el.closest("#ct-operations-dashboard, [id^='ct-operations-dashboard']");
+        }
+
         // If on non-edit route without explicit edit form container, do not parse
         if (typeof window !== "undefined" && window.location && window.location.pathname) {
             const p = window.location.pathname;
             if (p === "/manager/campaigns" || (p.startsWith("/manager/campaigns") && !p.includes("/campaigns/edit/"))) {
-                const hasEditContainer = Boolean(targetDoc.querySelector && targetDoc.querySelector("form, .campaign-edit-form, input[name='name']"));
+                const hasEditContainer = Boolean(targetDoc.querySelector && Array.from(targetDoc.querySelectorAll("form, .campaign-edit-form, input[name='name']")).some(notDashboard));
                 if (!hasEditContainer) return null;
             }
         }
@@ -864,36 +877,47 @@ window.CTParser = {
         let campaignId = "";
         if (typeof window !== "undefined" && window.location && window.location.pathname) {
             const match = window.location.pathname.match(/\/campaigns\/edit\/([0-9a-zA-Z_\-]+)/);
-            if (match) campaignId = match[1];
+            if (match && /^[0-9]+$/.test(match[1])) campaignId = match[1];
         }
         if (!campaignId) {
-            const formWithId = targetDoc.querySelector("[data-campaign-id], [data-id]");
-            if (formWithId) {
-                campaignId = formWithId.getAttribute("data-campaign-id") || formWithId.getAttribute("data-id") || "";
+            const formElements = Array.from(targetDoc.querySelectorAll("[data-campaign-id], [data-id]")).filter(notDashboard);
+            for (const el of formElements) {
+                const did = (el.getAttribute("data-campaign-id") || el.getAttribute("data-id") || "").trim();
+                if (/^[0-9]+$/.test(did)) {
+                    campaignId = did;
+                    break;
+                }
             }
         }
         if (!campaignId) {
-            const idInput = targetDoc.querySelector("input[name='id'], input[formcontrolname='id']");
-            if (idInput && (idInput.value || idInput.getAttribute("value"))) {
-                campaignId = idInput.value || idInput.getAttribute("value") || "";
+            const idInputs = Array.from(targetDoc.querySelectorAll("input[name='id'], input[formcontrolname='id']")).filter(notDashboard);
+            for (const el of idInputs) {
+                const val = (el.value || el.getAttribute("value") || "").trim();
+                if (/^[0-9]+$/.test(val)) {
+                    campaignId = val;
+                    break;
+                }
             }
         }
 
         // 2. Identify Campaign Name
         let campaignName = "";
-        const nameInput = targetDoc.querySelector("input[name='name'], input[formcontrolname='name'], input[id='name']");
-        if (nameInput && (nameInput.value || nameInput.getAttribute("value"))) {
-            campaignName = String(nameInput.value || nameInput.getAttribute("value") || "").trim();
-        } else {
-            const headerEl = targetDoc.querySelector("h1, h2, .page-title, .breadcrumb-item.active");
-            if (headerEl) {
+        const nameInputs = Array.from(targetDoc.querySelectorAll("input[name='name'], input[formcontrolname='name'], input[id='name']")).filter(notDashboard);
+        for (const inp of nameInputs) {
+            const val = String(inp.value || inp.getAttribute("value") || "").trim();
+            if (val) {
+                campaignName = val;
+                break;
+            }
+        }
+        if (!campaignName) {
+            const headers = Array.from(targetDoc.querySelectorAll("h1, h2, .page-title, .breadcrumb-item.active")).filter(notDashboard);
+            for (const headerEl of headers) {
                 const txt = (headerEl.innerText || headerEl.textContent || "").trim();
                 const m = txt.match(/^Edit\s+Campaign\s*\((.*?)\)$/i) || txt.match(/^Edit\s+(?:Campaign\s+)?\(?(.*?)\)?$/i);
                 if (m && (m[1] || m[2])) {
                     campaignName = String(m[1] || m[2] || "").trim();
-                } else {
-                    const clean = txt.replace(/^Edit\s+(?:Campaign\s+)?/i, "").replace(/[()]/g, "").trim();
-                    if (clean) campaignName = clean;
+                    break;
                 }
             }
         }
@@ -908,37 +932,191 @@ window.CTParser = {
             if (!s || s === "—" || s === "-" || s === "None" || s === "Unassigned") return false;
             const lower = s.toLowerCase();
             if (lower.startsWith("select") || lower === "choose..." || lower === "please select a live filter or bucket") return false;
+            if (lower.startsWith("detected:") || lower.includes("calltools operations") || lower.includes("scheduled tasks") || lower.includes("live filter targeting")) return false;
             return true;
         }
 
-        // A. Angular ng-select (Standard CallTools 2.0 dropdown)
-        const ngSelects = Array.from(targetDoc.querySelectorAll("ng-select[formcontrolname*='filter' i], ng-select[name*='filter' i], ng-select[id*='filter' i], ng-select[aria-label*='filter' i], ng-select"));
-        for (const ng of ngSelects) {
-            const containerText = ((ng.closest && ng.closest(".form-group, .targeting-field, section, div")) ? ng.closest(".form-group, .targeting-field, section, div").textContent : "") || "";
-            const isFilterSelect = (ng.getAttribute("formcontrolname") && ng.getAttribute("formcontrolname").toLowerCase().includes("filter")) ||
-                                   (ng.getAttribute("name") && ng.getAttribute("name").toLowerCase().includes("filter")) ||
-                                   /live\s*filter/i.test(containerText) ||
-                                   /targeting/i.test(containerText);
-            if (!isFilterSelect && ngSelects.length > 1) continue;
-
-            const valEl = ng.querySelector(".ng-value-label, span[title], span.ng-value, [class*='ng-value-label']") || ng.querySelector(".ng-value");
-            if (valEl) {
-                const targetEl = (valEl.querySelector && valEl.querySelector(".ng-value-label, span[title]")) || valEl;
-                const valText = String(targetEl.getAttribute("title") || targetEl.getAttribute("aria-label") || targetEl.innerText || targetEl.textContent || "").trim();
-                if (isValidFilterValue(valText)) {
-                    liveFilter = valText;
-                    filterSource = "NG_SELECT";
-                    break;
+        // 0. Extract Filter ID and anchor to Live Filter select from pencil edit link
+        let extractedFilterId = null;
+        let pencilAnchorSelect = null;
+        try {
+            const editLinks = Array.from(targetDoc.querySelectorAll("a[href*='live-filter'], a[href*='live_filter'], [data-filter-id]")).filter(notDashboard);
+            for (const el of editLinks) {
+                const href = el.getAttribute("href") || "";
+                const m = href.match(/\/live-filters\/(?:edit\/)?([0-9]+)/i);
+                if (m && m[1]) {
+                    extractedFilterId = m[1];
+                }
+                // The pencil edit link is placed directly adjacent to or in the same row/container as the Live Filter control
+                const rowOrContainer = (el.closest && el.closest(".form-group, .row, .field, fieldset, section, form, div")) || el.parentElement;
+                if (rowOrContainer && notDashboard(rowOrContainer)) {
+                    pencilAnchorSelect = rowOrContainer.querySelector("ng-select, mat-select, select");
+                    if (pencilAnchorSelect) break;
                 }
             }
-            if (!liveFilter) {
-                const inputEl = ng.querySelector("input:not([type='hidden'])");
-                if (inputEl) {
-                    const inpVal = String(inputEl.getAttribute("title") || inputEl.value || inputEl.getAttribute("value") || "").trim();
-                    if (isValidFilterValue(inpVal)) {
-                        liveFilter = inpVal;
+        } catch (e) {}
+
+        // Helper to parse Angular [ngValue] option value ("23: 4125" -> "4125")
+        function extractOptionFilterId(rawVal) {
+            if (!rawVal) return null;
+            const m = String(rawVal).trim().match(/^(?:[0-9]+:\s*)?([0-9]+)$/);
+            return m && m[1] ? m[1] : null;
+        }
+
+        // Helper to read value + filterId from native <select> and collect filterCatalog
+        let filterCatalog = [];
+        let observedNativeFilterSelect = false;
+        function readNativeSelectElement(sel) {
+            if (!sel || String(sel.tagName || "").toUpperCase() !== "SELECT") return null;
+            observedNativeFilterSelect = true;
+            const opts = sel.options ? Array.from(sel.options) : [];
+            if (opts.length > 0 && filterCatalog.length === 0) {
+                opts.forEach(function (o) {
+                    const oid = extractOptionFilterId(o.value);
+                    const otxt = String(o.text || o.innerText || o.textContent || "").trim();
+                    if (oid && otxt) {
+                        const mc = otxt.match(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*([0-9,]+)\s*[\)\]]/i);
+                        const isNotActive = /\(\s*Not\s+Active\s*\)\s*$/i.test(otxt);
+                        const cleanN = otxt
+                            .replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "")
+                            .replace(/\s*\(\s*Not\s+Active\s*\)\s*$/i, "")
+                            .trim();
+                        if (cleanN) {
+                            filterCatalog.push({
+                                filterId: oid,
+                                name: cleanN,
+                                count: mc && mc[1] ? Number(mc[1].replace(/,/g, "")) : null,
+                                active: !isNotActive
+                            });
+                        }
+                    }
+                });
+            }
+            if (opts.length > 0) {
+                const idx = sel.selectedIndex >= 0 ? sel.selectedIndex : 0;
+                const opt = opts[idx];
+                const optVal = opt ? (opt.value || sel.value || "") : (sel.value || "");
+                const fid = extractOptionFilterId(optVal);
+                if (fid && !extractedFilterId) extractedFilterId = fid;
+                const text = opt ? String(opt.text || opt.innerText || opt.textContent || "").trim() : "";
+                if (isValidFilterValue(text)) return text;
+                const fallbackVal = String(optVal).trim();
+                if (!/^(?:0:\s*)?null$/i.test(fallbackVal) && !/^[0-9]+:\s*null$/i.test(fallbackVal) && !/^[0-9]+$/.test(fallbackVal) && isValidFilterValue(fallbackVal)) {
+                    return fallbackVal;
+                }
+            } else if (sel.value) {
+                const fid = extractOptionFilterId(sel.value);
+                if (fid && !extractedFilterId) extractedFilterId = fid;
+                const text = String(sel.value).trim();
+                if (isValidFilterValue(text)) return text;
+            }
+            return null;
+        }
+
+        // 0B. If pencilAnchorSelect found, extract directly from it!
+        if (pencilAnchorSelect) {
+            if (String(pencilAnchorSelect.tagName || "").toUpperCase() === "SELECT") {
+                const nVal = readNativeSelectElement(pencilAnchorSelect);
+                if (nVal) {
+                    liveFilter = nVal;
+                    filterSource = "NATIVE_SELECT";
+                }
+            } else {
+                const valEl = pencilAnchorSelect.querySelector(".ng-value-label, span[title], span.ng-value, [class*='ng-value-label'], .mat-select-value-text, .mat-select-value") || pencilAnchorSelect.querySelector(".ng-value");
+                if (valEl) {
+                    const targetEl = (valEl.querySelector && valEl.querySelector(".ng-value-label, span[title]")) || valEl;
+                    const fullTitle = String(targetEl.getAttribute("title") || targetEl.getAttribute("aria-label") || "").trim();
+                    const innerText = String(targetEl.innerText || targetEl.textContent || "").trim();
+                    const bestVal = (fullTitle && isValidFilterValue(fullTitle) && !fullTitle.endsWith("...") && !fullTitle.endsWith("…")) ? fullTitle : innerText;
+                    if (isValidFilterValue(bestVal)) {
+                        liveFilter = bestVal;
+                        filterSource = pencilAnchorSelect.tagName.toLowerCase().includes("mat") ? "MAT_SELECT" : "NG_SELECT";
+                    }
+                }
+                if (!liveFilter) {
+                    const inputEl = pencilAnchorSelect.querySelector("input:not([type='hidden'])");
+                    if (inputEl) {
+                        const inpVal = String(inputEl.getAttribute("title") || inputEl.value || inputEl.getAttribute("value") || "").trim();
+                        if (isValidFilterValue(inpVal)) {
+                            liveFilter = inpVal;
+                            filterSource = "NG_SELECT";
+                        }
+                    }
+                }
+            }
+        }
+
+        // 0C. Anchor from label "Live Filter" (supports p, label, mat-label, strong, div, span)
+        if (!liveFilter) {
+            const labels = Array.from(targetDoc.querySelectorAll("label, mat-label, .form-label, strong, b, p, div, span")).filter(notDashboard);
+            for (const lbl of labels) {
+                const lblText = (lbl.innerText || lbl.textContent || "").trim().toLowerCase();
+                if (lblText === "live filter" || lblText === "live filter:" || lblText === "live filter *" || lblText.includes("select a live filter")) {
+                    const rowOrContainer = (lbl.closest && lbl.closest(".form-group, .row, .field, fieldset, section, .form-row")) || lbl.parentElement;
+                    if (rowOrContainer && notDashboard(rowOrContainer)) {
+                        const sel = rowOrContainer.querySelector("select[formcontrolname*='filter' i], ng-select, mat-select, select");
+                        if (sel && notDashboard(sel)) {
+                            if (String(sel.tagName || "").toUpperCase() === "SELECT") {
+                                const nVal = readNativeSelectElement(sel);
+                                if (nVal) {
+                                    liveFilter = nVal;
+                                    filterSource = "NATIVE_SELECT";
+                                    break;
+                                }
+                            } else {
+                                const valEl = sel.querySelector(".ng-value-label, span[title], span.ng-value, [class*='ng-value-label'], .mat-select-value-text, .mat-select-value") || sel.querySelector(".ng-value");
+                                if (valEl) {
+                                    const targetEl = (valEl.querySelector && valEl.querySelector(".ng-value-label, span[title]")) || valEl;
+                                    const fullTitle = String(targetEl.getAttribute("title") || targetEl.getAttribute("aria-label") || "").trim();
+                                    const innerText = String(targetEl.innerText || targetEl.textContent || "").trim();
+                                    const bestVal = (fullTitle && isValidFilterValue(fullTitle) && !fullTitle.endsWith("...") && !fullTitle.endsWith("…")) ? fullTitle : innerText;
+                                    if (isValidFilterValue(bestVal)) {
+                                        liveFilter = bestVal;
+                                        filterSource = sel.tagName.toLowerCase().includes("mat") ? "MAT_SELECT" : "NG_SELECT";
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // A. Angular ng-select (CallTools standard)
+        if (!liveFilter) {
+            const ngSelects = Array.from(targetDoc.querySelectorAll("ng-select[formcontrolname*='filter' i], ng-select[name*='filter' i], ng-select[id*='filter' i], ng-select[aria-label*='filter' i], ng-select")).filter(notDashboard);
+            for (const ng of ngSelects) {
+                const container = ng.closest(".form-group, mat-form-field, .targeting-field, .field, fieldset, section, .row, div") || ng.parentElement;
+                const containerText = container ? (container.textContent || "") : "";
+                const isFilterSelect = (ng.getAttribute("formcontrolname") && ng.getAttribute("formcontrolname").toLowerCase().includes("filter")) ||
+                                       (ng.getAttribute("name") && ng.getAttribute("name").toLowerCase().includes("filter")) ||
+                                       /live\s*filter/i.test(containerText) ||
+                                       /targeting/i.test(containerText);
+                if (!isFilterSelect && ngSelects.length > 1) continue;
+
+                const valEl = ng.querySelector(".ng-value-label, span[title], span.ng-value, [class*='ng-value-label']") || ng.querySelector(".ng-value");
+                if (valEl) {
+                    const targetEl = (valEl.querySelector && valEl.querySelector(".ng-value-label, span[title]")) || valEl;
+                    // Check title or aria-label first (CallTools stores full untruncated name here)
+                    const fullTitle = String(targetEl.getAttribute("title") || targetEl.getAttribute("aria-label") || "").trim();
+                    const innerText = String(targetEl.innerText || targetEl.textContent || "").trim();
+                    const bestVal = (fullTitle && isValidFilterValue(fullTitle) && !fullTitle.endsWith("...") && !fullTitle.endsWith("…")) ? fullTitle : innerText;
+                    if (isValidFilterValue(bestVal)) {
+                        liveFilter = bestVal;
                         filterSource = "NG_SELECT";
                         break;
+                    }
+                }
+                if (!liveFilter) {
+                    const inputEl = ng.querySelector("input:not([type='hidden'])");
+                    if (inputEl) {
+                        const inpVal = String(inputEl.getAttribute("title") || inputEl.value || inputEl.getAttribute("value") || "").trim();
+                        if (isValidFilterValue(inpVal)) {
+                            liveFilter = inpVal;
+                            filterSource = "NG_SELECT";
+                            break;
+                        }
                     }
                 }
             }
@@ -946,7 +1124,7 @@ window.CTParser = {
 
         // B. Angular Material mat-select
         if (!liveFilter) {
-            const matSelects = Array.from(targetDoc.querySelectorAll("mat-select[formcontrolname*='filter' i], mat-select[name*='filter' i], mat-select[aria-label*='filter' i], mat-select[placeholder*='filter' i]"));
+            const matSelects = Array.from(targetDoc.querySelectorAll("mat-select[formcontrolname*='filter' i], mat-select[name*='filter' i], mat-select[aria-label*='filter' i], mat-select[placeholder*='filter' i]")).filter(notDashboard);
             for (const ms of matSelects) {
                 const valEl = ms.querySelector(".mat-select-value, .mat-select-value-text, .mat-mdc-select-value-text, .mat-select-min-line");
                 const valText = valEl ? String(valEl.innerText || valEl.textContent || "").trim() : "";
@@ -958,71 +1136,34 @@ window.CTParser = {
             }
         }
 
-        // C. Standard HTML select
+        // C. Standard HTML select (CallTools Campaign Edit native <select formcontrolname="live_filter">)
         if (!liveFilter) {
-            const nativeSelects = Array.from(targetDoc.querySelectorAll("select[name*='filter' i], select[id*='filter' i], select[formcontrolname*='filter' i]"));
+            const nativeSelects = Array.from(targetDoc.querySelectorAll("select[name*='filter' i], select[id*='filter' i], select[formcontrolname*='filter' i]")).filter(notDashboard);
             for (const sel of nativeSelects) {
-                if (sel.options && sel.options.length > 0) {
-                    const idx = sel.selectedIndex >= 0 ? sel.selectedIndex : 0;
-                    const opt = sel.options[idx];
-                    const text = opt ? String(opt.text || opt.innerText || opt.textContent || opt.value || "").trim() : "";
-                    if (isValidFilterValue(text)) {
-                        liveFilter = text;
-                        filterSource = "NATIVE_SELECT";
-                        break;
-                    }
-                } else if (sel.value) {
-                    const text = String(sel.value).trim();
-                    if (isValidFilterValue(text)) {
-                        liveFilter = text;
-                        filterSource = "NATIVE_SELECT";
-                        break;
-                    }
+                const nVal = readNativeSelectElement(sel);
+                if (nVal) {
+                    liveFilter = nVal;
+                    filterSource = "NATIVE_SELECT";
+                    break;
                 }
             }
         }
 
         // D. Targeting section traversal from label
         if (!liveFilter) {
-            const labels = Array.from(targetDoc.querySelectorAll("label, mat-label, .form-label, strong, b, div, span"));
+            const labels = Array.from(targetDoc.querySelectorAll("label, mat-label, .form-label, strong, b")).filter(notDashboard);
             for (const lbl of labels) {
                 const lblText = (lbl.innerText || lbl.textContent || "").trim().toLowerCase();
                 if (lblText === "live filter" || lblText === "live filter:" || lblText.includes("select a live filter")) {
                     const container = (lbl.closest && lbl.closest(".form-group, mat-form-field, .targeting-field, .field, .form-row, .row, fieldset, section")) || lbl.parentElement;
-                    if (container) {
+                    if (container && notDashboard(container)) {
                         const valEl = container.querySelector(".ng-value-label, span[title], .mat-select-value-text, .mat-select-value, .selected-item, [role='combobox'] span, [data-value]");
                         if (valEl) {
-                            const txt = String(valEl.getAttribute("title") || valEl.innerText || valEl.textContent || "").trim();
-                            if (isValidFilterValue(txt)) {
-                                liveFilter = txt;
-                                filterSource = "TARGETING_SECTION";
-                                break;
-                            }
-                        }
-                        const sel = container.querySelector("select");
-                        if (sel && sel.options && sel.options.length > 0) {
-                            const opt = sel.options[sel.selectedIndex >= 0 ? sel.selectedIndex : 0];
-                            const txt = opt ? String(opt.text || opt.innerText || opt.textContent || "").trim() : "";
-                            if (isValidFilterValue(txt)) {
-                                liveFilter = txt;
-                                filterSource = "TARGETING_SECTION";
-                                break;
-                            }
-                        }
-                        const inp = container.querySelector("input:not([type='hidden']):not([type='checkbox']):not([type='radio'])");
-                        if (inp) {
-                            const inpVal = String(inp.getAttribute("title") || inp.value || inp.getAttribute("value") || inp.placeholder || "").trim();
-                            if (isValidFilterValue(inpVal)) {
-                                liveFilter = inpVal;
-                                filterSource = "TARGETING_SECTION";
-                                break;
-                            }
-                        }
-                        const combo = container.querySelector("[role='combobox']");
-                        if (combo) {
-                            const comboVal = String(combo.getAttribute("title") || combo.getAttribute("aria-label") || combo.innerText || combo.textContent || combo.value || "").trim();
-                            if (isValidFilterValue(comboVal)) {
-                                liveFilter = comboVal;
+                            const titleAttr = String(valEl.getAttribute("title") || valEl.getAttribute("aria-label") || "").trim();
+                            const txt = String(valEl.innerText || valEl.textContent || "").trim();
+                            const chosen = (titleAttr && isValidFilterValue(titleAttr) && !titleAttr.endsWith("...") && !titleAttr.endsWith("…")) ? titleAttr : txt;
+                            if (isValidFilterValue(chosen)) {
+                                liveFilter = chosen;
                                 filterSource = "TARGETING_SECTION";
                                 break;
                             }
@@ -1032,10 +1173,10 @@ window.CTParser = {
             }
         }
 
-        // Extract Filter ID from pencil edit link if present
-        let extractedFilterId = null;
-        try {
-            const editLinks = Array.from(targetDoc.querySelectorAll("a[href*='live-filter'], a[href*='live_filter'], [data-filter-id]"));
+        // Extract Filter ID from pencil edit link if not already found
+        if (!extractedFilterId) {
+            try {
+            const editLinks = Array.from(targetDoc.querySelectorAll("a[href*='live-filter'], a[href*='live_filter'], [data-filter-id]")).filter(notDashboard);
             for (const el of editLinks) {
                 const href = el.getAttribute("href") || "";
                 const m = href.match(/\/live-filters?\/(?:edit\/)?([0-9]+)/i);
@@ -1050,10 +1191,12 @@ window.CTParser = {
                 }
             }
         } catch (e) {}
+        }
 
         if (!campaignId && !liveFilter && !campaignName) return null;
 
         let filterCount = null;
+        let filterActive = true;
         let cleanFilterName = liveFilter;
         if (liveFilter) {
             const mCount = liveFilter.match(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*([0-9,]+)\s*[\)\]]/i);
@@ -1061,11 +1204,15 @@ window.CTParser = {
                 filterCount = Number(mCount[1].replace(/,/g, ""));
                 cleanFilterName = liveFilter.replace(/[\(\[]\s*(?:Count|Contacts)?\s*:?\s*[0-9,]+\s*[\)\]]/i, "").trim();
             }
+            if (/\(\s*Not\s+Active\s*\)\s*$/i.test(cleanFilterName)) {
+                filterActive = false;
+                cleanFilterName = cleanFilterName.replace(/\s*\(\s*Not\s+Active\s*\)\s*$/i, "").trim();
+            }
 
             // Cross-reference with title attribute or inventory if filter name ends with ellipsis
             if (cleanFilterName && (cleanFilterName.endsWith("...") || cleanFilterName.endsWith("…") || cleanFilterName.includes("..."))) {
                 const prefix = cleanFilterName.replace(/\.{3}$|…$/, "").replace(/\.\.\..*$/, "").trim().toLowerCase();
-                const titleMatch = targetDoc.querySelector && targetDoc.querySelector(`[title^="${prefix}" i], [aria-label^="${prefix}" i]`);
+                const titleMatch = targetDoc.querySelector && Array.from(targetDoc.querySelectorAll(`[title^="${prefix}" i], [aria-label^="${prefix}" i]`)).filter(notDashboard)[0];
                 if (titleMatch) {
                     const full = String(titleMatch.getAttribute("title") || titleMatch.getAttribute("aria-label") || "").trim();
                     if (full && !full.endsWith("...") && !full.endsWith("…") && isValidFilterValue(full)) {
@@ -1074,7 +1221,6 @@ window.CTParser = {
                 }
                 if (cleanFilterName.endsWith("...") || cleanFilterName.endsWith("…") || cleanFilterName.includes("...")) {
                     try {
-                        const isEast3Env = (typeof window !== "undefined" && window.location && window.location.hostname.includes("east-3")) || (typeof isEast3 !== "undefined" && isEast3);
                         const invKey = "ct_east3_live_filters_inventory_v1";
                         const invStorage = typeof localStorage !== "undefined" ? localStorage : (typeof window !== "undefined" ? window.localStorage : null);
                         if (invStorage) {
@@ -1112,6 +1258,13 @@ window.CTParser = {
         }
 
         const isAssigned = Boolean(cleanFilterName && isValidFilterValue(cleanFilterName));
+        // If we haven't extracted filterId yet, look it up in filterCatalog or ct_east3_filter_id_map_v1
+        if (!extractedFilterId && isAssigned) {
+            const normClean = cleanFilterName.toLowerCase();
+            const catMatch = filterCatalog.find(f => f.name.toLowerCase() === normClean);
+            if (catMatch) extractedFilterId = catMatch.filterId;
+        }
+        const isFormHydrated = Boolean(campaignName && (!observedNativeFilterSelect || filterCatalog.length > 0 || (liveFilter && !isValidFilterValue(liveFilter))));
         return {
             campaignId: campaignId || "unknown",
             campaignName: campaignName || (campaignId ? `Campaign ${campaignId}` : ""),
@@ -1119,7 +1272,9 @@ window.CTParser = {
             rawLiveFilter: liveFilter,
             filterId: extractedFilterId || null,
             filterCount: filterCount,
-            status: isAssigned ? "ASSIGNED" : "NONE",
+            filterActive: filterActive,
+            filterCatalog: filterCatalog,
+            status: isAssigned ? "ASSIGNED" : (isFormHydrated ? "NONE" : "LOADING"),
             source: filterSource,
             timestamp: Date.now()
         };

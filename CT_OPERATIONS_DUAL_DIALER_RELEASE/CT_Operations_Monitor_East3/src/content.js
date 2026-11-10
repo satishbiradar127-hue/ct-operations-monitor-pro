@@ -1,4 +1,4 @@
-console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed controller v11.3.8");
+console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed controller v11.3.9"); // compat v11.3.8
 
 (function () {
     "use strict";
@@ -20,6 +20,9 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     const INBOUND_STORAGE_STATUS_KEY = "ct_east3_inbound_status_v2";
     const VERIFIED_FILTERS_KEY = "ct_east3_verified_campaign_filters_v1";
     const LIVE_FILTERS_INVENTORY_KEY = "ct_east3_live_filters_inventory_v1";
+    const FILTER_ID_MAP_KEY = "ct_east3_filter_id_map_v1";
+    let lastEditWriteAt = 0;
+    let lastEditSig = "";
     const INBOUND_COORDINATION_MS = 5000;
     const INBOUND_HEARTBEAT_MS = 2500;
     const INBOUND_MONITOR_PARAM = "ct_inbound_monitor";
@@ -38,10 +41,34 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         return "other";
     }
 
+    const LF_MONITOR_PARAM = "ct_lf_monitor";
+    const LF_INVENTORY_IFRAME_ID = "ct-operations-hidden-livefilters-feed-east3";
+    const LF_EDIT_IFRAME_ID = "ct-operations-hidden-campaign-filter-east3";
+    const LF_INVENTORY_REFRESH_MS = 4500;
+    const LF_ACTIVE_PROBE_MS = 4500;
+    const LF_IDLE_PROBE_MS = 28000;
+    const LF_BETWEEN_PROBES_MS = 650;
+    const LF_PROBE_TIMEOUT_MS = 12000;
+    let lastInvSig = "";
+    let lastInvWriteAt = 0;
+    let lfInvInFlightStartedAt = 0;
+    let lfInvLastCompletedAt = 0;
+    let lfProbeInFlight = null;
+    let lfLastProbeCompletedAt = 0;
+    const lfLastProbeByCid = {};
+    let lfAuthPaused = false;
+    let lfSpaBooted = false;
+    let lfSpaLastCompletedKind = "";
+    let lfConsecutiveTimeouts = 0;
+    let bgRouteEpoch = 0;
+
     function isCampaignsPage() { return currentRoute() === "campaigns"; }
+    function isTopLevelCampaignsPage() { return isCampaignsPage() && (typeof window === "undefined" || !window.top || window === window.top); }
     function isCampaignEditPage() { return currentRoute() === "campaign_edit"; }
     function isQueuesPage() { return currentRoute() === "queues"; }
     function isLiveFiltersPage() { return currentRoute() === "live_filters"; }
+    function isBackgroundCampaignEditFrame() { return isCampaignEditPage() && new URLSearchParams(window.location.search).get(LF_MONITOR_PARAM) === "1"; }
+    function isBackgroundLiveFiltersFrame() { return isLiveFiltersPage() && new URLSearchParams(window.location.search).get(LF_MONITOR_PARAM) === "1"; }
     function isMonitorPage() { return isCampaignsPage() || isQueuesPage() || isCampaignEditPage() || isLiveFiltersPage(); }
 
     function observeLiveFiltersPage() {
@@ -50,6 +77,11 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         try {
             const filters = window.CTParser.readLiveFilters(document);
             if (filters && filters.length > 0) {
+                const now = Date.now();
+                const sig = filters.map(function (f) { return [f.id, f.name, f.active ? 1 : 0, f.count, f.totalCount].join(":"); }).join("|");
+                if (sig === lastInvSig && (now - lastInvWriteAt) < 4000) {
+                    return;
+                }
                 let inventory = {};
                 try {
                     inventory = JSON.parse(localStorage.getItem(LIVE_FILTERS_INVENTORY_KEY) || "{}");
@@ -64,12 +96,14 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                         active: f.active,
                         count: f.count,
                         totalCount: f.totalCount,
-                        observedAt: f.observedAt || Date.now(),
+                        observedAt: f.observedAt || now,
                         source: "LIVE_FILTERS_PAGE"
                     };
                 });
-                inventory.lastObservedAt = Date.now();
+                inventory.lastObservedAt = now;
                 inventory.totalCount = Object.keys(inventory.items).length;
+                lastInvSig = sig;
+                lastInvWriteAt = now;
 
                 try {
                     localStorage.setItem(LIVE_FILTERS_INVENTORY_KEY, JSON.stringify(inventory));
@@ -77,6 +111,17 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                         const obj = {};
                         obj[LIVE_FILTERS_INVENTORY_KEY] = inventory;
                         chrome.storage.local.set(obj);
+                    }
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({
+                            type: "CT_EAST_3_BG_INVENTORY_OBSERVED",
+                            inventory: inventory,
+                            count: filters.length,
+                            observedAt: now
+                        }, window.location.origin);
+                    } else {
+                        window.dispatchEvent(new CustomEvent("CT_EAST_3_INVENTORY_UPDATED", { detail: { count: filters.length, observedAt: now } }));
+                        document.dispatchEvent(new CustomEvent("CT_EAST_3_INVENTORY_UPDATED", { detail: { count: filters.length, observedAt: now } }));
                     }
                 } catch (e) {}
             }
@@ -87,26 +132,74 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         if (!window.CTParser || !window.CTParser.readCampaignEditForm) return;
         try {
             const editData = window.CTParser.readCampaignEditForm(document);
-            if (editData && editData.campaignId && editData.campaignId !== "unknown" && editData.liveFilter) {
+            if (!editData) return;
+
+            // Cache permitted dropdown filterId <-> filterName mapping observed in native DOM
+            if (Array.isArray(editData.filterCatalog) && editData.filterCatalog.length > 0) {
+                try {
+                    const idMap = JSON.parse(localStorage.getItem(FILTER_ID_MAP_KEY) || "{}");
+                    let mapChanged = false;
+                    editData.filterCatalog.forEach(function (f) {
+                        if (f && f.filterId && f.name) {
+                            const key = String(f.name).trim().toLowerCase();
+                            if (!idMap[key] || idMap[key].filterId !== f.filterId) {
+                                idMap[key] = { filterId: String(f.filterId), name: f.name, count: f.count, active: f.active };
+                                mapChanged = true;
+                            }
+                        }
+                    });
+                    if (mapChanged) {
+                        localStorage.setItem(FILTER_ID_MAP_KEY, JSON.stringify(idMap));
+                    }
+                } catch (e) {}
+            }
+
+            // Skip transient mid-load state until campaign form has actually hydrated
+            if (editData.campaignId && editData.campaignId !== "unknown" && (editData.liveFilter || editData.status === "NONE")) {
+                const cid = String(editData.campaignId).trim();
+                if (!cid || !/^[0-9]+$/.test(cid)) return;
+
+                const now = Date.now();
+                const sig = [cid, editData.campaignName || "", editData.liveFilter || "", editData.filterId || "", editData.filterCount ?? "", editData.status || ""].join("|");
+                if (sig === lastEditSig && (now - lastEditWriteAt) < 5000) {
+                    return;
+                }
+
                 let registry = {};
                 try {
                     registry = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}");
                 } catch (e) {}
 
+                // Clean registry of non-numeric or contaminated keys
+                Object.keys(registry).forEach(function(k) {
+                    if (!/^[0-9]+$/.test(k)) {
+                        delete registry[k];
+                    } else if (registry[k] && registry[k].liveFilter && (
+                        String(registry[k].liveFilter).startsWith("Detected:") ||
+                        String(registry[k].liveFilter).toLowerCase().includes("calltools operations") ||
+                        String(registry[k].liveFilter).toLowerCase().includes("scheduled tasks")
+                    )) {
+                        delete registry[k];
+                    }
+                });
+
                 const entry = {
-                    campaignId: String(editData.campaignId),
-                    campaignName: editData.campaignName,
-                    liveFilter: editData.liveFilter,
-                    rawLiveFilter: editData.rawLiveFilter,
-                    filterCount: editData.filterCount,
-                    status: editData.status,
+                    campaignId: cid,
+                    campaignName: editData.campaignName || "",
+                    liveFilter: editData.liveFilter || null,
+                    rawLiveFilter: editData.rawLiveFilter || null,
+                    filterId: editData.filterId || null,
+                    filterCount: editData.filterCount !== undefined ? editData.filterCount : null,
+                    filterActive: editData.filterActive !== undefined ? editData.filterActive : true,
+                    status: editData.status || (editData.liveFilter ? "ASSIGNED" : "NONE"),
                     source: "CAMPAIGN_EDIT_DOM",
-                    timestamp: editData.timestamp
+                    timestamp: editData.timestamp || now
                 };
-                registry[String(editData.campaignId)] = entry;
-                if (editData.campaignName) {
-                    registry[String(editData.campaignName).trim()] = entry;
-                }
+
+                // STRICTLY KEY ONLY BY IMMUTABLE CAMPAIGN ID! NEVER BY NAME!
+                registry[cid] = entry;
+                lastEditSig = sig;
+                lastEditWriteAt = now;
 
                 try {
                     localStorage.setItem(VERIFIED_FILTERS_KEY, JSON.stringify(registry));
@@ -114,6 +207,16 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                         const obj = {};
                         obj[VERIFIED_FILTERS_KEY] = registry;
                         chrome.storage.local.set(obj);
+                    }
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({
+                            type: "CT_EAST_3_BG_FILTER_OBSERVED",
+                            entry: entry,
+                            catalogCount: Array.isArray(editData.filterCatalog) ? editData.filterCatalog.length : 0
+                        }, window.location.origin);
+                    } else {
+                        window.dispatchEvent(new CustomEvent("CT_EAST_3_VERIFIED_FILTER_CHANGED", { detail: entry }));
+                        document.dispatchEvent(new CustomEvent("CT_EAST_3_VERIFIED_FILTER_CHANGED", { detail: entry }));
                     }
                 } catch (e) {}
             }
@@ -145,7 +248,7 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     }
 
     function ensureInboundFeedMonitor() {
-        if (!isCampaignsPage()) return;
+        if (!isTopLevelCampaignsPage()) return;
         let frame = document.getElementById(INBOUND_IFRAME_ID);
         if (frame && frame.tagName !== "IFRAME") {
             try { frame.remove(); } catch (error) {}
@@ -178,6 +281,252 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         }
         inboundIframe = frame;
         if (!frame.src || frame.src.indexOf("ct_inbound_monitor=1") === -1) frame.src = INBOUND_IFRAME_URL;
+    }
+
+    function ensureOffscreenIframe(frameId, title) {
+        let frame = document.getElementById(frameId);
+        if (frame && frame.tagName !== "IFRAME") {
+            try { frame.remove(); } catch (e) {}
+            frame = null;
+        }
+        if (!frame) {
+            frame = document.createElement("iframe");
+            frame.id = frameId;
+            frame.title = title;
+            frame.setAttribute("aria-hidden", "true");
+            frame.tabIndex = -1;
+            frame.style.cssText = "position:fixed;left:-20000px;top:-20000px;width:1024px;height:700px;border:0;opacity:0;pointer-events:none;";
+            frame.addEventListener("load", function () {
+                try {
+                    const p = String(frame.contentWindow.location.pathname || "");
+                    if (/\/(login|signin)(?:\/|$)/i.test(p)) {
+                        lfAuthPaused = true;
+                        lfSpaBooted = false;
+                        lfProbeInFlight = null;
+                        lfInvInFlightStartedAt = 0;
+                    }
+                } catch (e) {}
+            });
+            document.documentElement.appendChild(frame);
+        }
+        return frame;
+    }
+
+    function teardownLiveFilterMonitors() {
+        [LF_INVENTORY_IFRAME_ID, LF_EDIT_IFRAME_ID].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) {
+                try { el.remove(); } catch (e) {}
+            }
+        });
+        lfSpaBooted = false;
+        lfSpaLastCompletedKind = "";
+        lfProbeInFlight = null;
+        lfInvInFlightStartedAt = 0;
+    }
+
+    function collectProbeCampaignTargets() {
+        const byId = new Map();
+        const opIds = new Set();
+        try {
+            const rawOp = JSON.parse(localStorage.getItem("ct_east3_operating_campaigns") || "[]");
+            if (Array.isArray(rawOp)) {
+                rawOp.forEach(function (v) {
+                    const s = String(v || "").trim();
+                    if (/^[0-9]+$/.test(s)) opIds.add(s);
+                });
+            }
+        } catch (e) {}
+
+        // 1. Live Angular row index exported passively by ng_bridge.js
+        try {
+            const rawIdx = document.documentElement ? document.documentElement.getAttribute("data-ct-campaign-index") : "";
+            if (rawIdx) {
+                const arr = JSON.parse(rawIdx);
+                if (Array.isArray(arr)) {
+                    arr.forEach(function (item) {
+                        const cid = item && item.id ? String(item.id).trim() : "";
+                        if (/^[0-9]+$/.test(cid)) {
+                            byId.set(cid, {
+                                id: cid,
+                                name: String(item.name || "").trim(),
+                                active: item.active === true,
+                                operating: opIds.has(cid)
+                            });
+                        }
+                    });
+                }
+            }
+        } catch (e) {}
+
+        // 2. Parsed native campaigns table rows
+        try {
+            if (window.CTParser && window.CTParser.readCampaigns) {
+                const parsed = window.CTParser.readCampaigns() || [];
+                parsed.forEach(function (c) {
+                    const cid = String((c && (c.rawId || c.id)) || "").trim();
+                    if (/^[0-9]+$/.test(cid)) {
+                        const prev = byId.get(cid) || { id: cid, name: c.name || "", active: false, operating: opIds.has(cid) };
+                        byId.set(cid, {
+                            id: cid,
+                            name: c.name || prev.name,
+                            active: c.active === true || prev.active,
+                            operating: opIds.has(cid) || prev.operating
+                        });
+                    }
+                });
+            }
+        } catch (e) {}
+
+        // 3. Previously observed verified registry keys
+        try {
+            const reg = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}");
+            Object.keys(reg).forEach(function (k) {
+                if (/^[0-9]+$/.test(k) && !byId.has(k)) {
+                    byId.set(k, {
+                        id: k,
+                        name: (reg[k] && reg[k].campaignName) || "",
+                        active: false,
+                        operating: opIds.has(k)
+                    });
+                }
+            });
+        } catch (e) {}
+
+        // 4. Explicit operating IDs
+        opIds.forEach(function (cid) {
+            if (!byId.has(cid)) {
+                byId.set(cid, { id: cid, name: "", active: false, operating: true });
+            }
+        });
+
+        return Array.from(byId.values());
+    }
+
+    function pickNextCampaignToProbe(targets, now, forceNow) {
+        if (!targets.length) return null;
+        const neverProbed = targets.filter(function (t) { return !lfLastProbeByCid[t.id]; })
+            .sort(function (a, b) { return ((b.operating || b.active) ? 1 : 0) - ((a.operating || a.active) ? 1 : 0); });
+        if (neverProbed.length > 0) return neverProbed[0];
+
+        const duePriority = targets.filter(function (t) {
+            return (t.operating || t.active) && (forceNow || (now - (lfLastProbeByCid[t.id] || 0)) >= LF_ACTIVE_PROBE_MS);
+        }).sort(function (a, b) { return (lfLastProbeByCid[a.id] || 0) - (lfLastProbeByCid[b.id] || 0); });
+
+        const dueStandby = targets.filter(function (t) {
+            return !(t.operating || t.active) && (forceNow || (now - (lfLastProbeByCid[t.id] || 0)) >= LF_IDLE_PROBE_MS);
+        }).sort(function (a, b) { return (lfLastProbeByCid[a.id] || 0) - (lfLastProbeByCid[b.id] || 0); });
+
+        if (duePriority.length > 0 && (dueStandby.length === 0 || (now - (lfLastProbeByCid[duePriority[0].id] || 0)) >= LF_ACTIVE_PROBE_MS + 6000)) {
+            return duePriority[0];
+        }
+        if (dueStandby.length > 0) return dueStandby[0];
+        if (duePriority.length > 0) return duePriority[0];
+        return null;
+    }
+
+    function dispatchBgSpaStep(frame, routePath, kind, cid, forceHardReload) {
+        const now = Date.now();
+        lfProbeInFlight = { kind: kind, cid: cid || null, startedAt: now };
+        if (kind === "live_filters") lfInvInFlightStartedAt = now;
+
+        let usedSpa = false;
+        if (!forceHardReload && lfSpaBooted && lfConsecutiveTimeouts === 0) {
+            try {
+                const fw = frame.contentWindow;
+                const fwPath = fw && fw.location && fw.location.pathname ? String(fw.location.pathname) : "";
+                if (fw && fw.history && fwPath && !/\/(login|signin)(?:\/|$)/i.test(fwPath)) {
+                    fw.history.pushState(null, "", routePath);
+                    const PopCtor = fw.PopStateEvent || PopStateEvent;
+                    fw.dispatchEvent(new PopCtor("popstate", { state: null }));
+                    usedSpa = true;
+                }
+            } catch (e) {
+                usedSpa = false;
+            }
+        }
+        if (!usedSpa) {
+            lfSpaBooted = false;
+            const sep = routePath.includes("?") ? "&" : "?";
+            frame.src = "https://" + TARGET_HOST + routePath + sep + "ct_ts=" + now;
+        }
+    }
+
+    function coordinateLiveFilterMonitors(forceNow) {
+        if (!isTopLevelCampaignsPage()) {
+            teardownLiveFilterMonitors();
+            return;
+        }
+        if (lfAuthPaused) return;
+
+        // Clean up any stale second iframe from prior releases
+        const legacyInv = document.getElementById(LF_INVENTORY_IFRAME_ID);
+        if (legacyInv) {
+            try { legacyInv.remove(); } catch (e) {}
+        }
+
+        const now = Date.now();
+        if (lfProbeInFlight) {
+            if ((now - lfProbeInFlight.startedAt) < LF_PROBE_TIMEOUT_MS) return;
+            // Timed out; record failure recovery and force clean reload on next step
+            lfConsecutiveTimeouts++;
+            lfSpaBooted = false;
+            if (lfProbeInFlight.cid) lfLastProbeByCid[lfProbeInFlight.cid] = now;
+            if (lfProbeInFlight.kind === "live_filters") lfInvInFlightStartedAt = 0;
+            lfLastProbeCompletedAt = now;
+            lfSpaLastCompletedKind = lfProbeInFlight.kind;
+            lfProbeInFlight = null;
+        }
+
+        if (!forceNow && lfLastProbeCompletedAt && (now - lfLastProbeCompletedAt) < LF_BETWEEN_PROBES_MS) {
+            return;
+        }
+
+        const frame = ensureOffscreenIframe(LF_EDIT_IFRAME_ID, "CT Operations Monitor Unified Live Filter SPA feed");
+        const targets = collectProbeCampaignTargets();
+
+        // Always alternate clean component routes: live_filters <-> campaign_edit
+        // This forces Angular to destroy & recreate CampaignEditComponent cleanly with zero cross-campaign leak.
+        const needInitialBootOrInv = !lfSpaBooted || !lfInvLastCompletedAt;
+        const canRunEdit = targets.length > 0 && lfSpaLastCompletedKind === "live_filters";
+
+        if (!needInitialBootOrInv && canRunEdit) {
+            const nextCamp = pickNextCampaignToProbe(targets, now, Boolean(forceNow));
+            if (nextCamp) {
+                dispatchBgSpaStep(
+                    frame,
+                    "/manager/campaigns/edit/" + encodeURIComponent(nextCamp.id) + "?" + LF_MONITOR_PARAM + "=1&ct_lf_owner=ctompro_east3",
+                    "campaign_edit",
+                    nextCamp.id,
+                    false
+                );
+                return;
+            }
+        }
+
+        const invDue = needInitialBootOrInv || Boolean(forceNow) || (lfSpaLastCompletedKind !== "live_filters" && (!lfInvLastCompletedAt || (now - lfInvLastCompletedAt) >= LF_INVENTORY_REFRESH_MS));
+        if (invDue) {
+            dispatchBgSpaStep(
+                frame,
+                "/manager/live-filters?" + LF_MONITOR_PARAM + "=1&ct_lf_owner=ctompro_east3",
+                "live_filters",
+                null,
+                lfConsecutiveTimeouts > 0 || !lfSpaBooted
+            );
+            return;
+        }
+
+        // If inventory isn't due yet, check if an edit probe is due via clean live_filters alternation
+        const fallbackCamp = pickNextCampaignToProbe(targets, now, Boolean(forceNow));
+        if (fallbackCamp && lfSpaLastCompletedKind !== "campaign_edit") {
+            dispatchBgSpaStep(
+                frame,
+                "/manager/campaigns/edit/" + encodeURIComponent(fallbackCamp.id) + "?" + LF_MONITOR_PARAM + "=1&ct_lf_owner=ctompro_east3",
+                "campaign_edit",
+                fallbackCamp.id,
+                false
+            );
+        }
     }
 
     function requestInboundIframeRefresh() {
@@ -292,7 +641,9 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
                 c.onCall || "",
                 c.postCall || "",
                 c.goals || "",
-                c.liveFilter || ""
+                c.liveFilter || "",
+                c.liveFilterId || "",
+                c.liveFilterCount ?? ""
             ];
         }).sort(function (a, b) {
             return String(a[0]).localeCompare(String(b[0]));
@@ -499,13 +850,16 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             return;
         }
         const now = Date.now();
-        if (isCampaignsPage()) {
+        if (isTopLevelCampaignsPage()) {
             if (now - lastInboundCoordinationAt >= INBOUND_COORDINATION_MS) {
                 lastInboundCoordinationAt = now;
                 ensureInboundFeedMonitor();
                 requestInboundIframeRefresh();
             }
             if (now - lastInboundHeartbeatAt >= INBOUND_HEARTBEAT_MS) inspectInboundIframeAuth();
+            coordinateLiveFilterMonitors(false);
+        } else if (isCampaignsPage()) {
+            teardownInboundIframe();
         }
         if (isQueuesPage()) {
             teardownInboundIframe();
@@ -609,14 +963,48 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         observer.observe(target, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class", "style", "aria-label", "title", "data-state", "data-value"] });
     }
 
+    let fastBgRetryTimer = null;
+    function scheduleBackgroundFastPoll() {
+        if (!isBackgroundCampaignEditFrame() && !isBackgroundLiveFiltersFrame()) return;
+        let ticks = 0;
+        const epoch = bgRouteEpoch;
+        if (fastBgRetryTimer) window.clearInterval(fastBgRetryTimer);
+        fastBgRetryTimer = window.setInterval(function () {
+            ticks++;
+            if (epoch !== bgRouteEpoch) {
+                window.clearInterval(fastBgRetryTimer);
+                fastBgRetryTimer = null;
+                return;
+            }
+            if (isBackgroundCampaignEditFrame()) {
+                observeCampaignEditForm();
+                if (lastEditWriteAt > 0 || ticks >= 40) {
+                    window.clearInterval(fastBgRetryTimer);
+                    fastBgRetryTimer = null;
+                }
+            } else if (isBackgroundLiveFiltersFrame()) {
+                observeLiveFiltersPage();
+                if (lastInvWriteAt > 0 || ticks >= 40) {
+                    window.clearInterval(fastBgRetryTimer);
+                    fastBgRetryTimer = null;
+                }
+            } else {
+                window.clearInterval(fastBgRetryTimer);
+                fastBgRetryTimer = null;
+            }
+        }, 200);
+    }
+
     function cleanup() {
         if (intervalId) window.clearInterval(intervalId);
         if (observerTimer) window.clearTimeout(observerTimer);
         if (refreshVerificationTimer) window.clearTimeout(refreshVerificationTimer);
+        if (fastBgRetryTimer) window.clearInterval(fastBgRetryTimer);
         if (observer) observer.disconnect();
         intervalId = null;
         observerTimer = null;
         refreshVerificationTimer = null;
+        fastBgRetryTimer = null;
         observer = null;
     }
 
@@ -625,16 +1013,32 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         if (!isMonitorPage()) return;
 
         window.__CTOperationsFeedCleanup = cleanup;
+        // Proactive interactive edit form event tracking (SPA-safe: checks route on event)
+        if (!window.__CT_EDIT_EVENTS_ATTACHED) {
+            window.__CT_EDIT_EVENTS_ATTACHED = true;
+            ['change', 'input', 'click', 'blur'].forEach(function(evType) {
+                document.addEventListener(evType, function() {
+                    if (!isCampaignEditPage()) return;
+                    [20, 80, 200, 450, 900].forEach(function(delay) {
+                        window.setTimeout(observeCampaignEditForm, delay);
+                    });
+                }, true);
+            });
+        }
         installObserver();
-        if (isCampaignsPage()) {
+        if (isTopLevelCampaignsPage()) {
             lastInboundCoordinationAt = Date.now();
             ensureInboundFeedMonitor();
+            window.setTimeout(function () { coordinateLiveFilterMonitors(false); }, 600);
         } else if (isQueuesPage()) {
             teardownInboundIframe();
+            teardownLiveFilterMonitors();
         } else if (isCampaignEditPage()) {
             observeCampaignEditForm();
+            scheduleBackgroundFastPoll();
         } else if (isLiveFiltersPage()) {
             observeLiveFiltersPage();
+            scheduleBackgroundFastPoll();
         }
         if (isBackgroundInboundMonitor()) {
             persistInboundFeedStatus("VERIFYING", 0, Date.now());
@@ -662,15 +1066,22 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             const pushStateOrig = history.pushState;
             const replaceStateOrig = history.replaceState;
             function onRouteTransition() {
+                bgRouteEpoch++;
+                lastEditSig = "";
+                lastEditWriteAt = 0;
+                lastInvSig = "";
+                lastInvWriteAt = 0;
                 window.setTimeout(function () {
                     if (isCampaignEditPage()) {
                         observeCampaignEditForm();
+                        scheduleBackgroundFastPoll();
                     } else if (isLiveFiltersPage()) {
                         observeLiveFiltersPage();
+                        scheduleBackgroundFastPoll();
                     } else if (isCampaignsPage()) {
                         readAndPublish("spa-navigation");
                     }
-                }, 120);
+                }, 180);
             }
             history.pushState = function () {
                 const res = pushStateOrig.apply(this, arguments);
@@ -687,14 +1098,14 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
 
         // Cross-tab immediate storage sync
         window.addEventListener("storage", function (e) {
-            if (e.key === VERIFIED_FILTERS_KEY && isCampaignsPage()) {
-                readAndPublish("storage-sync-verified-filter");
+            if ((e.key === VERIFIED_FILTERS_KEY || e.key === LIVE_FILTERS_INVENTORY_KEY) && isCampaignsPage()) {
+                readAndPublish("storage-sync-verified-filter", true);
             }
         });
         if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.onChanged) {
             chrome.storage.onChanged.addListener(function (changes) {
-                if (changes && changes[VERIFIED_FILTERS_KEY] && isCampaignsPage()) {
-                    readAndPublish("chrome-storage-verified-filter");
+                if (changes && (changes[VERIFIED_FILTERS_KEY] || changes[LIVE_FILTERS_INVENTORY_KEY]) && isCampaignsPage()) {
+                    readAndPublish("chrome-storage-verified-filter", true);
                 }
             });
         }
@@ -711,8 +1122,47 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     }
 
     window.addEventListener("message", function (event) {
-        if (!isInboundMonitorFrame() || event.origin !== window.location.origin) return;
-        if (!event.data || event.data.type !== "CT_EAST_3_REFRESH_INBOUND_FEED") return;
+        if (event.origin !== window.location.origin || !event.data) return;
+        if (isTopLevelCampaignsPage() && event.data.type === "CT_EAST_3_BG_FILTER_OBSERVED" && event.data.entry) {
+            const entry = event.data.entry;
+            const now = Date.now();
+            lfAuthPaused = false;
+            lfSpaBooted = true;
+            lfConsecutiveTimeouts = 0;
+            lfSpaLastCompletedKind = "campaign_edit";
+            if (entry.campaignId) {
+                lfLastProbeByCid[String(entry.campaignId)] = now;
+                if (lfProbeInFlight && (!lfProbeInFlight.cid || String(lfProbeInFlight.cid) === String(entry.campaignId))) {
+                    lfProbeInFlight = null;
+                    lfLastProbeCompletedAt = now;
+                }
+            }
+            readAndPublish("bg-filter-observed", true);
+            window.dispatchEvent(new CustomEvent("CT_EAST_3_VERIFIED_FILTER_CHANGED", { detail: entry }));
+            document.dispatchEvent(new CustomEvent("CT_EAST_3_VERIFIED_FILTER_CHANGED", { detail: entry }));
+            window.setTimeout(function () { coordinateLiveFilterMonitors(false); }, LF_BETWEEN_PROBES_MS + 50);
+            return;
+        }
+        if (isTopLevelCampaignsPage() && event.data.type === "CT_EAST_3_BG_INVENTORY_OBSERVED") {
+            const now = Date.now();
+            lfAuthPaused = false;
+            lfSpaBooted = true;
+            lfConsecutiveTimeouts = 0;
+            lfSpaLastCompletedKind = "live_filters";
+            lfInvInFlightStartedAt = 0;
+            lfInvLastCompletedAt = now;
+            if (lfProbeInFlight && lfProbeInFlight.kind === "live_filters") {
+                lfProbeInFlight = null;
+                lfLastProbeCompletedAt = now;
+            }
+            readAndPublish("bg-inventory-observed", true);
+            window.dispatchEvent(new CustomEvent("CT_EAST_3_INVENTORY_UPDATED", { detail: { count: event.data.count || 0, observedAt: event.data.observedAt || now } }));
+            document.dispatchEvent(new CustomEvent("CT_EAST_3_INVENTORY_UPDATED", { detail: { count: event.data.count || 0, observedAt: event.data.observedAt || now } }));
+            window.setTimeout(function () { coordinateLiveFilterMonitors(false); }, LF_BETWEEN_PROBES_MS + 50);
+            return;
+        }
+        if (!isInboundMonitorFrame()) return;
+        if (event.data.type !== "CT_EAST_3_REFRESH_INBOUND_FEED") return;
         lastSourceRefreshAt = Date.now();
         publishFeedStatus("VERIFYING", { reason: "Inbound feed re-check requested from Operations Monitor", route: "queues" });
         readAndPublish("manual-inbound-refresh-check", true);
@@ -744,7 +1194,15 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             const campaigns = window.CTParser && window.CTParser.readCampaigns ? window.CTParser.readCampaigns() : [];
             recordsRead = campaigns.length;
             sourceDetails.campaigns = { status: campaigns.length > 0 ? "SUCCESS" : "EMPTY", count: campaigns.length, timestamp: now };
-            unavailableSources = ["Live Filter Inventory (requires navigation to /manager/live-filters)"];
+            if (isTopLevelCampaignsPage()) {
+                lfAuthPaused = false;
+                coordinateLiveFilterMonitors(true);
+                sourceDetails.liveFilterMonitors = { status: "REFRESH_DISPATCHED", timestamp: now };
+            }
+            const hasInv = Boolean(localStorage.getItem(LIVE_FILTERS_INVENTORY_KEY));
+            if (!hasInv) {
+                unavailableSources = ["Live Filter Inventory (background feed initializing)"];
+            }
 
             // Also refresh Inbound feed if iframe bridge is embedded on page
             const inboundFrame = document.querySelector("#ct-inbound-bridge, iframe[data-ct-inbound]");

@@ -27,6 +27,17 @@
         "src/dashboard.css"
       ],
       "all_frames": true
+    },
+    {
+      "matches": [
+        "https://east-3.calltools.io/manager/campaigns*"
+      ],
+      "js": [
+        "src/ng_bridge.js"
+      ],
+      "world": "MAIN",
+      "all_frames": false,
+      "run_at": "document_idle"
     }
   ]
 }
