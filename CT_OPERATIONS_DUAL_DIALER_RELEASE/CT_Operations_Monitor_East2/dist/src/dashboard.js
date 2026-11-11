@@ -69,6 +69,19 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
     const INBOUND_SETTINGS_KEY = PREFIX + "inbound_settings_v1";
     const VERIFIED_FILTERS_KEY = "ct_east2_verified_campaign_filters_v1";
     const LIVE_FILTERS_INVENTORY_KEY = "ct_east2_live_filters_inventory_v1";
+    const LFI_INVENTORY_FILTER_KEY = PREFIX + "lfi_inventory_filter_v1";
+
+    function normalizeInventoryFilter(raw) {
+        if (window.CT && typeof window.CT.normalizeLfiInventoryFilter === "function") {
+            return window.CT.normalizeLfiInventoryFilter(raw);
+        }
+        const val = String(raw || "").trim().toLowerCase();
+        return (val === "active" || val === "all" || val === "inactive") ? val : "active";
+    }
+
+    function readInventoryFilter() {
+        return normalizeInventoryFilter(readStorage(LFI_INVENTORY_FILTER_KEY, "active"));
+    }
 
     function readPersistentGoalBaselines() {
         try {
@@ -191,6 +204,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
         query: readStorage(SEARCH_QUERY_KEY, ""),
         filter: readStorage(FILTER_HEALTH_KEY, "all"),
         stateFilter: readStorage(FILTER_STATE_KEY, "active"),
+        inventoryStatusFilter: readInventoryFilter(),
         allCollapsed: false,
         theme: readStorage(THEME_KEY, "dark") === "light" ? "light" : "dark",
         contactThreshold: numberValue(readStorage(CONTACT_THRESHOLD_KEY, "2000")),
@@ -387,6 +401,20 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
         if (searchInput && searchInput.value !== (state.query || "")) {
             searchInput.value = state.query || "";
         }
+        syncLfiInventoryFilterButtons();
+    }
+
+    function syncLfiInventoryFilterButtons() {
+        if (!root) return;
+        const activeFilter = normalizeInventoryFilter(state.inventoryStatusFilter);
+        state.inventoryStatusFilter = activeFilter;
+        const btns = root.querySelectorAll("[data-lfi-filter]");
+        btns.forEach(function (button) {
+            const val = String(button.dataset.lfiFilter || "").trim().toLowerCase();
+            const selected = val === activeFilter;
+            button.classList.toggle("is-selected", selected);
+            button.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
     }
 
     // Route guard: Only mount dashboard UI on /manager/campaigns or /manager/queues (never in background iframes or on /edit, /live-filters, or /login)
@@ -533,12 +561,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                         if (currTs > 0 && entryTs > 0 && entryTs < currTs) {
                             return;
                         }
+                        const expectedSrc = (entryTs > 0 && (Date.now() - entryTs) > 120000)
+                            ? "STALE_REGISTRY"
+                            : (entry.source || "CAMPAIGN_EDIT_DOM");
                         if (c.liveFilter !== entry.liveFilter ||
                             c.liveFilterTimestamp !== entry.timestamp ||
                             c.liveFilterId !== resolvedFid ||
-                            c.liveFilterCount !== entry.filterCount) {
+                            c.liveFilterCount !== entry.filterCount ||
+                            c.liveFilterSource !== expectedSrc) {
                             c.liveFilter = entry.liveFilter;
-                            c.liveFilterSource = entry.source || "CAMPAIGN_EDIT_DOM";
+                            c.liveFilterSource = expectedSrc;
                             c.liveFilterTimestamp = entry.timestamp || Date.now();
                             c.liveFilterCount = entry.filterCount !== undefined ? entry.filterCount : null;
                             c.liveFilterId = resolvedFid || c.liveFilterId || null;
@@ -682,8 +714,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
         }
 
         try {
-            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT));
-            document.dispatchEvent(new CustomEvent(REQUEST_INBOUND_REFRESH_EVENT));
+            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT, { detail: { background: true, reason: reason || "15s-scheduler-cycle" } }));
+            document.dispatchEvent(new CustomEvent(REQUEST_INBOUND_REFRESH_EVENT, { detail: { background: true, forceReload: false } }));
         } catch (e) {}
 
         setTimeout(function () {
@@ -910,6 +942,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             scheduleRender();
             return;
         }
+        if (event.key === LFI_INVENTORY_FILTER_KEY) {
+            state.inventoryStatusFilter = normalizeInventoryFilter(event.newValue);
+            syncLfiInventoryFilterButtons();
+            updateLiveFilterIntelligence();
+            return;
+        }
         if (event.key === PERSISTENT_GOAL_ALERTS_KEY || event.key === ACKNOWLEDGED_GOAL_ALERTS_KEY) {
             state.persistentGoalAlerts = readPersistentGoalAlerts();
             state.acknowledgedGoalAlerts = readAcknowledgedGoalAlerts();
@@ -1090,9 +1128,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             }
 
             #${DASHBOARD_ID} .ct-summary {
-                position: sticky;
-                top: 0;
-                z-index: 80;
+                position: relative;
+                top: auto;
+                z-index: 20;
+                min-width: 0;
+                max-width: 100%;
+                box-sizing: border-box;
                 display: grid;
                 gap: 9px;
                 padding: 11px;
@@ -1409,8 +1450,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
 
             #${DASHBOARD_ID} .ct-content {
                 display: grid;
+                grid-template-columns: minmax(0, 1fr);
                 gap: 7px;
                 padding: 8px;
+                min-width: 0;
+                max-width: 100%;
+                box-sizing: border-box;
             }
 
             #${DASHBOARD_ID}.is-panel-collapsed {
@@ -2432,6 +2477,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             #${DASHBOARD_ID} .ct-alert-sev-pill.is-warning,
             #${DASHBOARD_ID} .ct-intel-badge.is-decrease,
             #${DASHBOARD_ID} .ct-intel-badge.is-filter-change { background:rgba(245,158,11,.24); color:#fde68a; border:1px solid rgba(245,158,11,.52); }
+            #${DASHBOARD_ID} .ct-alert-sev-pill.is-info { background:rgba(56,189,248,.22); color:#bae6fd; border:1px solid rgba(56,189,248,.48); }
             #${DASHBOARD_ID} .ct-alert-sev-pill.is-good,
             #${DASHBOARD_ID} .ct-goal-badge,
             #${DASHBOARD_ID} .ct-intel-badge.is-good { background:rgba(16,185,129,.26); color:#a7f3d0; border:1px solid rgba(16,185,129,.52); }
@@ -2439,7 +2485,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             #${DASHBOARD_ID} .ct-goal-campaign-tag { display:inline-flex; align-items:center; padding:3px 8px; border-radius:5px; background:rgba(56,189,248,.14); color:#bae6fd; border:1px solid rgba(56,189,248,.34); font-size:10.5px; font-weight:800; letter-spacing:.02em; }
             #${DASHBOARD_ID} .ct-goal-direction-tag { display:inline-flex; align-items:center; padding:3px 7px; border-radius:5px; background:rgba(148,163,184,.16); color:#cbd5e1; border:1px solid rgba(148,163,184,.28); font-size:10px; font-weight:850; letter-spacing:.04em; text-transform:uppercase; }
             #${DASHBOARD_ID} .ct-goal-time { margin-left:auto; color:#cbd5e1; font-size:11px; font-weight:700; font-variant-numeric:tabular-nums; }
-            #${DASHBOARD_ID} .ct-alert-headline { color:#f8fafc; font-size:13.5px; font-weight:850; line-height:1.42; white-space:normal; word-break:break-word; }
+            #${DASHBOARD_ID} .ct-alert-headline { color:#f8fafc; font-size:14px; font-weight:850; line-height:1.45; white-space:normal; word-break:break-word; }
             #${DASHBOARD_ID} .ct-alert-stat-bar { display:inline-flex; align-items:center; flex-wrap:wrap; gap:7px; width:fit-content; max-width:100%; padding:5px 11px; border-radius:7px; background:rgba(15,23,42,.82); border:1px solid rgba(148,163,184,.26); font-size:12px; font-weight:800; color:#e2e8f0; font-variant-numeric:tabular-nums; }
             #${DASHBOARD_ID} .ct-goal-count-prev { color:#cbd5e1; }
             #${DASHBOARD_ID} .ct-goal-arrow { color:#38bdf8; font-weight:900; }
@@ -2447,16 +2493,16 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             #${DASHBOARD_ID} .ct-intel-delta,
             #${DASHBOARD_ID} .ct-goal-increase { color:#38bdf8; font-weight:850; font-size:11.5px; }
             #${DASHBOARD_ID} .ct-goal-increase { color:#34d399; }
-            #${DASHBOARD_ID} .ct-alert-explain-grid { display:grid; gap:5px; padding:8px 11px; border-radius:8px; background:rgba(2,6,23,.48); border:1px solid rgba(148,163,184,.18); }
-            #${DASHBOARD_ID} .ct-alert-explain-row { display:grid; grid-template-columns:126px minmax(0,1fr); align-items:baseline; gap:10px; font-size:11.8px; line-height:1.45; color:#e2e8f0; white-space:normal; word-break:break-word; padding:2px 0; }
-            #${DASHBOARD_ID} .ct-alert-explain-row strong { color:#94a3b8; font-size:10px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+            #${DASHBOARD_ID} .ct-alert-explain-grid { display:grid; gap:6px; padding:10px 12px; border-radius:8px; background:rgba(2,6,23,.52); border:1px solid rgba(148,163,184,.2); }
+            #${DASHBOARD_ID} .ct-alert-explain-row { display:grid; grid-template-columns:134px minmax(0,1fr); align-items:baseline; gap:10px; font-size:12px; line-height:1.5; color:#e2e8f0; white-space:normal; word-break:break-word; padding:2px 0; }
+            #${DASHBOARD_ID} .ct-alert-explain-row strong { color:#94a3b8; font-size:10.5px; font-weight:900; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
             #${DASHBOARD_ID} .ct-alert-explain-row.is-why strong { color:#fbbf24; }
             #${DASHBOARD_ID} .ct-alert-explain-row.is-action { padding-top:4px; margin-top:2px; border-top:1px solid rgba(148,163,184,.12); color:#e0f2fe; font-weight:600; }
             #${DASHBOARD_ID} .ct-alert-explain-row.is-action strong { color:#38bdf8; }
             #${DASHBOARD_ID} .ct-alert-buttons,
-            #${DASHBOARD_ID} .ct-goal-card-actions { display:flex; flex-direction:column; justify-content:center; gap:7px; min-width:120px; border-left:1px solid rgba(148,163,184,.18); padding-left:12px; }
+            #${DASHBOARD_ID} .ct-goal-card-actions { display:flex; flex-direction:column; justify-content:center; gap:7px; min-width:132px; border-left:1px solid rgba(148,163,184,.18); padding-left:12px; }
             #${DASHBOARD_ID} .ct-alert-btn,
-            #${DASHBOARD_ID} .ct-btn-noted { display:inline-flex; align-items:center; justify-content:center; gap:5px; width:100%; min-height:32px; padding:6px 10px; border:1px solid rgba(148,163,184,.32); border-radius:7px; color:#f8fafc; background:rgba(255,255,255,.09); font-size:11px; font-weight:850; letter-spacing:.04em; cursor:pointer; text-align:center; transition:background .15s ease, transform .12s ease, border-color .15s ease; }
+            #${DASHBOARD_ID} .ct-btn-noted { display:inline-flex; align-items:center; justify-content:center; gap:5px; width:100%; min-height:34px; padding:6px 10px; border:1px solid rgba(148,163,184,.32); border-radius:7px; color:#f8fafc; background:rgba(255,255,255,.09); font-size:11px; font-weight:850; letter-spacing:.04em; cursor:pointer; text-align:center; transition:background .15s ease, transform .12s ease, border-color .15s ease; }
             #${DASHBOARD_ID} .ct-alert-btn-primary { background:#2563eb; border-color:#60a5fa; color:#ffffff; box-shadow:0 3px 10px rgba(37,99,235,.32); }
             #${DASHBOARD_ID} .ct-alert-btn-primary:hover { background:#1d4ed8; transform:translateY(-1px); }
             #${DASHBOARD_ID} .ct-alert-btn-secondary:hover,
@@ -2574,8 +2620,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
 
         style.textContent += `
             /* v11.0.7 final visual hardening */
-            #${DASHBOARD_ID} { width:min(1040px,calc(100vw - 24px)); max-height:calc(100vh - 24px); }
-            #${DASHBOARD_ID} .ct-summary { padding:12px; }
+            #${DASHBOARD_ID} { width:min(1040px,calc(100vw - 24px)); max-width:calc(100vw - 24px) !important; max-height:calc(100vh - 24px); box-sizing:border-box; }
+            #${DASHBOARD_ID} .ct-summary { padding:12px; min-width:0; max-width:100%; box-sizing:border-box; }
             #${DASHBOARD_ID} .ct-title h2 { font-size:18px; font-weight:950; }
             #${DASHBOARD_ID} .ct-updated { font-size:10px; font-weight:650; }
             #${DASHBOARD_ID} .ct-kpis { grid-template-columns:repeat(10,minmax(0,1fr)); gap:7px; }
@@ -2583,10 +2629,10 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             #${DASHBOARD_ID} .ct-kpi-label { font-size:8px; }
             #${DASHBOARD_ID} .ct-kpi-value { font-size:18px; }
             #${DASHBOARD_ID} .ct-kpi-note { font-size:9px; }
-            #${DASHBOARD_ID} .ct-alerts { min-height:150px; }
+            #${DASHBOARD_ID} .ct-alerts { min-height:150px; min-width:0; max-width:100%; box-sizing:border-box; }
             #${DASHBOARD_ID} .ct-alert { min-height:82px; }
-            #${DASHBOARD_ID} .ct-alert-buttons { min-width:84px; }
-            #${DASHBOARD_ID} .ct-alert-btn { min-width:84px; }
+            #${DASHBOARD_ID} .ct-alert-buttons { min-width:132px; }
+            #${DASHBOARD_ID} .ct-alert-btn { min-width:110px; min-height:34px; }
             /* v11.1.24 insight compactness: pressure signals should be scannable,
                not dominate the command center vertically. */
             #${DASHBOARD_ID} .ct-insights-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; }
@@ -3363,7 +3409,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                                 <span class="ct-lft-transition-label">LATEST TARGETING TRANSITION:</span>
                                 <div class="ct-lft-transition-content" data-ref="topFilterChange">No verified targeting changes recorded</div>
                             </div>
-                            <button type="button" class="ct-lft-copy-btn ct-lft-copy-btn-compact is-disabled" data-ref="copyTransitionBtn" disabled title="No verified targeting transition available to copy" aria-label="Copy latest verified Live Filter transition (FROM / TO)"><span class="ct-copy-icon" aria-hidden="true">⧉</span><span class="ct-copy-label">NO VERIFIED TRANSITION</span></button>
+                            <button type="button" class="ct-lft-copy-btn ct-lft-copy-btn-compact is-disabled" data-ref="copyTransitionBtn" disabled title="No verified targeting transition available to copy" aria-label="Copy latest verified Live Filter transition (Previous → New)"><span class="ct-copy-icon" aria-hidden="true">⧉</span><span class="ct-copy-label">NO VERIFIED TRANSITION</span></button>
                         </div>
                     </section>
 
@@ -3516,27 +3562,27 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                         <div class="ct-lfi-body" data-ref="lfiBody">
                             <!-- A. Summary KPIs -->
                             <div class="ct-lfi-kpi-grid" aria-label="Live Filter Summary KPIs">
-                                <div class="ct-lfi-kpi-card">
+                                <div class="ct-lfi-kpi-card is-total-tone">
                                     <div class="ct-lfi-kpi-label">TOTAL FILTERS</div>
                                     <div class="ct-lfi-kpi-value" data-ref="lfiTotalFilters">—</div>
                                     <div class="ct-lfi-kpi-sub" data-ref="lfiTotalFiltersSub">Known filter inventory</div>
                                 </div>
-                                <div class="ct-lfi-kpi-card">
+                                <div class="ct-lfi-kpi-card is-active-tone">
                                     <div class="ct-lfi-kpi-label">ACTIVE FILTERS</div>
                                     <div class="ct-lfi-kpi-value" data-ref="lfiActiveFilters">—</div>
                                     <div class="ct-lfi-kpi-sub" data-ref="lfiActiveFiltersSub">Active targeting rules</div>
                                 </div>
-                                <div class="ct-lfi-kpi-card">
+                                <div class="ct-lfi-kpi-card is-inactive-tone">
                                     <div class="ct-lfi-kpi-label">INACTIVE FILTERS</div>
                                     <div class="ct-lfi-kpi-value" data-ref="lfiInactiveFilters">—</div>
                                     <div class="ct-lfi-kpi-sub" data-ref="lfiInactiveFiltersSub">Dormant / disabled rules</div>
                                 </div>
-                                <div class="ct-lfi-kpi-card">
+                                <div class="ct-lfi-kpi-card is-contacts-tone">
                                     <div class="ct-lfi-kpi-label">AVAILABLE CONTACTS</div>
                                     <div class="ct-lfi-kpi-value" data-ref="lfiAvailableContacts">—</div>
                                     <div class="ct-lfi-kpi-sub" data-ref="lfiAvailableContactsSub">Contacts in matching filters</div>
                                 </div>
-                                <div class="ct-lfi-kpi-card">
+                                <div class="ct-lfi-kpi-card is-running-tone">
                                     <div class="ct-lfi-kpi-label">RUNNING CAMPAIGNS</div>
                                     <div class="ct-lfi-kpi-value" data-ref="lfiRunningCampaigns">—</div>
                                     <div class="ct-lfi-kpi-sub" data-ref="lfiRunningCampaignsSub">Active dialer campaigns</div>
@@ -3553,8 +3599,15 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                                 <!-- B. Live Filter Inventory -->
                                 <div class="ct-lfi-card">
                                     <div class="ct-lfi-card-head">
-                                        <strong>Live Filter Inventory</strong>
-                                        <small data-ref="lfiInventoryNote">Sourced from /manager/live-filters</small>
+                                        <div class="ct-lfi-card-head-left">
+                                            <strong>Live Filter Inventory</strong>
+                                            <small data-ref="lfiInventoryNote">Sourced from /manager/live-filters</small>
+                                        </div>
+                                        <div class="ct-lfi-filter-tabs" role="group" aria-label="Live Filter Inventory Status Filter" data-ref="lfiInventoryFilterGroup">
+                                            <button type="button" class="ct-lfi-filter-btn is-selected" data-lfi-filter="active" aria-pressed="true">ACTIVE</button>
+                                            <button type="button" class="ct-lfi-filter-btn" data-lfi-filter="all" aria-pressed="false">ALL</button>
+                                            <button type="button" class="ct-lfi-filter-btn" data-lfi-filter="inactive" aria-pressed="false">INACTIVE</button>
+                                        </div>
                                     </div>
                                     <div class="ct-lfi-table-wrap">
                                         <table class="ct-lfi-table">
@@ -3817,6 +3870,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             lfiVerifiedConfigs: root.querySelector('[data-ref="lfiVerifiedConfigs"]'),
             lfiVerifiedConfigsSub: root.querySelector('[data-ref="lfiVerifiedConfigsSub"]'),
             lfiInventoryNote: root.querySelector('[data-ref="lfiInventoryNote"]'),
+            lfiInventoryFilterGroup: root.querySelector('[data-ref="lfiInventoryFilterGroup"]'),
+            lfiInventoryFilterButtons: Array.from(root.querySelectorAll("[data-lfi-filter]")),
             lfiInventoryTableBody: root.querySelector('[data-ref="lfiInventoryTableBody"]'),
             lfiMatrixNote: root.querySelector('[data-ref="lfiMatrixNote"]'),
             lfiMatrixTableBody: root.querySelector('[data-ref="lfiMatrixTableBody"]'),
@@ -4108,7 +4163,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             if (refs.headerRefresh) {
                 refs.headerRefresh.classList.add("is-refreshing");
             }
-            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT, { detail: { refreshId: refreshId, requestedAt: Date.now() } }));
+            document.dispatchEvent(new CustomEvent(REQUEST_REFRESH_EVENT, { detail: { refreshId: refreshId, manual: true, requestedAt: Date.now() } }));
             if (activeRefreshTimer) clearTimeout(activeRefreshTimer);
             activeRefreshTimer = setTimeout(function () {
                 if (state.isRefreshing && state.activeRefreshId === refreshId) {
@@ -4187,6 +4242,19 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                     refs.lfiToggleBtn.textContent = "Expand ▾";
                 }
             } catch (e) {}
+        }
+        if (refs.lfiInventoryFilterButtons && refs.lfiInventoryFilterButtons.length) {
+            state.inventoryStatusFilter = readInventoryFilter();
+            syncLfiInventoryFilterButtons();
+            refs.lfiInventoryFilterButtons.forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    const nextView = normalizeInventoryFilter(btn.dataset.lfiFilter);
+                    state.inventoryStatusFilter = nextView;
+                    writeStorage(LFI_INVENTORY_FILTER_KEY, nextView);
+                    syncLfiInventoryFilterButtons();
+                    updateLiveFilterIntelligence();
+                });
+            });
         }
         refs.orderReset.addEventListener("click", function () {
             const sourceOrder = state.campaigns.map(function (campaign, index) { return campaignId(campaign, index); });
@@ -4334,7 +4402,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                     return;
                 }
                 setCopyButtonFeedback(refs.copyTransitionBtn, "is-copied", "✓ COPIED", "Copy Transition", false);
-                showActionNotice("Copied verified filter transition (FROM / TO) in WhatsApp format.");
+                showActionNotice("Copied verified filter transition (Previous → New) in WhatsApp format.");
             });
         }
         if (refs.persistentGoalsContainer) {
@@ -5583,11 +5651,13 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                         setClass(refs.topFilterVerificationState, "ct-lft-verify-badge is-unavailable");
                     }
                 }
+                const resolvedSourceLabel = fSource === "TABLE_COLUMN" ? "Campaigns Table" :
+                                            fSource === "CAMPAIGN_EDIT_DOM" ? "Edit Page DOM" :
+                                            fSource === "VERIFIED_REGISTRY" ? "Verified Registry" :
+                                            fSource === "STALE_REGISTRY" ? ((directRegEntry && directRegEntry.source === "CAMPAIGN_EDIT_DOM") ? "Edit Page DOM (Last Observed)" : "Verified Registry (Last Observed)") :
+                                            "DOM Unavailable";
                 if (refs.topFilterSource) {
-                    const sourceLabel = fSource === "TABLE_COLUMN" ? "Campaigns Table" :
-                                        fSource === "CAMPAIGN_EDIT_DOM" ? "Edit Page DOM" :
-                                        fSource === "VERIFIED_REGISTRY" ? "Verified Registry" : "DOM Unavailable";
-                    setText(refs.topFilterSource, "Source: " + sourceLabel);
+                    setText(refs.topFilterSource, "Source: " + resolvedSourceLabel);
                 }
 
                 // 2. Card 1: Assigned Live Filter
@@ -5656,7 +5726,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                     }
                 }
                 if (refs.topFilterVerifySource) {
-                    setText(refs.topFilterVerifySource, fSource === "TABLE_COLUMN" ? "Campaigns Table" : fSource === "CAMPAIGN_EDIT_DOM" ? "Edit Page DOM" : fSource === "VERIFIED_REGISTRY" ? "Verified Registry" : "DOM Unavailable");
+                    setText(refs.topFilterVerifySource, resolvedSourceLabel);
                 }
                 if (refs.topFilterObserved) {
                     setText(refs.topFilterObserved, "Last observed: " + fTime);
@@ -5676,7 +5746,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                     if (changeFound) {
                         refs.topFilterChange.innerHTML = lastChangeHtml;
                     } else {
-                        setText(refs.topFilterChange, "No verified targeting transitions recorded for " + cName);
+                        setText(refs.topFilterChange, "No verified targeting transitions recorded for " + cName + " (copying unavailable)");
                     }
                 }
                 const assignSnap = (window.CT && window.CT.resolveAuthoritativeAssignedFilterCopy && cId)
@@ -5698,8 +5768,8 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                     refs.copyTransitionBtn.disabled = !hasTrans;
                     refs.copyTransitionBtn.classList.toggle("is-disabled", !hasTrans);
                     refs.copyTransitionBtn.title = hasTrans
-                        ? ("Copy latest verified Live Filter transition in WhatsApp format:\n\n" + transSnap.text)
-                        : "NO VERIFIED TRANSITION — requires a verified prior and new Live Filter swap";
+                        ? ("Copy verified targeting transition (" + transSnap.text + ")")
+                        : "Copying unavailable: requires a verified prior and new Live Filter swap";
                     if (!refs.copyTransitionBtn._ctFeedbackTimer) {
                         const lbl = refs.copyTransitionBtn.querySelector(".ct-copy-label");
                         if (lbl) lbl.textContent = hasTrans ? "Copy Transition" : "NO VERIFIED TRANSITION";
@@ -7518,9 +7588,12 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                         : '<button type="button" class="ct-alert-btn ct-alert-btn-primary" data-intel-action="focus" data-target="' + escapeHtml(alert.targetId || alert.campaignId || alert.targetName || "") + '"><span aria-hidden="true">🎯</span><span>FOCUS</span></button>';
                 const dismissBtn = '<button type="button" class="ct-alert-btn ct-alert-btn-dismiss" data-intel-action="dismiss" data-intel-id="' + escapeHtml(alert.id) + '"><span aria-hidden="true">✕</span><span>DISMISS</span></button>';
 
+                const intelSevPillClass = alert.severity === "critical" ? "is-critical" : alert.severity === "warning" ? "is-warning" : "is-info";
+                const intelSevLabel = alert.severity === "critical" ? "CRITICAL" : alert.severity === "warning" ? "AT RISK" : "ACTIVE SIGNAL";
                 return '<div class="ct-intelligence-card ' + sevClass + '" data-intel-id="' + escapeHtml(alert.id) + '">' +
                     '<div class="ct-alert-main">' +
                         '<div class="ct-intel-card-top">' +
+                            '<span class="ct-alert-sev-pill ' + intelSevPillClass + '">' + escapeHtml(intelSevLabel) + '</span>' +
                             '<span class="ct-intel-badge ' + badgeClass + '">' + escapeHtml(alert.status) + '</span>' +
                             '<span class="' + dialerBadgeClass + '">' + escapeHtml(alert.dialer || DIALER) + '</span>' +
                             campaignPillHtml +
@@ -7549,6 +7622,7 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
                 return '<div class="ct-persistent-goal-card" data-goal-id="' + escapeHtml(alert.id) + '">' +
                     '<div class="ct-alert-main">' +
                         '<div class="ct-goal-card-top">' +
+                            '<span class="ct-alert-sev-pill is-info">ACTIVE SIGNAL</span>' +
                             '<span class="ct-goal-badge">NEW ' + escapeHtml(alert.metric.toUpperCase()) + '</span>' +
                             '<span class="' + dialerBadgeClass + '">' + escapeHtml(alert.dialer || DIALER) + '</span>' +
                             campaignPillHtml +
@@ -8459,25 +8533,45 @@ console.log("Dashboard Loaded — CT Operations Monitor Pro (" + ("EAST-2") + ")
             }
         }
 
-        // Inventory Table
+        // Validate persisted filter view (defaults cleanly to ACTIVE if corrupted or unset)
+        const currentView = readInventoryFilter();
+        state.inventoryStatusFilter = currentView;
+        syncLfiInventoryFilterButtons();
+        const filteredInventory = inventory.filter(function (f) {
+            if (currentView === "active") return f.status === "ACTIVE";
+            if (currentView === "inactive") return f.status === "INACTIVE";
+            return true;
+        });
+
+        if (refs.lfiInventoryNote) {
+            setText(refs.lfiInventoryNote, health.hasInventory
+                ? ("Showing " + filteredInventory.length + " of " + inventory.length + " (" + currentView.toUpperCase() + ") · Priority-ordered from /manager/live-filters")
+                : "Sourced from /manager/live-filters");
+        }
+
+        // Inventory Table (Presentation filtering only — CallTools & Summary KPIs unchanged)
         if (refs.lfiInventoryTableBody) {
             if (inventory.length === 0) {
                 refs.lfiInventoryTableBody.innerHTML = '<tr><td colspan="7" class="ct-lfi-empty">No inventory observed yet. Open /manager/live-filters in CallTools to discover filters.</td></tr>';
+            } else if (filteredInventory.length === 0) {
+                refs.lfiInventoryTableBody.innerHTML = '<tr><td colspan="7" class="ct-lfi-empty">No ' + escapeHtml(currentView.toUpperCase()) + ' live filters match this view. Switch to ALL to inspect all ' + inventory.length + ' filters.</td></tr>';
             } else {
-                refs.lfiInventoryTableBody.innerHTML = inventory.map(function (f) {
-                    const statusClass = f.status === "ACTIVE" ? "is-active" : "is-inactive";
+                refs.lfiInventoryTableBody.innerHTML = filteredInventory.map(function (f) {
+                    const statusClass = f.status === "ACTIVE" ? "is-active" : f.status === "INACTIVE" ? "is-inactive" : "is-unknown";
                     const ageSec = f.observedAt ? Math.max(0, Math.floor((Date.now() - f.observedAt) / 1000)) : null;
                     const timeStr = f.observedAt ? new Date(f.observedAt).toLocaleTimeString() : "—";
                     const freshClass = ageSec !== null ? (ageSec < 15 ? "is-live" : ageSec <= 60 ? "is-recent" : "is-stale") : "is-waiting";
                     const freshLabel = ageSec !== null ? (ageSec < 15 ? "LIVE (" + ageSec + "s ago)" : ageSec <= 60 ? "RECENT (" + formatAge(ageSec) + " ago)" : "STALE (" + formatAge(ageSec) + " ago)") : "NOT OBSERVED";
+                    const runningNames = Array.isArray(f.assignedCampaigns) ? f.assignedCampaigns.map(function (c) { return c.campaignName + (c.campaignId ? " (#" + c.campaignId + ")" : ""); }).join(", ") : "";
+                    const runningTag = f.isAssignedToRunning ? '<span class="ct-lfi-running-tag" title="Authoritatively assigned to running campaign: ' + escapeHtml(runningNames) + '">RUNNING</span>' : '';
                     return '<tr>' +
-                        '<td title="' + escapeHtml(f.name) + '"><strong>' + escapeHtml(f.name) + '</strong></td>' +
-                        '<td><span class="ct-lfi-badge ' + statusClass + '">' + escapeHtml(f.status) + '</span></td>' +
-                        '<td style="text-align:right;">' + formatNumber(f.count) + '</td>' +
-                        '<td style="text-align:right;">' + formatNumber(f.totalCount) + '</td>' +
-                        '<td>' + escapeHtml(f.dialer) + '</td>' +
-                        '<td>' + escapeHtml(timeStr) + '</td>' +
-                        '<td><span class="ct-lfi-badge ' + freshClass + '">' + escapeHtml(freshLabel) + '</span></td>' +
+                        '<td title="' + escapeHtml(f.name) + '"><strong>' + escapeHtml(f.name) + '</strong>' + runningTag + '</td>' +
+                        '<td class="ct-lfi-nowrap"><span class="ct-lfi-badge ' + statusClass + '">' + escapeHtml(f.status) + '</span></td>' +
+                        '<td class="ct-lfi-nowrap" style="text-align:right;">' + formatNumber(f.count) + '</td>' +
+                        '<td class="ct-lfi-nowrap" style="text-align:right;">' + formatNumber(f.totalCount) + '</td>' +
+                        '<td class="ct-lfi-nowrap">' + escapeHtml(f.dialer) + '</td>' +
+                        '<td class="ct-lfi-nowrap" title="Observation time">' + escapeHtml(timeStr) + '</td>' +
+                        '<td class="ct-lfi-nowrap"><span class="ct-lfi-badge ' + freshClass + '">' + escapeHtml(freshLabel) + '</span></td>' +
                     '</tr>';
                 }).join("");
             }

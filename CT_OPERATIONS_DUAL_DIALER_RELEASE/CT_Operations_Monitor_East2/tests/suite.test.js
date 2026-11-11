@@ -7583,7 +7583,7 @@ test("EAST-2 UPGRADE 341: Authoritative One-Click WhatsApp Copy resolvers and cl
     assert.strictEqual(assignedOk.ok, true);
     assert.strictEqual(assignedOk.filterId, "4721");
     assert.strictEqual(assignedOk.availableContacts, 57120);
-    assert.strictEqual(assignedOk.text, "LIVE FILTER\nTS BLEND Hilton 2nd + 3 small lists 11/10\nAVAILABLE LEADS: 57,120");
+    assert.strictEqual(assignedOk.text, "Live Filter: TS BLEND Hilton 2nd + 3 small lists 11/10 | Available Leads: 57,120");
 
     // Must reject truncated display names
     storage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
@@ -7630,7 +7630,7 @@ test("EAST-2 UPGRADE 341: Authoritative One-Click WhatsApp Copy resolvers and cl
     ]));
     const validTrans = global.CT.resolveAuthoritativeTransitionCopy({ campaignId: "1716", dialer: "EAST-2", prefix: "ct_east2_", storage });
     assert.strictEqual(validTrans.ok, true);
-    assert.strictEqual(validTrans.text, "FROM: TS ALL agent connects NP NP burst 11/10\nTO: TS BLEND Hilton 2nd + 3 small lists 11/10");
+    assert.strictEqual(validTrans.text, "TS ALL agent connects NP NP burst 11/10 → TS BLEND Hilton 2nd + 3 small lists 11/10");
     assert.strictEqual(/\d{4}/.test(validTrans.text), false, "Transition WhatsApp copy must contain zero counts or timestamps");
 
     // Clipboard success + failure handling
@@ -7729,6 +7729,109 @@ test("EAST-2 UPGRADE 343: Cross-tab storage synchronization & complete Alert Cen
             queues: [{ id: "q1", name: "Main Inbound", waiting: 0, waitMax: 0, loggedIn: 4, callsTodayNotAnswered: 0 }]
         });
         assert.strictEqual(engine.activeAlerts.some((a) => a.status === "FILTER POOL EXHAUSTED"), false, "FILTER POOL EXHAUSTED must auto-resolve when filter refills");
+    } finally {
+        global.window = origWin;
+    }
+});
+
+test("EAST-2 UPGRADE 344: Production live-scheduler isolation, multi-campaign priority probing, STALE_REGISTRY source accuracy & gauge dedup/recovery", () => {
+    const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+
+    // 1. Background 15s scheduler must NOT trigger manualRefreshSession or hard-reload inboundIframe
+    assert.ok(dashSrc.includes('background: true, reason: reason || "15s-scheduler-cycle"'), "15s scheduler must tag background refreshes");
+    assert.ok(dashSrc.includes('manual: true, requestedAt: Date.now()'), "Toolbar Refresh Data must tag manual refreshes");
+    assert.ok(contentSrc.includes("if (!isManual)") && contentSrc.includes("requestInboundIframeRefresh(false)"), "content.js must keep background ticks non-destructive");
+
+    // 2. Plan B multi-campaign scheduler must satisfy Priority Tier 1 (operating/active) before standby inactive campaigns
+    assert.ok(contentSrc.includes("priorityTargets") && contentSrc.includes("standbyTargets"), "pickNextCampaignToProbe must prioritize operating/active over standby");
+
+    // 3. STALE_REGISTRY source must resolve human-readable last-observed label instead of 'DOM Unavailable'
+    assert.ok(dashSrc.includes('fSource === "STALE_REGISTRY"'), "Dashboard must display STALE_REGISTRY last-observed origin accurately");
+
+    // 4. Live-gauge threshold alerts must supersede prior active duplicates and auto-resolve upon wait recovery (<15s)
+    const origWin = global.window;
+    global.window = { location: { pathname: "/manager/campaigns", hostname: "east-2.calltools.io", origin: "https://east-2.calltools.io" } };
+    const mem = new Map();
+    const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+    try {
+        const engine = new CTDataIntelligenceEngine({ dialer: "EAST-2", prefix: "ct_east2_", storage });
+        engine.processSnapshot({ isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "59874", name: "RES CRED MAIN", active: true, loggedIn: 7, waitNow: 20, contacts: 20000 }], queues: [] });
+        // Spike 1: 20 -> 50 (2 confirmations)
+        engine.processSnapshot({ isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "59874", name: "RES CRED MAIN", active: true, loggedIn: 7, waitNow: 50, contacts: 20000 }], queues: [] });
+        engine.processSnapshot({ isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "59874", name: "RES CRED MAIN", active: true, loggedIn: 7, waitNow: 50, contacts: 20000 }], queues: [] });
+        // Spike 2: 50 -> 90 (2 confirmations)
+        engine.processSnapshot({ isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "59874", name: "RES CRED MAIN", active: true, loggedIn: 7, waitNow: 90, contacts: 20000 }], queues: [] });
+        engine.processSnapshot({ isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "59874", name: "RES CRED MAIN", active: true, loggedIn: 7, waitNow: 90, contacts: 20000 }], queues: [] });
+        const waitAlerts = engine.activeAlerts.filter((a) => a.metric === "Worst Wait Time" && a.status === "INCREASE");
+        assert.strictEqual(waitAlerts.length, 1, "Multiple Worst Wait Time spikes must supersede rather than stacking duplicate active cards");
+        assert.strictEqual(waitAlerts[0].current, 90);
+
+        // Recover < 15s and confirm auto-resolution even when steady
+        engine.processSnapshot({ isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "59874", name: "RES CRED MAIN", active: true, loggedIn: 7, waitNow: 7, contacts: 20000 }], queues: [] });
+        engine.processSnapshot({ isCampaignsRoute: true, campaignTableFound: true, campaigns: [{ id: "59874", name: "RES CRED MAIN", active: true, loggedIn: 7, waitNow: 7, contacts: 20000 }], queues: [] });
+        assert.strictEqual(engine.activeAlerts.some((a) => a.metric === "Worst Wait Time" && a.status === "INCREASE"), false, "Recovered wait alert must auto-resolve cleanly");
+    } finally {
+        global.window = origWin;
+    }
+});
+
+test("EAST-2 UPGRADE 345: LFI ACTIVE/ALL/INACTIVE filter persistence, Priority 1-4 ordering, Summary Card responsive containment, and non-sticky header", () => {
+    const cssSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.css"), "utf-8");
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+
+    // 1. LFI filter normalization & corrupted storage fallback
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter(undefined), "active");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter(""), "active");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter("corrupted-garbage"), "active");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter("ALL"), "all");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter("inactive"), "inactive");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter("active"), "active");
+
+    // 2. Dashboard LFI controls, Summary card responsive fix, non-sticky overlap fix, and 15s background tag
+    assert.ok(dashSrc.includes("LFI_INVENTORY_FILTER_KEY") && dashSrc.includes('data-ref="lfiInventoryFilterGroup"'), "LFI ACTIVE/ALL/INACTIVE buttons must exist");
+    assert.ok(dashSrc.includes('data-lfi-filter="active"') && dashSrc.includes('data-lfi-filter="all"') && dashSrc.includes('data-lfi-filter="inactive"'));
+    assert.ok(dashSrc.includes("event.key === LFI_INVENTORY_FILTER_KEY"), "Cross-tab LFI filter sync required");
+    assert.ok(cssSrc.includes("grid-template-columns: repeat(3, minmax(0, 1fr)) !important") && cssSrc.includes("grid-template-columns: repeat(2, minmax(0, 1fr)) !important"));
+    assert.ok(!dashSrc.includes(".ct-summary {\n                position: sticky;"), "Sticky .ct-summary overlap removed");
+    assert.ok(contentSrc.includes("if (!isManual)") && contentSrc.includes("!ev.detail.background") && dashSrc.includes("background: true"), "15s scheduler must remain non-destructive");
+    assert.ok(contentSrc.includes("MANUAL_REFRESH_TIMEOUT_MS = 20000") && contentSrc.includes("now - aTs) >= 45000"), "EAST-2 must allow full 3-route manual refresh headroom and anti-starvation priority rotation");
+
+    // 3. Priority 1-4 deterministic inventory sorting on EAST-2
+    const origWin = global.window;
+    global.window = { location: { pathname: "/manager/campaigns", hostname: "east-2.calltools.io", origin: "https://east-2.calltools.io" } };
+    const mem = new Map();
+    const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+    try {
+        const now = Date.now();
+        storage.setItem("ct_east2_verified_campaign_filters_v1", JSON.stringify({
+            "59874": { campaignId: "59874", campaignName: "RES CRED MAIN", liveFilter: "Assigned Runner Medium", filterId: "101", filterCount: 500, timestamp: now - 5000 }
+        }));
+        storage.setItem("ct_east2_live_filters_inventory_v1", JSON.stringify({
+            items: {
+                "201": { id: "201", name: "Active Huge Unassigned", active: true, count: 95000, totalCount: 95000, observedAt: now },
+                "301": { id: "301", name: "Inactive Dormant", active: false, count: 40000, totalCount: 40000, observedAt: now },
+                "101": { id: "101", name: "Assigned Runner Medium", active: true, count: 500, totalCount: 600, observedAt: now },
+                "202": { id: "202", name: "Active Smaller", active: true, count: 1200, totalCount: 1500, observedAt: now },
+                "401": { id: "401", name: "Ambiguous Status Filter", active: null, count: 300, totalCount: 300, observedAt: now }
+            },
+            lastObservedAt: now
+        }));
+        const engine = new CTDataIntelligenceEngine({ dialer: "EAST-2", prefix: "ct_east2_", storage });
+        const summary = engine.getLiveFilterIntelligenceSummary({
+            campaigns: [
+                { id: "59874", name: "RES CRED MAIN", state: "Active", agents: 8, loggedIn: 8, contacts: 500 }
+            ]
+        });
+        assert.deepStrictEqual(
+            summary.inventory.map((i) => i.id),
+            ["101", "201", "202", "401", "301"],
+            "Inventory must sort Priority 1 (Running) -> Priority 2 (Active DESC) -> Priority 3 (Other) -> Priority 4 (Inactive)"
+        );
+        assert.strictEqual(summary.inventory[0].isAssignedToRunning, true);
     } finally {
         global.window = origWin;
     }

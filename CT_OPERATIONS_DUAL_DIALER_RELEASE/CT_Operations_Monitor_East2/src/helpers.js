@@ -297,7 +297,7 @@ CT.resolveAuthoritativeAssignedFilterCopy = function (options = {}) {
         filterName: canonicalName,
         availableContacts: countInt,
         formattedAvailableContacts: formattedCount,
-        text: "LIVE FILTER\n" + canonicalName + "\nAVAILABLE LEADS: " + formattedCount,
+        text: "Live Filter: " + canonicalName + " | Available Leads: " + formattedCount,
         verificationSource: regEntry.source || "CAMPAIGN_EDIT_DOM",
         inventorySource: invRecord.source || "LIVE_FILTERS_PAGE",
         observedAt: invObservedAt,
@@ -400,7 +400,7 @@ CT.resolveAuthoritativeTransitionCopy = function (options = {}) {
             campaignId: cid,
             filterFrom: prevCheck.cleanName,
             filterTo: currCheck.cleanName,
-            text: "FROM: " + prevCheck.cleanName + "\nTO: " + currCheck.cleanName,
+            text: prevCheck.cleanName + " → " + currCheck.cleanName,
             timestamp: Number(rec.timestamp || 0) || null,
             confirmedAt: rec.confirmedAt || null,
             source: rec.source || "CAMPAIGN_EDIT_DOM",
@@ -434,6 +434,15 @@ CT.writeTextToClipboard = async function (text, clipboardOverride) {
     } catch (err) {
         return { ok: false, error: (err && err.message) ? String(err.message) : "Clipboard write permission denied" };
     }
+};
+
+/**
+ * Normalize persisted Live Filter Inventory view preference ("active" | "all" | "inactive").
+ * Defaults strictly to "active" when missing, empty, or invalid/corrupted.
+ */
+CT.normalizeLfiInventoryFilter = function (raw) {
+    const val = String(raw || "").trim().toLowerCase();
+    return (val === "active" || val === "all" || val === "inactive") ? val : "active";
 };
 
 console.log("Helpers Loaded (EAST-2)");

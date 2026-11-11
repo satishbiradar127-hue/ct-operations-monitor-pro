@@ -45,11 +45,11 @@ console.log("CT Operations Monitor (" + ("EAST-2") + ") — Production live feed
     const LF_INVENTORY_IFRAME_ID = "ct-operations-hidden-livefilters-feed-east2";
     const LF_EDIT_IFRAME_ID = "ct-operations-hidden-campaign-filter-east2";
     const LF_INVENTORY_REFRESH_MS = 4500;
-    const LF_ACTIVE_PROBE_MS = 4500;
-    const LF_IDLE_PROBE_MS = 28000;
+    const LF_ACTIVE_PROBE_MS = 12000;
+    const LF_IDLE_PROBE_MS = 90000;
     const LF_BETWEEN_PROBES_MS = 550;
-    const LF_PROBE_TIMEOUT_MS = 9000;
-    const MANUAL_REFRESH_TIMEOUT_MS = 10500;
+    const LF_PROBE_TIMEOUT_MS = 10500;
+    const MANUAL_REFRESH_TIMEOUT_MS = 20000;
     let lastInvSig = "";
     let lastInvWriteAt = 0;
     let invCompletedEpoch = -1;
@@ -546,23 +546,44 @@ console.log("CT Operations Monitor (" + ("EAST-2") + ") — Production live feed
 
     function pickNextCampaignToProbe(targets, now, forceNow) {
         if (!targets.length) return null;
-        const neverProbed = targets.filter(function (t) { return !lfLastProbeByCid[t.id]; })
-            .sort(function (a, b) { return ((b.operating || b.active) ? 1 : 0) - ((a.operating || a.active) ? 1 : 0); });
-        if (neverProbed.length > 0) return neverProbed[0];
+        let regMap = {};
+        try { regMap = JSON.parse(localStorage.getItem(VERIFIED_FILTERS_KEY) || "{}"); } catch (e) {}
+        const lastObservedTs = function (cid) {
+            const mem = lfLastProbeByCid[cid] || 0;
+            if (mem > 0) return mem;
+            const regEntry = regMap && regMap[cid];
+            const regTs = regEntry && Number(regEntry.timestamp);
+            return Number.isFinite(regTs) && regTs > 0 ? regTs : 0;
+        };
+        const priorityTargets = targets.filter(function (t) { return Boolean(t.operating || t.active); });
+        const standbyTargets = targets.filter(function (t) { return !(t.operating || t.active); });
 
-        const duePriority = targets.filter(function (t) {
-            return (t.operating || t.active) && (forceNow || (now - (lfLastProbeByCid[t.id] || 0)) >= LF_ACTIVE_PROBE_MS);
-        }).sort(function (a, b) { return (lfLastProbeByCid[a.id] || 0) - (lfLastProbeByCid[b.id] || 0); });
-
-        const dueStandby = targets.filter(function (t) {
-            return !(t.operating || t.active) && (forceNow || (now - (lfLastProbeByCid[t.id] || 0)) >= LF_IDLE_PROBE_MS);
-        }).sort(function (a, b) { return (lfLastProbeByCid[a.id] || 0) - (lfLastProbeByCid[b.id] || 0); });
-
-        if (duePriority.length > 0 && (dueStandby.length === 0 || (now - (lfLastProbeByCid[duePriority[0].id] || 0)) >= LF_ACTIVE_PROBE_MS + 6000)) {
-            return duePriority[0];
-        }
-        if (dueStandby.length > 0) return dueStandby[0];
+        // Priority Tier 1: ALWAYS keep Operating & Active campaigns fresh (<120s TTL) before probing standby/inactive ones.
+        // Guard against operating campaign starvation so sibling active campaigns rotate cleanly before approaching 120s staleness.
+        const duePriority = priorityTargets.filter(function (t) {
+            const ts = lastObservedTs(t.id);
+            return !ts || forceNow || (now - ts) >= LF_ACTIVE_PROBE_MS;
+        }).sort(function (a, b) {
+            const aTs = lastObservedTs(a.id);
+            const bTs = lastObservedTs(b.id);
+            const aUrgent = !aTs || (now - aTs) >= 45000;
+            const bUrgent = !bTs || (now - bTs) >= 45000;
+            if (aUrgent !== bUrgent) return aUrgent ? -1 : 1;
+            if (!aUrgent && Boolean(a.operating) !== Boolean(b.operating)) return a.operating ? -1 : 1;
+            if (aTs !== bTs) return aTs - bTs;
+            return (a.operating ? 0 : 1) - (b.operating ? 0 : 1);
+        });
         if (duePriority.length > 0) return duePriority[0];
+
+        // Priority Tier 2: Probe oldest due Standby/Inactive campaign ONLY when all Operating & Active campaigns are fresh
+        const dueStandby = standbyTargets.filter(function (t) {
+            const ts = lastObservedTs(t.id);
+            return !ts || forceNow || (now - ts) >= LF_IDLE_PROBE_MS;
+        }).sort(function (a, b) {
+            return lastObservedTs(a.id) - lastObservedTs(b.id);
+        });
+        if (dueStandby.length > 0) return dueStandby[0];
+
         return null;
     }
 
@@ -1585,8 +1606,25 @@ console.log("CT Operations Monitor (" + ("EAST-2") + ") — Production live feed
 
     document.addEventListener("CT_EAST_2_REQUEST_REFRESH", function (ev) {
         const now = Date.now();
-        lastSourceRefreshAt = now;
         const route = currentRoute();
+        const isManual = Boolean(ev && ev.detail && (ev.detail.manual === true || (ev.detail.refreshId && !ev.detail.background)));
+
+        if (!isManual) {
+            if (route === "campaigns" && isTopLevelCampaignsPage()) {
+                readAndPublish("scheduler-heartbeat", false);
+                requestInboundIframeRefresh(false);
+                coordinateLiveFilterMonitors(false);
+            } else if (route === "live_filters") {
+                observeLiveFiltersPage();
+            } else if (route === "campaign_edit") {
+                observeCampaignEditForm();
+            } else if (route === "queues") {
+                readAndPublish("scheduler-queue-poll", false);
+            }
+            return;
+        }
+
+        lastSourceRefreshAt = now;
         const refreshId = ev && ev.detail && ev.detail.refreshId ? ev.detail.refreshId : now;
 
         if (route === "campaigns" && isTopLevelCampaignsPage()) {
