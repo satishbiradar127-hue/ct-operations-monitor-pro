@@ -45,8 +45,8 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
     const LF_INVENTORY_IFRAME_ID = "ct-operations-hidden-livefilters-feed-east3";
     const LF_EDIT_IFRAME_ID = "ct-operations-hidden-campaign-filter-east3";
     const LF_INVENTORY_REFRESH_MS = 4500;
-    const LF_ACTIVE_PROBE_MS = 4500;
-    const LF_IDLE_PROBE_MS = 28000;
+    const LF_ACTIVE_PROBE_MS = 8000;
+    const LF_IDLE_PROBE_MS = 45000;
     const LF_BETWEEN_PROBES_MS = 550;
     const LF_PROBE_TIMEOUT_MS = 9000;
     const MANUAL_REFRESH_TIMEOUT_MS = 10500;
@@ -558,11 +558,8 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
             return !(t.operating || t.active) && (forceNow || (now - (lfLastProbeByCid[t.id] || 0)) >= LF_IDLE_PROBE_MS);
         }).sort(function (a, b) { return (lfLastProbeByCid[a.id] || 0) - (lfLastProbeByCid[b.id] || 0); });
 
-        if (duePriority.length > 0 && (dueStandby.length === 0 || (now - (lfLastProbeByCid[duePriority[0].id] || 0)) >= LF_ACTIVE_PROBE_MS + 6000)) {
-            return duePriority[0];
-        }
-        if (dueStandby.length > 0) return dueStandby[0];
         if (duePriority.length > 0) return duePriority[0];
+        if (dueStandby.length > 0) return dueStandby[0];
         return null;
     }
 
@@ -1587,7 +1584,16 @@ console.log("CT Operations Monitor (" + ("EAST-3") + ") — Production live feed
         const now = Date.now();
         lastSourceRefreshAt = now;
         const route = currentRoute();
-        const refreshId = ev && ev.detail && ev.detail.refreshId ? ev.detail.refreshId : now;
+        const reqDetail = ev && ev.detail && typeof ev.detail === "object" ? ev.detail : {};
+        const isManual = Boolean(reqDetail.manual || reqDetail.refreshId);
+        const refreshId = reqDetail.refreshId || now;
+
+        if (route === "campaigns" && isTopLevelCampaignsPage() && !isManual) {
+            readAndPublish("scheduler-heartbeat", false);
+            requestInboundIframeRefresh(false);
+            coordinateLiveFilterMonitors(false);
+            return;
+        }
 
         if (route === "campaigns" && isTopLevelCampaignsPage()) {
             publishFeedStatus("VERIFYING", { reason: "Refreshing CallTools Campaigns, Live Filters, Edit DOM, and Inbound Queues…", route: "campaigns" });

@@ -7581,7 +7581,7 @@ test("EAST-3 UPGRADE 341: Authoritative One-Click WhatsApp Copy resolvers and cl
     assert.strictEqual(assignedOk.ok, true);
     assert.strictEqual(assignedOk.filterId, "4721");
     assert.strictEqual(assignedOk.availableContacts, 57120);
-    assert.strictEqual(assignedOk.text, "LIVE FILTER\nTS BLEND Hilton 2nd + 3 small lists 11/10\nAVAILABLE LEADS: 57,120");
+    assert.strictEqual(assignedOk.text, "Live Filter: TS BLEND Hilton 2nd + 3 small lists 11/10 | Available Leads: 57,120");
 
     // Must reject truncated display names
     storage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
@@ -7628,7 +7628,7 @@ test("EAST-3 UPGRADE 341: Authoritative One-Click WhatsApp Copy resolvers and cl
     ]));
     const validTrans = global.CT.resolveAuthoritativeTransitionCopy({ campaignId: "1716", dialer: "EAST-3", prefix: "ct_east3_", storage });
     assert.strictEqual(validTrans.ok, true);
-    assert.strictEqual(validTrans.text, "FROM: TS ALL agent connects NP NP burst 11/10\nTO: TS BLEND Hilton 2nd + 3 small lists 11/10");
+    assert.strictEqual(validTrans.text, "TS ALL agent connects NP NP burst 11/10 → TS BLEND Hilton 2nd + 3 small lists 11/10");
     assert.strictEqual(/\d{4}/.test(validTrans.text), false, "Transition WhatsApp copy must contain zero counts or timestamps");
 
     // Clipboard success + failure handling
@@ -7727,6 +7727,78 @@ test("EAST-3 UPGRADE 343: Cross-tab storage synchronization & complete Alert Cen
             queues: [{ id: "q1", name: "Main Inbound", waiting: 0, waitMax: 0, loggedIn: 4, callsTodayNotAnswered: 0 }]
         });
         assert.strictEqual(engine.activeAlerts.some((a) => a.status === "FILTER POOL EXHAUSTED"), false, "FILTER POOL EXHAUSTED must auto-resolve when filter refills");
+    } finally {
+        global.window = origWin;
+    }
+});
+
+test("EAST-3 UPGRADE 344: LFI ACTIVE/ALL/INACTIVE filter persistence, Priority 1-4 ordering, Summary Card layout, and Action Center surge dedup/recovery", () => {
+    const cssSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.css"), "utf-8");
+    const dashSrc = fs.readFileSync(path.resolve(__dirname, "../src/dashboard.js"), "utf-8");
+    const contentSrc = fs.readFileSync(path.resolve(__dirname, "../src/content.js"), "utf-8");
+    const { CTDataIntelligenceEngine } = require("../src/intelligence.js");
+
+    // 1. LFI filter normalization & corrupted storage fallback
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter(undefined), "active");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter(""), "active");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter("corrupted-garbage"), "active");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter("ALL"), "all");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter("inactive"), "inactive");
+    assert.strictEqual(global.CT.normalizeLfiInventoryFilter("active"), "active");
+
+    // 2. Dashboard LFI controls, Summary card responsive fix, non-sticky overlap fix, and 15s background tag
+    assert.ok(dashSrc.includes("LFI_INVENTORY_FILTER_KEY") && dashSrc.includes('data-ref="lfiInventoryFilterGroup"'), "LFI ACTIVE/ALL/INACTIVE buttons must exist");
+    assert.ok(dashSrc.includes('data-lfi-filter="active"') && dashSrc.includes('data-lfi-filter="all"') && dashSrc.includes('data-lfi-filter="inactive"'));
+    assert.ok(dashSrc.includes("event.key === LFI_INVENTORY_FILTER_KEY"), "Cross-tab LFI filter sync required");
+    assert.ok(cssSrc.includes("grid-template-columns: repeat(3, minmax(0, 1fr)) !important") && cssSrc.includes("grid-template-columns: repeat(2, minmax(0, 1fr)) !important"));
+    assert.ok(!dashSrc.includes(".ct-summary {\n                position: sticky;"), "Sticky .ct-summary overlap removed");
+    assert.ok(contentSrc.includes("Boolean(reqDetail.manual || reqDetail.refreshId)") && dashSrc.includes("background: true"), "15s scheduler must remain non-destructive");
+
+    // 3. Priority 1-4 inventory sorting & Action Center wait surge deduplication/auto-recovery
+    const origWin = global.window;
+    global.window = { location: { pathname: "/manager/campaigns", hostname: "east-3.calltools.io", origin: "https://east-3.calltools.io" } };
+    const mem = new Map();
+    const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+    try {
+        const now = Date.now();
+        storage.setItem("ct_east3_verified_campaign_filters_v1", JSON.stringify({
+            "1716": { campaignId: "1716", campaignName: "TS FRESH DATA", liveFilter: "Assigned Runner Medium", filterId: "101", filterCount: 500, timestamp: now - 5000 }
+        }));
+        storage.setItem("ct_east3_live_filters_inventory_v1", JSON.stringify({
+            items: {
+                "201": { id: "201", name: "Active Huge Unassigned", active: true, count: 95000, totalCount: 95000, observedAt: now },
+                "301": { id: "301", name: "Inactive Dormant", active: false, count: 40000, totalCount: 40000, observedAt: now },
+                "101": { id: "101", name: "Assigned Runner Medium", active: true, count: 500, totalCount: 600, observedAt: now },
+                "202": { id: "202", name: "Active Smaller", active: true, count: 1200, totalCount: 1500, observedAt: now },
+                "401": { id: "401", name: "Ambiguous Status Filter", active: null, count: 300, totalCount: 300, observedAt: now }
+            },
+            lastObservedAt: now
+        }));
+        const engine = new CTDataIntelligenceEngine({ dialer: "EAST-3", prefix: "ct_east3_", storage });
+        const summary = engine.getLiveFilterIntelligenceSummary({
+            campaigns: [
+                { id: "1716", name: "TS FRESH DATA", state: "Active", agents: 8, loggedIn: 8, contacts: 500 }
+            ]
+        });
+        assert.deepStrictEqual(
+            summary.inventory.map((i) => i.id),
+            ["101", "201", "202", "401", "301"],
+            "Inventory must sort Priority 1 (Running) -> Priority 2 (Active DESC) -> Priority 3 (Other) -> Priority 4 (Inactive)"
+        );
+        assert.strictEqual(summary.inventory[0].isAssignedToRunning, true);
+
+        // Wait surge supersede & auto-recovery below minBaseline (15s)
+        engine.evaluateOperationalMetric("outbound_wait_time", 15, "OUTBOUND", "ALL", "Worst Wait Time", now - 60000, "19:00:00");
+        engine.evaluateOperationalMetric("outbound_wait_time", 50, "OUTBOUND", "ALL", "Worst Wait Time", now - 50000, "19:00:10");
+        engine.evaluateOperationalMetric("outbound_wait_time", 50, "OUTBOUND", "ALL", "Worst Wait Time", now - 40000, "19:00:20");
+        engine.evaluateOperationalMetric("outbound_wait_time", 15, "OUTBOUND", "ALL", "Worst Wait Time", now - 30000, "19:00:30");
+        engine.evaluateOperationalMetric("outbound_wait_time", 75, "OUTBOUND", "ALL", "Worst Wait Time", now - 20000, "19:00:40");
+        engine.evaluateOperationalMetric("outbound_wait_time", 75, "OUTBOUND", "ALL", "Worst Wait Time", now - 10000, "19:00:50");
+        const waitAlerts = engine.activeAlerts.filter((a) => a.metric === "Worst Wait Time" && !a.acknowledged);
+        assert.strictEqual(waitAlerts.length, 1, "Wait Time surges must supersede older unacknowledged cards rather than stacking");
+        assert.strictEqual(waitAlerts[0].current, 75);
+        engine.evaluateOperationalMetric("outbound_wait_time", 6, "OUTBOUND", "ALL", "Worst Wait Time", now, "19:01:00");
+        assert.strictEqual(engine.activeAlerts.filter((a) => a.metric === "Worst Wait Time" && !a.acknowledged).length, 0, "Wait Time must auto-resolve when below 15s");
     } finally {
         global.window = origWin;
     }

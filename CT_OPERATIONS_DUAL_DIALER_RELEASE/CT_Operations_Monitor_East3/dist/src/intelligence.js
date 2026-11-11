@@ -280,7 +280,16 @@
                     this.baselines = JSON.parse(this.storage.getItem(this.BASELINES_KEY) || "{}");
                     this.filterBaselines = JSON.parse(this.storage.getItem(this.FILTER_BASELINES_KEY) || "{}");
                     this.pendingConfirmations = JSON.parse(this.storage.getItem(this.PENDING_KEY) || "{}");
-                    this.activeAlerts = (JSON.parse(this.storage.getItem(this.ALERTS_KEY) || "[]") || []).filter(isValidAlert);
+                    const rawAlerts = (JSON.parse(this.storage.getItem(this.ALERTS_KEY) || "[]") || []).filter(isValidAlert);
+                    const seenOpKeys = new Set();
+                    this.activeAlerts = rawAlerts.filter((a) => {
+                        if (!a.acknowledged && (a.category === "SUDDEN_INCREASE" || a.category === "SUDDEN_DECREASE") && (a.status === "INCREASE" || a.status === "DECREASE")) {
+                            const dk = `${a.dialer || this.dialer}|${a.targetId}|${a.metric}|${a.status}`;
+                            if (seenOpKeys.has(dk)) return false;
+                            seenOpKeys.add(dk);
+                        }
+                        return true;
+                    });
                     this.history = (JSON.parse(this.storage.getItem(this.HISTORY_KEY) || "[]") || []).filter(isValidHistory);
                     this.liveFilterChangeHistory = (JSON.parse(this.storage.getItem(this.CHANGE_HISTORY_KEY) || "[]") || []).filter(h => h && !sameCanonicalFilter(h.previousFilter, h.currentFilter));
                 } catch (e) {
@@ -897,6 +906,24 @@
                     baseline.updatedAt = now;
                     return;
                 }
+            }
+
+            // Auto-resolve wait/queue surge or recovered drop alerts once live metrics return within healthy range
+            const beforeRecover = this.activeAlerts.length;
+            this.activeAlerts = this.activeAlerts.filter((a) => {
+                if (!a || a.acknowledged || a.dialer !== this.dialer || a.targetId !== targetId || a.metric !== profile.metric) return true;
+                if (a.category === "SUDDEN_INCREASE" && a.status === "INCREASE" &&
+                    (profileKey === "outbound_wait_time" || profileKey === "outbound_callers_waiting" || profileKey === "inbound_max_wait" || profileKey === "inbound_callers_waiting") &&
+                    currentValue <= Math.max(0, (profile.minBaseline || 1) - 1)) {
+                    return false;
+                }
+                if (a.category === "SUDDEN_DECREASE" && a.status === "DECREASE" && Number.isFinite(Number(a.previous)) && currentValue >= Number(a.previous)) {
+                    return false;
+                }
+                return true;
+            });
+            if (this.activeAlerts.length !== beforeRecover) {
+                this.saveState();
             }
 
             // Check if there was a pending anomaly that has now reverted back to normal
@@ -1597,7 +1624,8 @@
                 return; // Reject foreign dialer alert contamination
             }
             alertObj.dialer = this.dialer;
-            // Duplicate Suppression: check if alert with same dialer, target, status, and metric is already active
+            // Duplicate Suppression & Superseding: prevent operational gauge surges from piling up multiple simultaneous cards
+            const isOpGaugeAlert = (alertObj.category === "SUDDEN_INCREASE" || alertObj.category === "SUDDEN_DECREASE") && (alertObj.status === "INCREASE" || alertObj.status === "DECREASE");
             const exists = this.activeAlerts.some(a => a.id === alertObj.id || (
                 a.dialer === this.dialer &&
                 a.targetId === alertObj.targetId &&
@@ -1607,6 +1635,18 @@
                 !a.acknowledged
             ));
             if (exists) return;
+
+            if (isOpGaugeAlert) {
+                this.activeAlerts = this.activeAlerts.filter(a => !(
+                    a &&
+                    !a.acknowledged &&
+                    a.dialer === this.dialer &&
+                    a.targetId === alertObj.targetId &&
+                    a.metric === alertObj.metric &&
+                    a.status === alertObj.status &&
+                    (a.category === "SUDDEN_INCREASE" || a.category === "SUDDEN_DECREASE")
+                ));
+            }
 
             this.activeAlerts.unshift(alertObj); // Pinned to top
             this.history.unshift(Object.assign({}, alertObj));
@@ -1883,6 +1923,75 @@
                 else inventoryFreshness = `${Math.floor(diffSec / 3600)}h ago`;
             }
 
+            const runningByFilterId = new Map();
+            const runningByFilterName = new Map();
+            matrix.forEach((m) => {
+                if (!m || (m.state !== "RUNNING" && m.state !== "ACTIVE")) return;
+                const assigned = String(m.assignedFilter || "").trim();
+                if (!assigned || assigned === "None Assigned" || assigned === "Filter Unavailable") return;
+                const ref = { campaignId: m.rawId || m.campaignId, campaignName: m.campaignName, state: m.state };
+                const fid = m.filterId ? String(m.filterId).trim() : "";
+                if (/^[0-9]+$/.test(fid)) {
+                    if (!runningByFilterId.has(fid)) runningByFilterId.set(fid, []);
+                    runningByFilterId.get(fid).push(ref);
+                } else {
+                    const normAssigned = assigned.toLowerCase();
+                    if (!runningByFilterName.has(normAssigned)) runningByFilterName.set(normAssigned, []);
+                    runningByFilterName.get(normAssigned).push(ref);
+                }
+            });
+
+            const sortedInventory = filterList.map((f) => {
+                const isExplicitActive = f.active === true || f.active === "true" || String(f.active).toLowerCase() === "true";
+                const isExplicitInactive = f.active === false || f.active === "false" || String(f.active).toLowerCase() === "false";
+                const status = isExplicitActive ? "ACTIVE" : (isExplicitInactive ? "INACTIVE" : "UNKNOWN");
+                const hasNumericCount = f.count !== null && f.count !== undefined && String(f.count).trim() !== "" && Number.isFinite(Number(f.count));
+                const hasNumericTotal = f.totalCount !== null && f.totalCount !== undefined && String(f.totalCount).trim() !== "" && Number.isFinite(Number(f.totalCount));
+                const countVal = hasNumericCount ? Number(f.count) : null;
+                const totalVal = hasNumericTotal ? Number(f.totalCount) : countVal;
+                const fidKey = /^[0-9]+$/.test(String(f.id || "").trim())
+                    ? String(f.id).trim()
+                    : (/^[0-9]+$/.test(String(f.rawId || "").trim()) ? String(f.rawId).trim() : "");
+                const normName = String(f.name || "").trim().toLowerCase();
+                let assignedCampaigns = [];
+                if (fidKey && runningByFilterId.has(fidKey)) {
+                    assignedCampaigns = runningByFilterId.get(fidKey).slice();
+                } else if (!fidKey && normName && runningByFilterName.has(normName)) {
+                    assignedCampaigns = runningByFilterName.get(normName).slice();
+                }
+                const isAssignedToRunning = assignedCampaigns.length > 0;
+                const priorityRank = isAssignedToRunning ? 1 : (isExplicitActive ? 2 : (!isExplicitInactive ? 3 : 4));
+
+                return {
+                    id: f.id,
+                    rawId: f.rawId || null,
+                    name: f.name,
+                    status,
+                    active: isExplicitActive,
+                    isAssignedToRunning,
+                    assignedCampaigns,
+                    priorityRank,
+                    hasNumericCount,
+                    count: countVal,
+                    totalCount: totalVal,
+                    dialer: this.dialer,
+                    observedAt: f.observedAt || null,
+                    lastRefill: "Not exposed by available source"
+                };
+            }).sort((a, b) => {
+                if (a.priorityRank !== b.priorityRank) return a.priorityRank - b.priorityRank;
+                if (a.hasNumericCount !== b.hasNumericCount) return (b.hasNumericCount ? 1 : 0) - (a.hasNumericCount ? 1 : 0);
+                const ca = Number(a.count) || 0;
+                const cb = Number(b.count) || 0;
+                if (cb !== ca) return cb - ca;
+                const ta = Number(a.totalCount) || 0;
+                const tb = Number(b.totalCount) || 0;
+                if (tb !== ta) return tb - ta;
+                const nameCmp = String(a.name || "").localeCompare(String(b.name || ""));
+                if (nameCmp !== 0) return nameCmp;
+                return String(a.id || "").localeCompare(String(b.id || ""));
+            });
+
             const inactiveFilters = (totalFilters !== null && activeFilters !== null) ? Math.max(0, totalFilters - activeFilters) : null;
             return {
                 summary: {
@@ -1894,17 +2003,7 @@
                     runningCampaignsCount,
                     verifiedActiveConfigurations: verifiedActiveConfigs
                 },
-                inventory: filterList.map(f => ({
-                    id: f.id,
-                    rawId: f.rawId || null,
-                    name: f.name,
-                    status: (f.active === true || f.active === "true" || String(f.active).toLowerCase() === "true") ? "ACTIVE" : "INACTIVE",
-                    count: Number(f.count) || 0,
-                    totalCount: Number(f.totalCount) || Number(f.count) || 0,
-                    dialer: this.dialer,
-                    observedAt: f.observedAt,
-                    lastRefill: "Not exposed by available source"
-                })),
+                inventory: sortedInventory,
                 assignmentMatrix: matrix,
                 changeHistory: (this.liveFilterChangeHistory || []).slice(0, 20),
                 leadListDetails: matrix.map(m => ({
